@@ -4,4 +4,11 @@
 - **/src/main** 
     - **/java** contains the source code of the EE.
     - **/resources** contains example yaml files to test the execution
-- **/src/main/resources/credentials.properties** contains the login credentials for the FaaS providers. This file should be filled by the users own credentials (it is added to **.gitignore**)
+- You will need to create a **/src/main/resources/credentials.properties** file, which contains the login credentials for the FaaS providers. This file will be ignored from git (**.gitignore**).
+
+    The file should look as follows:
+    ````
+    aws_access_key=<your_aws_access_key>
+    aws_secret_key=<your_aws_secret_key>
+    ibm_api_key=<your_ibm_api_key>
+    ````
