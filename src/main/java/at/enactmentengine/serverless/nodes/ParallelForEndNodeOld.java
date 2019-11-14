@@ -1,15 +1,15 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.model.Data;
-import com.dps.afcl.functions.objects.DataOuts;
-import com.google.gson.Gson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.DataOutput;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
+
+import at.enactmentengine.serverless.model.Data;
 
 /**
  * Control node which manages the tasks at the end of a parallel for loop.
@@ -17,14 +17,14 @@ import java.util.Map;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class ParallelForEndNode extends Node {
-	final static Logger logger = LoggerFactory.getLogger(ParallelForEndNode.class);
+public class ParallelForEndNodeOld extends Node {
+	final static Logger logger = LoggerFactory.getLogger(ParallelForEndNodeOld.class);
 	private int waitCounter = 0;
-	private List<DataOuts> output;
+	private List<Data> output;
 	private Map<String, Object> parallelResult = new HashMap<>();
 	private int numberOfChildren;
 
-	public ParallelForEndNode(String name, String type, List<DataOuts> output) {
+	public ParallelForEndNodeOld(String name, String type, List<Data> output) {
 		super(name, type);
 		this.output = output;
 	}
@@ -42,7 +42,7 @@ public class ParallelForEndNode extends Node {
 		}
 
 		Map<String, Object> outputValues = new HashMap<>();
-		for (DataOuts data : output) {
+		for (Data data : output) {
 			String key = name + "/" + data.getName();
 			if (parallelResult.containsKey(data.getSource())) {
 				outputValues.put(key, parallelResult.get(data.getSource()));
@@ -67,7 +67,7 @@ public class ParallelForEndNode extends Node {
 	@Override
 	public void passResult(Map<String, Object> input) {
 		synchronized (this) {
-			for (DataOuts data : output) {
+			for (Data data : output) {
 				if (input.containsKey(data.getSource())) {
 					if (data.getType().equals("collection")) {
 						parallelResult.put(data.getSource() + Integer.toString(parallelResult.size()),

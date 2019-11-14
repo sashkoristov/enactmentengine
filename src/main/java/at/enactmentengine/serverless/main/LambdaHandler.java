@@ -2,6 +2,7 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
@@ -43,9 +44,9 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
 		ExecutableWorkflow ex;
 		try {
-			InputStream in = App.class.getResourceAsStream(inputObject.getFilename());
+			String in = inputObject.getFilename();
 			YAMLParser yamlParser = new YAMLParser();
-			ex = yamlParser.parseExecutableWorkflowOld(in);
+			ex = yamlParser.parseExecutableWorkflow(in);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			return "{\"result\": \"Workflow stopped with errors! See Logs!\"}";
@@ -75,7 +76,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 		return "{\"result\": \"Workflow ran without errors in "+(endTime-startTime)+"ms!\"}" + startTime;
 	}
 
-	private static ExecutableWorkflow readFileFromS3(InputObject inputObject) throws Exception {
+	private static ExecutableWorkflowOld readFileFromS3(InputObject inputObject) throws Exception {
 		S3Object fullObject = null, objectPortion = null, headerOverrideObject = null;
 
 		String awsAccessKey = null;
@@ -92,7 +93,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
 		BasicAWSCredentials awsCreds = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
 
-		ExecutableWorkflow ex = null;
+		ExecutableWorkflowOld ex = null;
 		try {
 			AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_2)
 					.withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();

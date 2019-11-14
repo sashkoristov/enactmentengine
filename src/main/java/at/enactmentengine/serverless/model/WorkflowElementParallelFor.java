@@ -4,8 +4,8 @@ import java.util.List;
 
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
-import at.enactmentengine.serverless.nodes.ParallelForEndNode;
-import at.enactmentengine.serverless.nodes.ParallelForStartNode;
+import at.enactmentengine.serverless.nodes.ParallelForEndNodeOld;
+import at.enactmentengine.serverless.nodes.ParallelForStartNodeOld;
 
 /**
  * Model class for a parallel for workflow element.
@@ -72,30 +72,30 @@ public class WorkflowElementParallelFor extends WorkflowElement {
 	}
 
 	/**
-	 * Creates a ListPair which includes a ParallelForStartNode and a
-	 * ParallelForEndNode. This nodes are used for management purposes. The nodes
+	 * Creates a ListPair which includes a ParallelForStartNodeOld and a
+	 * ParallelForEndNodeOld. This nodes are used for management purposes. The nodes
 	 * between start and end are linked together. Because the number of for parallel
 	 * branches is not known at this time it creates one branch which is copied
 	 * later during execution.
 	 */
 	public ListPair<Node, Node> toNodeList() {
-		ParallelForStartNode parallelForStartNode = new ParallelForStartNode(name, "type", dataIns, loopCounter);
-		ParallelForEndNode parallelForEndNode = new ParallelForEndNode(name, "", dataOuts);
+		ParallelForStartNodeOld parallelForStartNodeOld = new ParallelForStartNodeOld(name, "type", dataIns, loopCounter);
+		ParallelForEndNodeOld parallelForEndNodeOld = new ParallelForEndNodeOld(name, "", dataOuts);
 
 		ListPair<Node, Node> firstPair = loopBodyParsed.get(0).toNodeList();
 
 		Node currentEnd = firstPair.getEnd();
-		parallelForStartNode.addChild(firstPair.getStart());
+		parallelForStartNodeOld.addChild(firstPair.getStart());
 		for (int j = 1; j < loopBodyParsed.size(); j++) {
 			ListPair<Node, Node> current = loopBodyParsed.get(j).toNodeList();
 			currentEnd.addChild(current.getStart());
 			current.getStart().addChild(currentEnd);
 			currentEnd = current.getEnd();
 		}
-		currentEnd.addChild(parallelForEndNode);
-		parallelForEndNode.addParent(currentEnd);
+		currentEnd.addChild(parallelForEndNodeOld);
+		parallelForEndNodeOld.addParent(currentEnd);
 
-		return new ListPair<Node, Node>(parallelForStartNode, parallelForEndNode);
+		return new ListPair<Node, Node>(parallelForStartNodeOld, parallelForEndNodeOld);
 	}
 
 }

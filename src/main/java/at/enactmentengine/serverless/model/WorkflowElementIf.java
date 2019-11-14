@@ -2,10 +2,10 @@ package at.enactmentengine.serverless.model;
 
 import java.util.List;
 
+import at.enactmentengine.serverless.nodes.IfEndNodeOld;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import at.enactmentengine.serverless.nodes.IfEndNode;
-import at.enactmentengine.serverless.nodes.IfStartNode;
+import at.enactmentengine.serverless.nodes.IfStartNodeOld;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 
@@ -66,7 +66,7 @@ public class WorkflowElementIf extends WorkflowElement {
 	}
 
 	/**
-	 * Creates a ListPair which includes an IfStartNode and an IfEndNode. This nodes
+	 * Creates a ListPair which includes an IfStartNodeOld and an IfEndNodeOld. This nodes
 	 * are used for management purposes. For the "then" and "else" branch the
 	 * elements are linked together and both branches are put between start- and
 	 * endnode of the if element.
@@ -74,8 +74,8 @@ public class WorkflowElementIf extends WorkflowElement {
 
 	@Override
 	public ListPair<Node, Node> toNodeList() {
-		IfStartNode start = new IfStartNode(name, dataIns, condition);
-		IfEndNode end = new IfEndNode(name, dataOuts);
+		IfStartNodeOld start = new IfStartNodeOld(name, dataIns, condition);
+		IfEndNodeOld end = new IfEndNodeOld(name, dataOuts);
 
 		ListPair<Node, Node> thenPair = new ListPair<Node, Node>();
 		ListPair<Node, Node> startNode = then.get(0).getFunction().toNodeList();

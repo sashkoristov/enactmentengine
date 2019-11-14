@@ -2,10 +2,10 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -30,16 +30,15 @@ public class App {
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
 
         // Get the input file as argument or default string
-        InputStream in;
+        String fileName;
         if (args.length > 0)
-            in = App.class.getResourceAsStream("/" + args[0]);
+            fileName = args[0];
         else
-            in = App.class.getResourceAsStream("/yaml_files/gateChangeAlertCFCL_AWS_1.yaml");
-        if (in == null)
-            throw new MissingInputDataException("Could not open file! Please check the filename and try again");
+            fileName = "src/main/resources/yaml_files/gateChangeAlertCFCL_AWS_1.yaml";
 
         // Create an executable workflow
-        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflowOld(in);
+
+        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName);
         if (ex != null) {
 
             // Set workflow input

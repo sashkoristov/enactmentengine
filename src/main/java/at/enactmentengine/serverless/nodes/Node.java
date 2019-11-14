@@ -12,8 +12,8 @@ import java.util.concurrent.Callable;
  *
  */
 public abstract class Node implements Callable<Boolean>, Cloneable {
-	protected List<Node> parents = new ArrayList<>();
-	protected List<Node> children = new ArrayList<>();
+	protected List<Node> parents;
+	protected List<Node> children;
 	protected String name;
 	protected String type;
 	protected Map<String, Object> dataValues;
@@ -22,6 +22,8 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
 		super();
 		this.name = name;
 		this.type = type;
+		this.parents = new ArrayList<>();
+		this.children = new ArrayList<>();
 	}
 
 	public abstract void passResult(Map<String, Object> map);

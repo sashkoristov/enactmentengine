@@ -1,12 +1,5 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
-import at.enactmentengine.serverless.model.Data;
-import com.dps.afcl.functions.objects.DataIns;
-import com.dps.afcl.functions.objects.dataflow.DataInsDataFlow;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,18 +8,24 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.model.Data;
+
 /**
  * Control node which manages the tasks at the start of a parallel loop.
  * 
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class ParallelStartNode extends Node {
-	private List<DataInsDataFlow> definedInput;
-	final static Logger logger = LoggerFactory.getLogger(ParallelStartNode.class);
+public class ParallelStartNodeOld extends Node {
+	private List<Data> definedInput;
+	final static Logger logger = LoggerFactory.getLogger(ParallelStartNodeOld.class);
 	private static int MAX_NUMBER_THREADS = 50;
 
-	public ParallelStartNode(String name, String type, List<DataInsDataFlow> definedInput) {
+	public ParallelStartNodeOld(String name, String type, List<Data> definedInput) {
 		super(name, type);
 		this.definedInput = definedInput;
 	}
@@ -38,7 +37,7 @@ public class ParallelStartNode extends Node {
 	@Override
 	public Boolean call() throws Exception {
 		final Map<String, Object> outVals = new HashMap<>();
-		for (DataInsDataFlow data : definedInput) {
+		for (Data data : definedInput) {
 			if (!dataValues.containsKey(data.getSource())) {
 				throw new MissingInputDataException(ParallelForStartNodeOld.class.getCanonicalName() + ": " + name
 						+ " needs " + data.getSource() + "!");
@@ -73,7 +72,7 @@ public class ParallelStartNode extends Node {
 			if (dataValues == null) {
 				dataValues = new HashMap<String, Object>();
 			}
-			for (DataInsDataFlow data : definedInput) {
+			for (Data data : definedInput) {
 				if (input.containsKey(data.getSource())) {
 					dataValues.put(data.getSource(), input.get(data.getSource()));
 				}
@@ -116,7 +115,7 @@ public class ParallelStartNode extends Node {
 					return findParallelEndNode(child, depth - 1);
 				}
 
-			} else if (child instanceof ParallelStartNode) {
+			} else if (child instanceof ParallelStartNodeOld) {
 				return findParallelEndNode(child, depth + 1);
 			} else {
 				return findParallelEndNode(child, depth);

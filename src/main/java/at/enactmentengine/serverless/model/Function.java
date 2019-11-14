@@ -2,7 +2,7 @@ package at.enactmentengine.serverless.model;
 
 import java.util.List;
 
-import at.enactmentengine.serverless.nodes.FunctionNode;
+import at.enactmentengine.serverless.nodes.FunctionNodeOld;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 
@@ -59,9 +59,9 @@ public class Function extends WorkflowElement {
 		this.dataOuts = dataOuts;
 	}
 
-	public FunctionNode toFunction() {
+	public FunctionNodeOld toFunction() {
 
-		return new FunctionNode(name, type, properties, dataIns, dataOuts);
+		return new FunctionNodeOld(name, type, properties, dataIns, dataOuts);
 	}
 
 	/**
@@ -70,7 +70,7 @@ public class Function extends WorkflowElement {
 	 */
 	@Override
 	public ListPair<Node, Node> toNodeList() {
-		FunctionNode f = new FunctionNode(name, type, properties, dataIns, dataOuts);
+		FunctionNodeOld f = new FunctionNodeOld(name, type, properties, dataIns, dataOuts);
 		return new ListPair<Node, Node>(f, f);
 	}
 

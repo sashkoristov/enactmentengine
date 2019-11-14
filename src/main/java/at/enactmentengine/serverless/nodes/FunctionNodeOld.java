@@ -5,10 +5,6 @@ import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
 import at.enactmentengine.serverless.model.Data;
 import at.enactmentengine.serverless.model.Property;
-import com.dps.afcl.functions.objects.DataIns;
-import com.dps.afcl.functions.objects.DataOuts;
-import com.dps.afcl.functions.objects.DataOutsAtomic;
-import com.dps.afcl.functions.objects.PropertyConstraint;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import dps.invoker.*;
@@ -24,15 +20,15 @@ import java.util.*;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class FunctionNode extends Node {
-	final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
-	private List<PropertyConstraint> properties;
-	private List<DataOutsAtomic> output;
-	private List<DataIns> input;
+public class FunctionNodeOld extends Node {
+	final static Logger logger = LoggerFactory.getLogger(FunctionNodeOld.class);
+	private List<Property> properties;
+	private List<Data> output;
+	private List<Data> input;
 	private FaaSInvoker faasInvoker = new DockerInvoker();
 	private Map<String, Object> result;
 
-	public FunctionNode(String name, String type, List<PropertyConstraint> properties, List<DataIns> input, List<DataOutsAtomic> output) {
+	public FunctionNodeOld(String name, String type, List<Property> properties, List<Data> input, List<Data> output) {
 		super(name, type);
 		this.output = output;
 		if (output == null) {
@@ -55,13 +51,13 @@ public class FunctionNode extends Node {
 
 		try {
 			if(input != null){
-				for (DataIns data : input) {
+				for (Data data : input) {
 					if (!dataValues.containsKey(data.getSource())) {
 						throw new MissingInputDataException(
-								FunctionNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
+								FunctionNodeOld.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
 					} else {
 						// if (data.getPass()!=null && data.getPass().equals("true"))
-						if (data.getPassing() != null && data.getPassing())
+						if (data.isPassing())
 							outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
 						else
 							functionInputs.put(data.getName(), dataValues.get(data.getSource()));
@@ -106,7 +102,7 @@ public class FunctionNode extends Node {
 		try {
 			JsonObject jso = new Gson().fromJson(resultString, JsonObject.class);
 
-			for (DataOutsAtomic data : output) {
+			for (Data data : output) {
 				if (out.containsKey(name + "/" + data.getName())) {
 					continue;
 				}
@@ -142,7 +138,7 @@ public class FunctionNode extends Node {
 			this.faasInvoker = new DummyInvoker();
 			return null;
 		}
-		for (PropertyConstraint p : properties) {
+		for (Property p : properties) {
 			if (p.getName().equals("resource")) {
 				resourceLink = p.getValue();
 				break;

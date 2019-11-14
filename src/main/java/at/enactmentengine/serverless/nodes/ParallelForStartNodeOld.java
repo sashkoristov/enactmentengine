@@ -1,17 +1,5 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
-import com.dps.afcl.functions.objects.DataIns;
-import com.dps.afcl.functions.objects.LoopCounter;
-import com.dps.afcl.functions.objects.dataflow.DataFlowBlock;
-import com.dps.afcl.functions.objects.dataflow.DataFlowObject;
-import com.dps.afcl.functions.objects.dataflow.DataFlowString;
-import com.dps.afcl.functions.objects.dataflow.DataInsDataFlow;
-import com.google.gson.JsonArray;
-import org.apache.commons.lang3.NotImplementedException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,16 +8,27 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.NotImplementedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.gson.JsonArray;
+
+import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.model.Data;
+import at.enactmentengine.serverless.model.DataFlow;
+import at.enactmentengine.serverless.model.LoopCounter;
+
 /**
  * Control node which manages the tasks at the start of a parallel for loop.
  * 
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class ParallelForStartNode extends Node {
-	final static Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
+public class ParallelForStartNodeOld extends Node {
+	final static Logger logger = LoggerFactory.getLogger(ParallelForStartNodeOld.class);
 	// private String distribution;
-	private List<DataInsDataFlow> definedInput;
+	private List<Data> definedInput;
 	private Map<String, Object> counterValues;
 	private int counterStart;
 	private int counterEnd;
@@ -37,7 +36,7 @@ public class ParallelForStartNode extends Node {
 	private String[] counterVariableNames;
 	private static int MAX_NUMBER_THREADS = 10000;
 
-	public ParallelForStartNode(String name, String type, List<DataInsDataFlow> definedInput, LoopCounter loopCounter) {
+	public ParallelForStartNodeOld(String name, String type, List<Data> definedInput, LoopCounter loopCounter) {
 		super(name, type);
 		this.definedInput = definedInput;
 		counterVariableNames = new String[3];
@@ -80,7 +79,7 @@ public class ParallelForStartNode extends Node {
 			if (counterValues == null) {
 				counterValues = new HashMap<String, Object>();
 			}
-			for (DataIns data : definedInput) {
+			for (Data data : definedInput) {
 				if (input.containsKey(data.getSource())) {
 					dataValues.put(data.getSource(), input.get(data.getSource()));
 				}
@@ -101,9 +100,9 @@ public class ParallelForStartNode extends Node {
 	@Override
 	public Boolean call() throws Exception {
 		final Map<String, Object> outVals = new HashMap<>();
-		for (DataIns data : definedInput) {
+		for (Data data : definedInput) {
 			if (!dataValues.containsKey(data.getSource())) {
-				throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
+				throw new MissingInputDataException(ParallelForStartNodeOld.class.getCanonicalName() + ": " + name
 						+ " needs " + data.getSource() + "!");
 			} else {
 				outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
@@ -147,7 +146,7 @@ public class ParallelForStartNode extends Node {
 		for (String counterKeyName : counterVariableNames) {
 			if (counterKeyName != null && !counterValues.containsKey(counterKeyName)) {
 				throw new MissingInputDataException(
-						ParallelForStartNode.class.getCanonicalName() + ": " + name + " needs " + counterKeyName + "!");
+						ParallelForStartNodeOld.class.getCanonicalName() + ": " + name + " needs " + counterKeyName + "!");
 			}
 		}
 		if (counterVariableNames[0] != null) {
@@ -159,11 +158,10 @@ public class ParallelForStartNode extends Node {
 		if (counterVariableNames[2] != null) {
 			counterStepSize = Integer.parseInt((String) counterValues.get(counterVariableNames[2]));
 		}
-		logger.info("Counter values for " + ParallelForStartNode.class.getCanonicalName() + ": counterStart: "
+		logger.info("Counter values for " + ParallelForStartNodeOld.class.getCanonicalName() + ": counterStart: "
 				+ counterStart + ", counterEnd: " + counterEnd + ", stepSize: " + counterStepSize);
 
-		System.out.println("Child: " + children.get(0).getName());
-		ParallelForEndNode endNode = findParallelForEndNode(children.get(0), 0);
+		ParallelForEndNodeOld endNode = findParallelForEndNode(children.get(0), 0);
 
 		for (int i = counterStart; i < counterEnd - 1; i += counterStepSize) {
 			Node node = (Node) children.get(0).clone(endNode);
@@ -171,6 +169,7 @@ public class ParallelForStartNode extends Node {
 
 		}
 		endNode.setNumberOfChildren(children.size());
+
 	}
 
 	/**
@@ -180,16 +179,16 @@ public class ParallelForStartNode extends Node {
 	 * @param depth
 	 * @return
 	 */
-	private ParallelForEndNode findParallelForEndNode(Node currentNode, int depth) {
+	private ParallelForEndNodeOld findParallelForEndNode(Node currentNode, int depth) {
 		for (Node child : currentNode.getChildren()) {
-			if (child instanceof ParallelForEndNode) {
+			if (child instanceof ParallelForEndNodeOld) {
 				if (depth == 0) {
-					return (ParallelForEndNode) child;
+					return (ParallelForEndNodeOld) child;
 				} else {
 					return findParallelForEndNode(child, depth - 1);
 				}
 
-			} else if (child instanceof ParallelForStartNode) {
+			} else if (child instanceof ParallelForStartNodeOld) {
 				return findParallelForEndNode(child, depth + 1);
 			} else {
 				return findParallelForEndNode(child, depth);
@@ -208,24 +207,25 @@ public class ParallelForStartNode extends Node {
 	 */
 	private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) throws Exception {
 		ArrayList<Map<String, Object>> values = null;
-		for (DataInsDataFlow data : definedInput) {
+		for (Data data : definedInput) {
 			if (data.getDataFlow() == null) {
 				continue;
 			}
-
-			DataFlowObject dataFlowObject = data.getDataFlow();
-
-			if(dataFlowObject instanceof DataFlowBlock){
-				DataFlowBlock tmp = (DataFlowBlock) dataFlowObject;
-				if(tmp.getSize() instanceof DataFlowString){
-					values = distributeOutValsBlock(data, ((DataFlowString) tmp.getSize()).getStr(), childs);
-					return values;
-				}else{
-					throw new NotImplementedException("NESTED BLOCK data flow type for distribution is not implemented.");
-				}
-			}else{
+			DataFlow dataFlow = data.getDataFlow();
+			switch (dataFlow.getType()) {
+			case "BLOCK":
+				values = distributeOutValsBlock(data, dataFlow.getSize().getValue(), childs);
+				return values;
+			case "REPLICATE":
+				throw new NotImplementedException("REPLICATE distribution is not implemented.");
+			case "ELEMENT_INDEX":
+				throw new NotImplementedException("ELEMENT INDEX distribution is not implemented.");
+			case "SINGLE":
+				throw new NotImplementedException("SINGLE distribution is not implemented.");
+			default:
 				throw new NotImplementedException("Data flow type for distribution is not implemented.");
 			}
+
 		}
 		return values;
 	}
@@ -239,7 +239,7 @@ public class ParallelForStartNode extends Node {
 	 * @param childs    The number of children.
 	 * @return An ArrayList with the data blocks.
 	 */
-	private ArrayList<Map<String, Object>> distributeOutValsBlock(DataInsDataFlow data, String blockSize, int childs) {
+	private ArrayList<Map<String, Object>> distributeOutValsBlock(Data data, String blockSize, int childs) {
 		JsonArray jsonArr = (JsonArray) dataValues.get(data.getSource());
 		int size = Integer.parseInt(blockSize);
 		JsonArray distributedArray = new JsonArray();

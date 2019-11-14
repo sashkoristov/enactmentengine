@@ -2,6 +2,7 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.cloudant.client.api.ClientBuilder;
 import com.cloudant.client.api.CloudantClient;
@@ -42,10 +43,12 @@ public class OpenWhiskHandler {
 			jsonMap = new Gson().fromJson(args.get("params").toString(), HashMap.class);
 
 		JsonObject response = new JsonObject();
-		InputStream in;
+		String in;
 
-		if (filename != null)
-			in = getFileFromCloudant(filename);
+		if (filename != null) {
+            InputStream tmp = getFileFromCloudant(filename);
+            in = "test";
+        }
 		else {
 			response.addProperty("result", "No filename defined!");
 			return response;
@@ -53,12 +56,8 @@ public class OpenWhiskHandler {
 
 		System.out.println(in + " ");
 
-		if (in == null) {
-			response.addProperty("result", "Input file not found!");
-			return response;
-		}
 		logger.debug("Parsing file " + filename + "!");
-		ExecutableWorkflow ex = yamlParser.parseExecutableWorkflowOld(in);
+		ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(in);
 		if (ex != null) {
 			Map<String, Object> input = new HashMap<String, Object>();
 

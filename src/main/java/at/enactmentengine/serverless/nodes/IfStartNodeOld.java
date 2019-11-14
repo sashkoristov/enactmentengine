@@ -1,15 +1,16 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
-import com.dps.afcl.functions.objects.ACondition;
-import com.dps.afcl.functions.objects.Condition;
-import com.dps.afcl.functions.objects.DataIns;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.model.Condition;
+import at.enactmentengine.serverless.model.ConditionElement;
+import at.enactmentengine.serverless.model.Data;
 
 /**
  * Control node which manages the tasks at the start of a if element.
@@ -17,12 +18,12 @@ import java.util.Map;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class IfStartNode extends Node {
+public class IfStartNodeOld extends Node {
 	private Condition condition;
-	private List<DataIns> dataIns;
-	final static Logger logger = LoggerFactory.getLogger(IfStartNode.class);
+	private List<Data> dataIns;
+	final static Logger logger = LoggerFactory.getLogger(IfStartNodeOld.class);
 
-	public IfStartNode(String name, List<DataIns> dataIns, Condition condition) {
+	public IfStartNodeOld(String name, List<Data> dataIns, Condition condition) {
 		super(name, "");
 		this.condition = condition;
 		this.dataIns = dataIns;
@@ -36,17 +37,17 @@ public class IfStartNode extends Node {
 	@Override
 	public Boolean call() throws Exception {
 		final Map<String, Object> ifInputValues = new HashMap<>();
-		for (DataIns data : dataIns) {
+		for (Data data : dataIns) {
 			if (!dataValues.containsKey(data.getSource())) {
 				throw new MissingInputDataException(
-						IfStartNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
+						IfStartNodeOld.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
 			} else {
 				ifInputValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
 			}
 		}
 		boolean evaluate = false;
 
-		for (ACondition conditionElement : condition.getConditions()) {
+		for (ConditionElement conditionElement : condition.getConditions()) {
 			evaluate = evaluate(conditionElement, ifInputValues);
 			// if combined with is "or" and one condition element is true the whole
 			// condition evaluates to true
@@ -84,7 +85,7 @@ public class IfStartNode extends Node {
 	 *         false.
 	 * @throws MissingInputDataException
 	 */
-	private boolean evaluate(ACondition conditionElement, Map<String, Object> ifInputValues)
+	private boolean evaluate(ConditionElement conditionElement, Map<String, Object> ifInputValues)
 			throws MissingInputDataException {
 		int data1 = parseCondition(conditionElement.getData1(), ifInputValues);
 		int data2 = parseCondition(conditionElement.getData2(), ifInputValues);
@@ -115,7 +116,7 @@ public class IfStartNode extends Node {
 		synchronized (this) {
 			if (dataValues == null)
 				dataValues = new HashMap<>();
-			for (DataIns data : dataIns) {
+			for (Data data : dataIns) {
 				if (input.containsKey(data.getSource())) {
 					dataValues.put(data.getSource(), input.get(data.getSource()));
 				}
@@ -147,7 +148,7 @@ public class IfStartNode extends Node {
 			}
 		} catch (Exception e) {
 			throw new MissingInputDataException(
-					IfStartNode.class.getCanonicalName() + ": " + name + " needs " + conditionName + "!");
+					IfStartNodeOld.class.getCanonicalName() + ": " + name + " needs " + conditionName + "!");
 		}
 
 		return conditionData;

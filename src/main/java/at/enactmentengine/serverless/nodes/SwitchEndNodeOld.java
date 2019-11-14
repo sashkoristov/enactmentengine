@@ -1,14 +1,14 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.model.Data;
-import com.dps.afcl.functions.objects.DataOuts;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import at.enactmentengine.serverless.model.Data;
 
 /**
  * Control node which manages the tasks at the end of a switch element.
@@ -16,12 +16,12 @@ import java.util.Map.Entry;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class SwitchEndNode extends Node {
-	private List<DataOuts> dataOuts;
+public class SwitchEndNodeOld extends Node {
+	private List<Data> dataOuts;
 	private Map<String, Object> switchResult = new HashMap<>();
-	final static Logger logger = LoggerFactory.getLogger(SwitchEndNode.class);
+	final static Logger logger = LoggerFactory.getLogger(SwitchEndNodeOld.class);
 
-	public SwitchEndNode(String name, List<DataOuts> dataOuts) {
+	public SwitchEndNodeOld(String name, List<Data> dataOuts) {
 		super(name, "");
 		this.dataOuts = dataOuts;
 	}
@@ -37,14 +37,14 @@ public class SwitchEndNode extends Node {
 
 		Map<String, Object> outputValues = new HashMap<>();
 
-		for (DataOuts data : dataOuts) {
+		for (Data data : dataOuts) {
 			for (Entry<String, Object> inputElement : switchResult.entrySet()) {
 				outputValues.put(name + "/" + data.getName(), inputElement.getValue());
 			}
 
 		}
 		if (outputValues.size() == 0) {
-			for (DataOuts data : dataOuts) {
+			for (Data data : dataOuts) {
 				if (data.getSource().contains("NULL")) {
 					outputValues.put(name + "/" + data.getName(), "NULL");
 				}
@@ -64,7 +64,7 @@ public class SwitchEndNode extends Node {
 	@Override
 	public void passResult(Map<String, Object> input) {
 		synchronized (this) {
-			for (DataOuts data : dataOuts) {
+			for (Data data : dataOuts) {
 				for (Entry<String, Object> inputElement : input.entrySet()) {
 					if (data.getSource().contains(inputElement.getKey())) {
 						switchResult.put(inputElement.getKey(), input.get(inputElement.getKey()));

@@ -4,8 +4,8 @@ import java.util.List;
 
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
-import at.enactmentengine.serverless.nodes.ParallelEndNode;
-import at.enactmentengine.serverless.nodes.ParallelStartNode;
+import at.enactmentengine.serverless.nodes.ParallelEndNodeOld;
+import at.enactmentengine.serverless.nodes.ParallelStartNodeOld;
 
 /**
  * Model class for a parallel workflow element.
@@ -53,14 +53,14 @@ public class WorkflowElementParallel extends WorkflowElement {
 	}
 
 	/**
-	 * Creates a ListPair which includes a ParallelStartNode and a ParallelEndNode.
+	 * Creates a ListPair which includes a ParallelStartNodeOld and a ParallelEndNodeOld.
 	 * This nodes are used for management purposes. The nodes between start and end
 	 * are linked together.
 	 */
 	@Override
 	public ListPair<Node, Node> toNodeList() {
-		ParallelStartNode start = new ParallelStartNode(name, "test", dataIns);
-		ParallelEndNode end = new ParallelEndNode(name, "test", dataOuts);
+		ParallelStartNodeOld start = new ParallelStartNodeOld(name, "test", dataIns);
+		ParallelEndNodeOld end = new ParallelEndNodeOld(name, "test", dataOuts);
 
 		for (int i = 0; i < parallelBody.size(); i++) {
 			ListPair<Node, Node> currentListPair = parallelBody.get(i).toNodeList();

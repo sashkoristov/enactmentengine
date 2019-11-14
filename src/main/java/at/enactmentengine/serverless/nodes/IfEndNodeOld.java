@@ -1,15 +1,14 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.model.Data;
-import com.dps.afcl.functions.objects.DataOuts;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.DataOutput;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import at.enactmentengine.serverless.model.Data;
 
 /**
  * Control node which manages the tasks at the end of a if element.
@@ -17,13 +16,13 @@ import java.util.Map.Entry;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class IfEndNode extends Node {
+public class IfEndNodeOld extends Node {
 
-	private List<DataOuts> dataOuts;
+	private List<Data> dataOuts;
 	private Map<String, Object> ifResult;
-	final static Logger logger = LoggerFactory.getLogger(IfEndNode.class);
+	final static Logger logger = LoggerFactory.getLogger(IfEndNodeOld.class);
 
-	public IfEndNode(String name, List<DataOuts> dataOuts) {
+	public IfEndNodeOld(String name, List<Data> dataOuts) {
 		super(name, "");
 		this.dataOuts = dataOuts;
 	}
@@ -37,7 +36,7 @@ public class IfEndNode extends Node {
 	public Boolean call() throws Exception {
 		Map<String, Object> outputValues = new HashMap<>();
 		if (dataOuts != null) {
-			for (DataOuts data : dataOuts) {
+			for (Data data : dataOuts) {
 				for (Entry<String, Object> inputElement : this.ifResult.entrySet()) {
 					outputValues.put(name + "/" + data.getName(), inputElement.getValue());
 				}
@@ -62,7 +61,7 @@ public class IfEndNode extends Node {
 				ifResult = new HashMap<String, Object>();
 			}
 			if (dataOuts != null) {
-				for (DataOuts data : dataOuts) {
+				for (Data data : dataOuts) {
 					for (Entry<String, Object> inputElement : input.entrySet()) {
 						if (data.getSource().contains(inputElement.getKey())) {
 							this.ifResult.put(inputElement.getKey(), input.get(inputElement.getKey()));

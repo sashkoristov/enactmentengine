@@ -2,12 +2,12 @@ package at.enactmentengine.serverless.model;
 
 import java.util.List;
 
+import at.enactmentengine.serverless.nodes.SwitchEndNodeOld;
+import at.enactmentengine.serverless.nodes.SwitchStartNodeOld;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
-import at.enactmentengine.serverless.nodes.SwitchEndNode;
-import at.enactmentengine.serverless.nodes.SwitchStartNode;
 
 /**
  * Model class for a switch workflow element.
@@ -67,15 +67,15 @@ public class WorkflowElementSwitch extends WorkflowElement {
 	}
 
 	/**
-	 * Creates a ListPair which includes a SwitchStartNode and a SwitchEndNode. This
+	 * Creates a ListPair which includes a SwitchStartNodeOld and a SwitchEndNodeOld. This
 	 * nodes are used for management purposes. For each switch case and for the
 	 * default case an own branch is created and the elements inside are linked
 	 * together. Every case is put between start- and endnode of the switch element.
 	 */
 	@Override
 	public ListPair<Node, Node> toNodeList() {
-		SwitchStartNode start = new SwitchStartNode(name, dataIns, dataEval, cases);
-		SwitchEndNode end = new SwitchEndNode(name, dataOuts);
+		SwitchStartNodeOld start = new SwitchStartNodeOld(name, dataIns, dataEval, cases);
+		SwitchEndNodeOld end = new SwitchEndNodeOld(name, dataOuts);
 		// switch cases
 		for (Case switchCase : cases) {
 			ListPair<Node, Node> switchPair = new ListPair<Node, Node>();

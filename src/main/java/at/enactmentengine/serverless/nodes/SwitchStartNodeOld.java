@@ -1,16 +1,16 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
-import at.enactmentengine.serverless.exception.NoSwitchCaseFulfilledException;
-import com.dps.afcl.functions.objects.Case;
-import com.dps.afcl.functions.objects.DataEval;
-import com.dps.afcl.functions.objects.DataIns;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.exception.NoSwitchCaseFulfilledException;
+import at.enactmentengine.serverless.model.Case;
+import at.enactmentengine.serverless.model.Data;
 
 /**
  * Control node which manages the tasks at the start of a switch element.
@@ -18,13 +18,13 @@ import java.util.Map;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class SwitchStartNode extends Node {
-	private List<DataIns> dataIns;
+public class SwitchStartNodeOld extends Node {
+	private List<Data> dataIns;
 	private List<Case> cases;
-	private DataEval dataEval;
-	final static Logger logger = LoggerFactory.getLogger(SwitchStartNode.class);
+	private Data dataEval;
+	final static Logger logger = LoggerFactory.getLogger(SwitchStartNodeOld.class);
 
-	public SwitchStartNode(String name, List<DataIns> dataIns, DataEval dataEval, List<Case> cases) {
+	public SwitchStartNodeOld(String name, List<Data> dataIns, Data dataEval, List<Case> cases) {
 		super(name, "");
 		this.dataIns = dataIns;
 		this.dataEval = dataEval;
@@ -38,17 +38,17 @@ public class SwitchStartNode extends Node {
 	@Override
 	public Boolean call() throws Exception {
 		final Map<String, Object> switchInputValues = new HashMap<>();
-		for (DataIns data : dataIns) {
+		for (Data data : dataIns) {
 			if (!dataValues.containsKey(data.getSource())) {
 				throw new MissingInputDataException(
-						SwitchStartNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
+						SwitchStartNodeOld.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
 			} else {
 				switchInputValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
 			}
 		}
 		if (!dataValues.containsKey(dataEval.getSource())) {
 			throw new MissingInputDataException(
-					SwitchStartNode.class.getCanonicalName() + ": " + name + " needs " + dataEval.getSource() + "!");
+					SwitchStartNodeOld.class.getCanonicalName() + ": " + name + " needs " + dataEval.getSource() + "!");
 		}
 
 		logger.info("Executing " + name + " SwitchStartNodeOld");
@@ -119,7 +119,7 @@ public class SwitchStartNode extends Node {
 		synchronized (this) {
 			if (dataValues == null)
 				dataValues = new HashMap<>();
-			for (DataIns data : dataIns) {
+			for (Data data : dataIns) {
 				if (input.containsKey(data.getSource())) {
 					dataValues.put(data.getSource(), input.get(data.getSource()));
 				}

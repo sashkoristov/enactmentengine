@@ -3,7 +3,7 @@ package at.enactmentengine.serverless.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 
@@ -79,7 +79,7 @@ public class Workflow {
 	 * 
 	 * @return an executable workflow.
 	 */
-	public ExecutableWorkflow toExecutableWorkflow() {
+	public ExecutableWorkflowOld toExecutableWorkflow() {
 		ListPair<Node, Node> workflowPair = new ListPair<Node, Node>();
 		ListPair<Node, Node> startNode = workflowBodyParsed.get(0).toNodeList();
 		workflowPair.setStart(startNode.getStart());
@@ -93,6 +93,6 @@ public class Workflow {
 		}
 		workflowPair.setEnd(currentEnd);
 
-		return new ExecutableWorkflow(name, workflowPair, dataIns);
+		return new ExecutableWorkflowOld(name, workflowPair, dataIns);
 	};
 }

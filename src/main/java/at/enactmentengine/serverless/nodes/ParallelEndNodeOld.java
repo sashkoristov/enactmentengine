@@ -1,15 +1,15 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.model.Data;
-import com.dps.afcl.functions.objects.DataOuts;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import at.enactmentengine.serverless.model.Data;
 
 /**
  * Control node which manages the tasks at the end of a parallel loop.
@@ -17,14 +17,14 @@ import java.util.Map.Entry;
  * @author markusmoosbrugger, jakobnoeckl
  *
  */
-public class ParallelEndNode extends Node {
-	final static Logger logger = LoggerFactory.getLogger(ParallelEndNode.class);
+public class ParallelEndNodeOld extends Node {
+	final static Logger logger = LoggerFactory.getLogger(ParallelEndNodeOld.class);
 	private int waitcounter = 0;
-	private List<DataOuts> output = new ArrayList<>();
+	private List<Data> output = new ArrayList<>();
 	private Map<String, Object> parallelResult = new HashMap<>();
 	private Node currentCopy;
 
-	public ParallelEndNode(String name, String type, List<DataOuts> output) {
+	public ParallelEndNodeOld(String name, String type, List<Data> output) {
 		super(name, type);
 		this.output = output;
 	}
@@ -43,7 +43,7 @@ public class ParallelEndNode extends Node {
 
 		Map<String, Object> outputValues = new HashMap<>();
 		if (output != null) {
-			for (DataOuts data : output) {
+			for (Data data : output) {
 				String key = name + "/" + data.getName();
 				if (parallelResult.containsKey(data.getSource())) {
 					outputValues.put(key, parallelResult.get(data.getSource()));
@@ -83,7 +83,7 @@ public class ParallelEndNode extends Node {
 		synchronized (this) {
 			if (output == null)
 				return;
-			for (DataOuts data : output) {
+			for (Data data : output) {
 				if (input.containsKey(data.getSource())) {
 					parallelResult.put(data.getSource(), input.get(data.getSource()));
 				}

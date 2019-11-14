@@ -2,6 +2,7 @@ package at.enactmentengine.serverless.parser;
 
 import at.enactmentengine.serverless.model.*;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 import com.dps.afcl.utils.Utils;
@@ -25,6 +26,7 @@ import java.util.Map.Entry;
 /**
  * 
  * @author markusmoosbrugger, jakobnoeckl
+ * extended by @author stefanpedratscher
  *
  *         Class for parsing YAML files into executable workflows.
  */
@@ -42,24 +44,23 @@ public class YAMLParser {
 
 		com.dps.afcl.Workflow workflow = Utils.readYAMLNoValidation(filename);
 		if (workflow != null) {
+			NodeListHelper nodeListHelper = new NodeListHelper();
+
 			ListPair<Node, Node> workflowPair = new ListPair<Node, Node>();
-			/*
-			* -> executableWorkflow = workflow.toExecutableWorkflow();
-		ListPair<Node, Node> workflowPair = new ListPair<Node, Node>();
-		ListPair<Node, Node> startNode = workflowBodyParsed.get(0).toNodeList();
-		workflowPair.setStart(startNode.getStart());
-		Node currentEnd = startNode.getEnd();
+			ListPair<Node, Node> startNode = nodeListHelper.toNodeList(workflow.getWorkflowBody().get(0));
+			workflowPair.setStart(startNode.getStart());
+			Node currentEnd = startNode.getEnd();
 
-		for (int i = 1; i < workflowBodyParsed.size(); i++) {
-			ListPair<Node, Node> current = workflowBodyParsed.get(i).toNodeList();
-			currentEnd.addChild(current.getStart());
-			current.getStart().addParent(currentEnd);
-			currentEnd = current.getEnd();
-		}
-		workflowPair.setEnd(currentEnd);
+			for (int i = 1; i < workflow.getWorkflowBody().size(); i++) {
+				ListPair<Node, Node> current = nodeListHelper.toNodeList(workflow.getWorkflowBody().get(i));
+				currentEnd.addChild(current.getStart());
+				current.getStart().addParent(currentEnd);
+				currentEnd = current.getEnd();
+			}
+			workflowPair.setEnd(currentEnd);
 
-		return new ExecutableWorkflow(name, workflowPair, dataIns);
-			*/
+			executableWorkflow = new ExecutableWorkflow(workflow.getName(), workflowPair, workflow.getDataIns());
+
 			logger.info("Workflow was converted into an executable workflow.");
 		}
 
@@ -72,15 +73,15 @@ public class YAMLParser {
 	 * @param file The YAML file.
 	 * @return Instance of class Executable workflow.
 	 */
-	public ExecutableWorkflow parseExecutableWorkflowOld(InputStream file) {
-		ExecutableWorkflow executableWorkflow = null;
+	public ExecutableWorkflowOld parseExecutableWorkflowOld(InputStream file) {
+		ExecutableWorkflowOld executableWorkflowOld = null;
 		at.enactmentengine.serverless.model.Workflow workflow = parseYAMLFile(file);
 		if (workflow != null) {
-			executableWorkflow = workflow.toExecutableWorkflow();
+			executableWorkflowOld = workflow.toExecutableWorkflow();
 			logger.info("Workflow was converted into an executable workflow.");
 		}
 
-		return executableWorkflow;
+		return executableWorkflowOld;
 	}
 
 	/**
