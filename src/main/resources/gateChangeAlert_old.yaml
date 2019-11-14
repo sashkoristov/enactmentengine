@@ -1,0 +1,144 @@
+---
+name: "gateChangeAlert"
+dataIns:
+- name: "InVal"
+  type: "number"
+  source: "some source"
+workflowBody:
+- function:
+    name: "f19"
+    type: "f19Type"
+    properties:
+    - name: "resource"
+      value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1"
+    dataIns:
+    - name: "inVal"
+      type: "number"
+      source: "gateChangeAlert/InVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+- function:
+    name: "f20"
+    type: "f20Type"
+    properties:
+    - name: "resource"
+      value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f20"
+    dataIns:
+    - name: "inVal"
+      type: "string"
+      source: "f19/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "collection"
+    - name: "OutVal2"
+      type: "number"
+- parallelFor:
+    name: "parallelFor"
+    dataIns:
+    - name: "InVal"
+      type: "collection"
+      source: "f20/OutVal"
+    loopCounter:
+      name: "counter"
+      type: "number"
+      from: "0"
+      to: "f20/OutVal2"
+    loopBody:
+    - parallel:
+        name: "parallelF21F22"
+        dataIns:
+        - name: "InVal"
+          type: "collection"
+          source: "parallelFor/InVal"
+          constraints:
+          - name: "distribution"
+            value: "BLOCK(5)"
+        parallelBody:
+        - section:
+          - function:
+              name: "f21"
+              type: "f21Type"
+              properties:
+              - name: "resource"
+                value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/ff6"
+              dataIns:
+              - name: "inVal"
+                type: "string"
+                source: "parallelF21F22/InVal"
+        - section:
+          - function:
+              name: "f22"
+              type: "f22Type"
+              properties:
+              - name: "resource"
+                value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/ff6"
+              dataIns:
+              - name: "inVal"
+                type: "string"
+                source: "parallelF21F22/InVal"
+              dataOuts:
+              - name: "OutVal"
+                type: "number"
+          - if:
+              name: "ifThenElse"
+              dataIns:
+              - name: "InVal"
+                type: "number"
+                source: "f22/OutVal"
+              condition:
+                combinedWith: "and"
+                conditions:
+                - data1: "ifThenElse/InVal"
+                  data2: "5"
+                  operator: ">"
+              then:
+              - function:
+                  name: "f23"
+                  type: "f23Type"
+                  properties:
+                  - name: "resource"
+                    value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f3"
+                  dataIns:
+                  - name: "inVal"
+                    type: "number"
+                    source: "ifThenElse/InVal"
+                  dataOuts:
+                  - name: "OutVal"
+                    type: "string"
+              else:
+              - function:
+                  name: "f24"
+                  type: "f24Type"
+                  properties:
+                  - name: "resource"
+                    value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f4"
+                  dataIns:
+                  - name: "inVal"
+                    type: "number"
+                    source: "ifThenElse/InVal"
+                  dataOuts:
+                  - name: "OutVal"
+                    type: "string"
+              dataOuts:
+              - name: "OutVal"
+                type: "string"
+                source: "f23/OutVal,f24/OutVal"
+        dataOuts:
+        - name: "OutVal"
+          type: "string"
+          source: "ifThenElse/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "collection"
+      source: "parallelF21F22/OutVal"
+- function:
+    name: "f8"
+    type: "f8Type"
+    properties:
+    - name: "resource"
+      value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/ff6"
+    dataIns:
+    - name: "inVal"
+      type: "collection"
+      source: "parallelFor/OutVal"

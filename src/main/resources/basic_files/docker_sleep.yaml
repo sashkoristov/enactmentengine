@@ -1,0 +1,20 @@
+---
+name: "docker_sleep"
+dataIns:
+- name: "InVal"
+  type: "string"
+  source: "some source"
+workflowBody:
+- function:
+    name: "sleep"
+    type: "sleepType"
+    dataIns:
+    - name: "InVal"
+      type: "number"
+      source: "docker_sleep/InVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "java:tcp://3.17.5.51:2375/noeckl96/sleep:v1"

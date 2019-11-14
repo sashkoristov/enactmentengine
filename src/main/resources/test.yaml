@@ -1,0 +1,110 @@
+---
+workflow:
+name: "rackStatusDetection"
+dataIns:
+  - name: "cameraData"
+    source: "some camera source"
+  - name: "sensorData"
+    source: "some sensor source"
+workflowBody:
+  - parallel:
+    name: "par"
+    dataIns:
+      - name: "inVal"
+        source: "shopLottery/inVal"
+    parallelBody:
+      - section:
+          - function:
+            name: "f1"
+            type: "f1Type"
+            properties:
+              - name: "resource"
+                value: "java:LambdaLink;python:OpenWhiskLink"
+              - name: "encryption"
+                value: "encryption"
+              - name: "key"
+                value: "encryptionKey"
+            dataIns:
+              - name: "inVal"
+                source: "par/inVal"
+            dataOuts:
+              - name: "outVal"
+      - section:
+          - function:
+            name: "f6"
+            type: "f6Type"
+            properties:
+              - name: "resource"
+                value: "java:LambdaLink;python:OpenWhiskLink"
+              - name: "encryption"
+                value: "encryption"
+              - name: "key"
+                value: "encryptionKey"
+            dataIns: []
+            dataOuts:
+              - name: "outVal"
+  - parallelFor:
+    name: "parFor"
+    dataIns:
+      - name: "inValData"
+        source: "par/outValData"
+        constraint:
+          - name: "distribution"
+            value: "EVENLY"
+      - name: "inValN"
+        source: "par/outValN"
+    loopCounter:
+      var: "{n}"
+      selection: "1:parFor/inValN:1"
+    loopBody:
+      - function:
+        name: "f2"
+        type: "f2Type"
+        properties:
+          - name: "resource"
+            value: "java:LambdaLink;python:OpenWhiskLink"
+          - name: "encryption"
+            value: "encryption"
+          - name: "key"
+            value: "encryptionKey"
+        dataIns:
+          - name: "inVal"
+            source: "parFor/inValData"
+        dataOuts:
+          - name: "outVal"
+      - function:
+        name: "f3"
+        type: "f3Type"
+        properties:
+          - name: "resource"
+            value: "java:LambdaLink;python:OpenWhiskLink"
+          - name: "encryption"
+            value: "encryption"
+          - name: "key"
+            value: "encryptionKey"
+        dataIns:
+          - name: "inVal"
+            source: "f2/outVal"
+        dataOuts:
+          - name: "outVal"
+      - function:
+        name: "f4"
+        type: "f4Type"
+        properties:
+          - name: "resource"
+            value: "python:OpenWhiskLink"
+          - name: "encryption"
+            value: "encryption"
+          - name: "key"
+            value: "encryptionKey"
+        dataIns:
+          - name: "inVal"
+            source: "f3/outVal"
+        dataOuts:
+          - name: "outVal"
+    dataOuts:
+      - name: "outVal"
+        source: "f4/outVal"
+dataOuts:
+  - name: "outVal"
+    source: "f6/outVal"

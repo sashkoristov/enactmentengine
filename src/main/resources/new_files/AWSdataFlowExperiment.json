@@ -1,0 +1,46 @@
+{
+  "StartAt": "f0",
+  "States": {
+    "f0": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:170392512081:function:EE_experiment_f0",
+      "ResultPath": "$.f0",
+      "Next": "f1.1"
+    },
+    "f1.1": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:170392512081:function:EE_experiment_f1",
+      "ResultPath": "$.f11",
+      "InputPath": "$.f0",
+      "Next": "f1.2"
+    },
+    "f1.2": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:170392512081:function:EE_experiment_f12",
+      "ResultPath": "$.f12",
+      "InputPath": "$.f0",
+      "Next": "f1.3"
+    },
+    "f1.3": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:170392512081:function:EE_experiment_f13",
+      "ResultPath": "$.f13",
+      "InputPath": "$.f0",
+      "Next": "f1.4"
+    },
+    "f1.4": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:170392512081:function:EE_experiment_f14",
+      "ResultPath": "$.f14",
+      "InputPath": "$.f0",
+      "Next": "f2"
+    },
+    "f2": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:170392512081:function:EE_experiment_f2",
+      "ResultPath": "$.f2",
+      "InputPath": "$.f0",
+      "End": true
+    }
+  }
+}

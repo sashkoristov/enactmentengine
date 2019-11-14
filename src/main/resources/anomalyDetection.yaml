@@ -1,0 +1,344 @@
+---
+name: "anomalyDetection"
+dataIns:
+- name: "inVal"
+  type: "number"
+  source: "some source"
+workflowBody:
+- function:
+    name: "f1"
+    type: "f1Type"
+    properties:
+    - name: "resource"
+      value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1switch"
+    dataIns:
+    - name: "inVal"
+      type: "number"
+      source: "anomalyDetection/inVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    - name: "OutVal2"
+      type: "string"
+- switch:
+    name: "switchF2F3F4"
+    dataIns:
+    - name: "inVal"
+      type: "string"
+      source: "f1/OutVal"
+    dataEval:
+      name: "value"
+      type: "string"
+      source: "f1/OutVal2"
+    cases:
+    - value: "two"
+      functions:
+      - function:
+          name: "f2"
+          type: "f2Type"
+          properties:
+          - name: "resource"
+            value: "https://138.232.66.185:31001/api/v1/namespaces/guest/actions/f3"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF2F3F4/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "number"
+    - value: "three"
+      functions:
+      - function:
+          name: "f3"
+          type: "f3Type"
+          properties:
+          - name: "resource"
+            value: "https://138.232.66.185:31001/api/v1/namespaces/guest/actions/f3"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF2F3F4/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "number"
+    - value: "four"
+      functions:
+      - function:
+          name: "f4"
+          type: "f4Type"
+          properties:
+          - name: "resource"
+            value: "https://138.232.66.185:31001/api/v1/namespaces/guest/actions/f3"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF2F3F4/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "number"
+    dataOuts:
+    - name: "OutVal"
+      type: "collection"
+      source: "f2/OutVal,f3/OutVal,f4/OutVal,NULL"
+- function:
+    name: "f18"
+    type: "f18Type"
+    properties:
+    - name: "resource"
+      value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1switch"
+    dataIns:
+    - name: "inVal"
+      type: "collection"
+      source: "switchF2F3F4/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    - name: "OutVal2"
+      type: "string"
+- switch:
+    name: "switchF5F6F7"
+    dataIns:
+    - name: "inVal"
+      type: "string"
+      source: "f18/OutVal"
+    dataEval:
+      name: "value"
+      type: "string"
+      source: "f18/OutVal2"
+    cases:
+    - value: "five"
+      functions:
+      - function:
+          name: "f5"
+          type: "f5Type"
+          properties:
+          - name: "resource"
+            value: "tcp://3.14.87.17:2375/noeckl96/f5:v1"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF5F6F7/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "string"
+      - parallel:
+          name: "parallelF8F9F10F11"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "f5/OutVal"
+          parallelBody:
+          - section:
+            - function:
+                name: "f8"
+                type: "f8Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF8F9F10F11/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          - section:
+            - function:
+                name: "f9"
+                type: "f9Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF8F9F10F11/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          - section:
+            - function:
+                name: "f10"
+                type: "f10Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF8F9F10F11/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          - section:
+            - function:
+                name: "f11"
+                type: "f11Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF8F9F10F11/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          dataOuts:
+          - name: "OutVal"
+            type: "collection"
+            source: "f8/OutVal,f9/OutVal,f10/OutVal,f11/OutVal"
+    - value: "six"
+      functions:
+      - function:
+          name: "f6"
+          type: "f6Type"
+          properties:
+          - name: "resource"
+            value: "https://138.232.66.185:31001/api/v1/namespaces/guest/actions/f3"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF5F6F7/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "string"
+      - parallel:
+          name: "parallelF12F13F14"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "f6/OutVal"
+          parallelBody:
+          - section:
+            - function:
+                name: "f12"
+                type: "f12Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f2"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF12F13F14/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          - section:
+            - function:
+                name: "f13"
+                type: "f13Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f2"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF12F13F14/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          - section:
+            - function:
+                name: "f14"
+                type: "f14Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f2"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF12F13F14/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          dataOuts:
+          - name: "OutVal"
+            type: "collection"
+            source: "f12/OutVal,f13/OutVal,f14/OutVal"
+    - value: "seven"
+      functions:
+      - function:
+          name: "f7"
+          type: "f7Type"
+          properties:
+          - name: "resource"
+            value: "https://138.232.66.185:31001/api/v1/namespaces/guest/actions/f3"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF5F6F7/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "string"
+      - parallel:
+          name: "parallelF15F16"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "f7/OutVal"
+          parallelBody:
+          - section:
+            - function:
+                name: "f15"
+                type: "f15Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f3"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF15F16/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          - section:
+            - function:
+                name: "f16"
+                type: "f16Type"
+                properties:
+                - name: "resource"
+                  value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f3"
+                dataIns:
+                - name: "inVal"
+                  type: "string"
+                  source: "parallelF15F16/inVal"
+                dataOuts:
+                - name: "OutVal"
+                  type: "string"
+          dataOuts:
+          - name: "OutVal"
+            type: "collection"
+            source: "f15/OutVal,f16/OutVal"
+    - value: "empty"
+      functions:
+      - function:
+          name: "dummy"
+          dataIns:
+          - name: "inVal"
+            type: "string"
+            source: "switchF5F6F7/inVal"
+          dataOuts:
+          - name: "OutVal"
+            type: "string"
+    dataOuts:
+    - name: "OutVal"
+      type: "collection"
+      source: "parallelF8F9F10F11/OutVal,parallelF12F13F14/OutVal,parallelF15F16/OutVal,dummy/OutVal,NULL"
+- function:
+    name: "f17"
+    type: "f17Type"
+    properties:
+    - name: "resource"
+      value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/ff6" 
+    dataIns:
+    - name: "inVal"
+      type: "collection"
+      source: "switchF5F6F7/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+dataOuts:
+- name: "OutVal"
+  type: "string"
+  source: "f17/OutVal"

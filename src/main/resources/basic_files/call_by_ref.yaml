@@ -1,0 +1,46 @@
+---
+name: "call_by_value"
+dataIns:
+- name: "InVal"
+  type: "number"
+  source: "some source"
+workflowBody:
+- function:
+    name: "saveNumber"
+    type: "saveNumberType"
+    dataIns:
+    - name: "InVal"
+      type: "number"
+      source: "call_by_value/InVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "python:https://xhacgxzx5h.execute-api.us-east-2.amazonaws.com/basic/store-item"
+- function:
+    name: "increaseValueOfReference"
+    type: "increaseValueOfReferenceType"
+    dataIns:
+    - name: "InVal"
+      type: "string"
+      source: "saveNumber/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "nodejs:https://xhacgxzx5h.execute-api.us-east-2.amazonaws.com/basic/reference"
+- function:
+    name: "getNumber"
+    type: "getNumberType"
+    dataIns:
+    - name: "InVal"
+      type: "string"
+      source: "increaseValueOfReference/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "nodejs:https://xhacgxzx5h.execute-api.us-east-2.amazonaws.com/basic/get-item"

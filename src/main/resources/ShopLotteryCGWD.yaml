@@ -1,0 +1,125 @@
+---
+workflow:
+name: "shopLottery"
+dataIns:
+  - name: "inVal"
+    source: "some source"
+workflowBody:
+  - parallel:
+    name: "par"
+    dataIns:
+      - name: "inVal"
+        source: "shopLottery/inVal"
+    parallelBody:
+      - section:
+          - function:
+            name: "f1"
+            type: "f1Type"
+            properties:
+              - name: "resource"
+                value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f1"
+              - name: "encryption"
+                value: "encryption"
+              - name: "key"
+                value: "encryptionKey"
+            dataIns:
+              - name: "inVal"
+                source: "par/inVal"
+            dataOuts:
+              - name: "outVal"
+      - section:
+          - function:
+            name: "f6"
+            type: "f6Type"
+            properties:
+              - name: "resource"
+                value: "tcp://18.223.15.115:2375/f6"
+              - name: "encryption"
+                value: "encryption"
+              - name: "key"
+                value: "encryptionKey"
+            dataIns: []
+            dataOuts:
+              - name: "outVal"
+    dataOuts:
+      - name: "outValData"
+        source: "f1/outVal"
+      - name: "outValN"
+        source: "f6/outVal"
+  - parallelFor:
+    name: "parFor"
+    dataIns:
+      - name: "inValData"
+        source: "par/outValData"
+        constraint:
+          - name: "distribution"
+            value: "EVENLY"
+      - name: "inValN"
+        source: "par/outValN"
+    loopCounter:
+      var: "{n}"
+      selection: "1:parFor/inValN:1"
+    loopBody:
+      - function:
+        name: "f2"
+        type: "f2Type"
+        properties:
+          - name: "resource"
+            value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f2"
+          - name: "encryption"
+            value: "encryption"
+          - name: "key"
+            value: "encryptionKey"
+        dataIns:
+          - name: "inVal"
+            source: "parFor/inValData"
+        dataOuts:
+          - name: "outVal"
+      - function:
+        name: "f3"
+        type: "f3Type"
+        properties:
+          - name: "resource"
+            value: "https://138.232.66.185:31001/api/v1/namespaces/guest/actions/f3"
+          - name: "encryption"
+            value: "encryption"
+          - name: "key"
+            value: "encryptionKey"
+        dataIns:
+          - name: "inVal"
+            source: "f2/outVal"
+        dataOuts:
+          - name: "outVal"
+      - function:
+        name: "f4"
+        type: "f4Type"
+        properties:
+          - name: "resource"
+            value: "https://xxzbbxqfpc.execute-api.us-east-2.amazonaws.com/prod/f4"
+          - name: "encryption"
+            value: "encryption"
+          - name: "key"
+            value: "encryptionKey"
+        dataIns:
+          - name: "inVal"
+            source: "f3/outVal"
+        dataOuts:
+          - name: "outVal"
+    dataOuts:
+      - name: "outVal"
+        source: "f4/outVal"
+  - function:
+    name: "f5"
+    type: "f5Type"
+    properties:
+      - name: "resource"
+        value: "tcp://18.223.15.115:2375/f5"
+      - name: "encryption"
+        value: "encryption"
+      - name: "key"
+        value: "encryptionKey"
+    dataIns:
+      - name: "inVal"
+        source: "parFor/outVal"
+    dataOuts: []
+dataOuts: []

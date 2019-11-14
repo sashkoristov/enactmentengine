@@ -1,0 +1,72 @@
+---
+name: "call_by_value"
+dataIns:
+- name: "InVal"
+  type: "number"
+  source: "some source"
+workflowBody:
+- function:
+    name: "saveNumber"
+    type: "saveNumberType"
+    dataIns:
+    - name: "InVal"
+      type: "number"
+      source: "call_by_value/InVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "python:https://eu-gb.functions.cloud.ibm.com/api/v1/web/ec8536ba-903a-4899-9e1b-009a47366ad8/data_movement/store_item_to_claudant.json"
+- function:
+    name: "increaseValueOfReferenceIBM"
+    type: "increaseValueOfReferenceType"
+    dataIns:
+    - name: "InVal"
+      type: "string"
+      source: "saveNumber/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "python:https://eu-gb.functions.cloud.ibm.com/api/v1/web/ec8536ba-903a-4899-9e1b-009a47366ad8/data_movement/reference.json"
+- function:
+    name: "moveToAWS"
+    type: "moveToAWSType"
+    dataIns:
+    - name: "InVal"
+      type: "string"
+      source: "increaseValueOfReferenceIBM/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "python:https://eu-gb.functions.cloud.ibm.com/api/v1/web/ec8536ba-903a-4899-9e1b-009a47366ad8/data_movement/store_item_into_s3.json"
+- function:
+    name: "increaseValueOfReferenceAWS"
+    type: "increaseValueOfReferenceType"
+    dataIns:
+    - name: "InVal"
+      type: "string"
+      source: "moveToAWS/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "nodejs:https://xhacgxzx5h.execute-api.us-east-2.amazonaws.com/basic/reference"
+- function:
+    name: "getNumber"
+    type: "getNumberType"
+    dataIns:
+    - name: "InVal"
+      type: "string"
+      source: "increaseValueOfReferenceAWS/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "python:https://xhacgxzx5h.execute-api.us-east-2.amazonaws.com/basic/get-item"

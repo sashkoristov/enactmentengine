@@ -1,0 +1,46 @@
+---
+name: "multi_provider"
+dataIns:
+- name: "InVal"
+  type: "number"
+  source: "some source"
+workflowBody:
+- function:
+    name: "increaseValueDocker"
+    type: "increaseValueType"
+    dataIns:
+    - name: "InVal"
+      type: "number"
+      source: "multi_provider/InVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "c:tcp://3.17.5.51:2375/noeckl96/cfunction:v1"
+- function:
+    name: "increaseValueLambda"
+    type: "increaseValueType"
+    dataIns:
+    - name: "InVal"
+      type: "number"
+      source: "increaseValueDocker/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "c#:arn:aws:lambda:us-east-2:170392512081:function:test_C_sharp"
+- function:
+    name: "increaseValueIBM"
+    type: "increaseValueType"
+    dataIns:
+    - name: "InVal"
+      type: "number"
+      source: "increaseValueLambda/OutVal"
+    dataOuts:
+    - name: "OutVal"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "php:https://eu-gb.functions.cloud.ibm.com/api/v1/web/ec8536ba-903a-4899-9e1b-009a47366ad8/default/php.json"
