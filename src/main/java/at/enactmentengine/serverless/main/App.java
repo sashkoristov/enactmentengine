@@ -2,7 +2,6 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
-import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +36,6 @@ public class App {
             fileName = "src/main/resources/yaml_files/gateChangeAlertCFCL_AWS_1.yaml";
 
         // Create an executable workflow
-
         ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName);
         if (ex != null) {
 

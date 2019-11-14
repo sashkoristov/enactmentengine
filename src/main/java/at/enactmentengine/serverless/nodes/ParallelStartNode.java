@@ -1,8 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import at.enactmentengine.serverless.model.Data;
-import com.dps.afcl.functions.objects.DataIns;
 import com.dps.afcl.functions.objects.dataflow.DataInsDataFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +38,7 @@ public class ParallelStartNode extends Node {
 		final Map<String, Object> outVals = new HashMap<>();
 		for (DataInsDataFlow data : definedInput) {
 			if (!dataValues.containsKey(data.getSource())) {
-				throw new MissingInputDataException(ParallelForStartNodeOld.class.getCanonicalName() + ": " + name
+				throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
 						+ " needs " + data.getSource() + "!");
 			} else {
 				outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
@@ -109,7 +107,7 @@ public class ParallelStartNode extends Node {
 	 */
 	private Node findParallelEndNode(Node currentNode, int depth) {
 		for (Node child : currentNode.getChildren()) {
-			if (child instanceof ParallelEndNodeOld) {
+			if (child instanceof ParallelEndNode) {
 				if (depth == 0) {
 					return child;
 				} else {

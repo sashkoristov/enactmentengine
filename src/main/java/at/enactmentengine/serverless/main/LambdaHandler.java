@@ -2,7 +2,6 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
-import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
@@ -18,7 +17,6 @@ import com.amazonaws.services.s3.model.S3Object;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -76,7 +74,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 		return "{\"result\": \"Workflow ran without errors in "+(endTime-startTime)+"ms!\"}" + startTime;
 	}
 
-	private static ExecutableWorkflowOld readFileFromS3(InputObject inputObject) throws Exception {
+	private static ExecutableWorkflow readFileFromS3(InputObject inputObject) throws Exception {
 		S3Object fullObject = null, objectPortion = null, headerOverrideObject = null;
 
 		String awsAccessKey = null;
@@ -93,7 +91,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
 		BasicAWSCredentials awsCreds = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
 
-		ExecutableWorkflowOld ex = null;
+		ExecutableWorkflow ex = null;
 		try {
 			AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_2)
 					.withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();
@@ -106,7 +104,8 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 			System.out.println("Content: ");
 
 			YAMLParser yamlParser = new YAMLParser();
-			ex = yamlParser.parseExecutableWorkflowOld(fullObject.getObjectContent());
+			// TODO change to string or to inputStream
+			//ex = yamlParser.parseExecutableWorkflow(fullObject.getObjectContent());
 			s3Client.shutdown();
 
 		} catch (AmazonServiceException e) {

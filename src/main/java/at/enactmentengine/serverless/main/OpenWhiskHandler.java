@@ -2,7 +2,6 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
-import at.enactmentengine.serverless.nodes.ExecutableWorkflowOld;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.cloudant.client.api.ClientBuilder;
 import com.cloudant.client.api.CloudantClient;
