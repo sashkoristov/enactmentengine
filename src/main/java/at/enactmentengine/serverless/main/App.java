@@ -5,6 +5,7 @@ import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -12,17 +13,16 @@ import java.util.Properties;
 /**
  * Main class of enactment engine which specifies the input file and starts the
  * workflow on the machine on which it gets started.
- *
+ * <p>
  * based on @author markusmoosbrugger, jakobnoeckl
  * extended by @author stefanpedratscher
  */
 public class App {
 
+    static final Logger logger = LoggerFactory.getLogger(App.class);
+
     public static void main(String[] args) throws MissingInputDataException {
         long time = System.currentTimeMillis();
-        final Logger logger = LoggerFactory.getLogger(App.class);
-
-        YAMLParser yamlParser = new YAMLParser();
 
         // Disable hostname verification (enable OpenWhisk connections)
         final Properties props = System.getProperties();
@@ -36,6 +36,7 @@ public class App {
             fileName = "src/main/resources/yaml_files/gateChangeAlertCFCL_AWS_1.yaml";
 
         // Create an executable workflow
+        YAMLParser yamlParser = new YAMLParser();
         ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName);
         if (ex != null) {
 

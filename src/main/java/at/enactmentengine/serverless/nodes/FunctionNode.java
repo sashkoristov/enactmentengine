@@ -22,7 +22,9 @@ import java.util.*;
  *
  */
 public class FunctionNode extends Node {
+
 	final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
+
 	private List<PropertyConstraint> properties;
 	private List<DataOutsAtomic> output;
 	private List<DataIns> input;
@@ -47,7 +49,8 @@ public class FunctionNode extends Node {
 		Map<String, Object> outVals = new HashMap<>();
 		String resourceLink = setFaaSInvoker();
 		logger.info("Executing function " + name + " at resource: " + resourceLink + " ["+System.currentTimeMillis()+"ms]");
-		// Check if all input data is sended by last node and create a input map
+
+		// Check if all input data is sent by last node and create an input map
 		Map<String, Object> functionInputs = new HashMap<>();
 
 		try {
