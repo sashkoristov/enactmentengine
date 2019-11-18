@@ -32,7 +32,7 @@ public class ExecutableWorkflow {
      * Default constructor to create an executable workflow
      *
      * @param workflowName name of the workflow
-     * @param workflow list pair of workflow elements
+     * @param workflow     list pair of workflow elements
      * @param definedInput inputs
      */
     public ExecutableWorkflow(String workflowName, ListPair<Node, Node> workflow, List<DataIns> definedInput) {

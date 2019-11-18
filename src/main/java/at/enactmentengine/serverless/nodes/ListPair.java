@@ -2,39 +2,38 @@ package at.enactmentengine.serverless.nodes;
 
 /**
  * Class which represents a ListPair with start and end.
- * 
- * @author markusmoosbrugger, jakobnoeckl
  *
  * @param <X> The end value.
  * @param <Y> The start value.
+ * @author markusmoosbrugger, jakobnoeckl
  */
 public class ListPair<X, Y> {
-	private X start;
-	private Y end;
+    private X start;
+    private Y end;
 
-	public ListPair(X start, Y end) {
-		super();
-		this.start = start;
-		this.end = end;
-	}
+    public ListPair(X start, Y end) {
+        super();
+        this.start = start;
+        this.end = end;
+    }
 
-	public ListPair() {
-	}
+    public ListPair() {
+    }
 
-	public X getStart() {
-		return start;
-	}
+    public X getStart() {
+        return start;
+    }
 
-	public void setStart(X start) {
-		this.start = start;
-	}
+    public void setStart(X start) {
+        this.start = start;
+    }
 
-	public Y getEnd() {
-		return end;
-	}
+    public Y getEnd() {
+        return end;
+    }
 
-	public void setEnd(Y end) {
-		this.end = end;
-	}
+    public void setEnd(Y end) {
+        this.end = end;
+    }
 
 }

@@ -7,56 +7,55 @@ import java.util.concurrent.Callable;
 
 /**
  * Abstract class which defines basic properties and functions for all nodes.
- * 
- * @author markusmoosbrugger, jakobnoeckl
  *
+ * @author markusmoosbrugger, jakobnoeckl
  */
 public abstract class Node implements Callable<Boolean>, Cloneable {
-	protected List<Node> parents;
-	protected List<Node> children;
-	protected String name;
-	protected String type;
-	protected Map<String, Object> dataValues;
+    protected List<Node> parents;
+    protected List<Node> children;
+    protected String name;
+    protected String type;
+    protected Map<String, Object> dataValues;
 
-	public Node(String name, String type) {
-		super();
-		this.name = name;
-		this.type = type;
-		this.parents = new ArrayList<>();
-		this.children = new ArrayList<>();
-	}
+    public Node(String name, String type) {
+        super();
+        this.name = name;
+        this.type = type;
+        this.parents = new ArrayList<>();
+        this.children = new ArrayList<>();
+    }
 
-	public abstract void passResult(Map<String, Object> map);
+    public abstract void passResult(Map<String, Object> map);
 
-	public void addChild(Node node) {
-		children.add(node);
-	}
+    public void addChild(Node node) {
+        children.add(node);
+    }
 
-	public void addParent(Node node) {
-		parents.add(node);
-	}
+    public void addParent(Node node) {
+        parents.add(node);
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	public List<Node> getChildren() {
-		return children;
-	}
+    public List<Node> getChildren() {
+        return children;
+    }
 
-	public abstract Map<String, Object> getResult();
+    public abstract Map<String, Object> getResult();
 
-	public Node clone(Node endNode) throws CloneNotSupportedException {
-		Node node = (Node) super.clone();
-		node.children = new ArrayList<>();
-		for (Node childrenNode : children) {
-			node.children.add((Node) childrenNode.clone(endNode));
+    public Node clone(Node endNode) throws CloneNotSupportedException {
+        Node node = (Node) super.clone();
+        node.children = new ArrayList<>();
+        for (Node childrenNode : children) {
+            node.children.add((Node) childrenNode.clone(endNode));
 
-		}
-		return node;
-	}
+        }
+        return node;
+    }
 }

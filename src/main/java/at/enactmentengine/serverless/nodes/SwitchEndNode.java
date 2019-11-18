@@ -11,75 +11,74 @@ import java.util.Map.Entry;
 
 /**
  * Control node which manages the tasks at the end of a switch element.
- * 
- * @author markusmoosbrugger, jakobnoeckl
  *
+ * @author markusmoosbrugger, jakobnoeckl
  */
 public class SwitchEndNode extends Node {
-	private List<DataOuts> dataOuts;
-	private Map<String, Object> switchResult = new HashMap<>();
-	final static Logger logger = LoggerFactory.getLogger(SwitchEndNode.class);
+    private List<DataOuts> dataOuts;
+    private Map<String, Object> switchResult = new HashMap<>();
+    final static Logger logger = LoggerFactory.getLogger(SwitchEndNode.class);
 
-	public SwitchEndNode(String name, List<DataOuts> dataOuts) {
-		super(name, "");
-		this.dataOuts = dataOuts;
-	}
+    public SwitchEndNode(String name, List<DataOuts> dataOuts) {
+        super(name, "");
+        this.dataOuts = dataOuts;
+    }
 
-	/**
-	 * Passes the results to the children if one parent has finished. No
-	 * synchronization needed because always just one switch case can be executed.
-	 */
-	@Override
-	public Boolean call() throws Exception {
+    /**
+     * Passes the results to the children if one parent has finished. No
+     * synchronization needed because always just one switch case can be executed.
+     */
+    @Override
+    public Boolean call() throws Exception {
 
-		logger.info("Executing " + name + " SwitchEndNodeOld");
+        logger.info("Executing " + name + " SwitchEndNodeOld");
 
-		Map<String, Object> outputValues = new HashMap<>();
+        Map<String, Object> outputValues = new HashMap<>();
 
-		for (DataOuts data : dataOuts) {
-			for (Entry<String, Object> inputElement : switchResult.entrySet()) {
-				outputValues.put(name + "/" + data.getName(), inputElement.getValue());
-			}
+        for (DataOuts data : dataOuts) {
+            for (Entry<String, Object> inputElement : switchResult.entrySet()) {
+                outputValues.put(name + "/" + data.getName(), inputElement.getValue());
+            }
 
-		}
-		if (outputValues.size() == 0) {
-			for (DataOuts data : dataOuts) {
-				if (data.getSource().contains("NULL")) {
-					outputValues.put(name + "/" + data.getName(), "NULL");
-				}
+        }
+        if (outputValues.size() == 0) {
+            for (DataOuts data : dataOuts) {
+                if (data.getSource().contains("NULL")) {
+                    outputValues.put(name + "/" + data.getName(), "NULL");
+                }
 
-			}
-		}
-		for (Node node : children) {
-			node.passResult(outputValues);
-			node.call();
-		}
-		return true;
-	}
+            }
+        }
+        for (Node node : children) {
+            node.passResult(outputValues);
+            node.call();
+        }
+        return true;
+    }
 
-	/**
-	 * Sets the passed result for the switch element.
-	 */
-	@Override
-	public void passResult(Map<String, Object> input) {
-		synchronized (this) {
-			for (DataOuts data : dataOuts) {
-				for (Entry<String, Object> inputElement : input.entrySet()) {
-					if (data.getSource().contains(inputElement.getKey())) {
-						switchResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
-					}
-				}
-			}
-		}
+    /**
+     * Sets the passed result for the switch element.
+     */
+    @Override
+    public void passResult(Map<String, Object> input) {
+        synchronized (this) {
+            for (DataOuts data : dataOuts) {
+                for (Entry<String, Object> inputElement : input.entrySet()) {
+                    if (data.getSource().contains(inputElement.getKey())) {
+                        switchResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
+                    }
+                }
+            }
+        }
 
-	}
+    }
 
-	/**
-	 * Returns the result.
-	 */
-	@Override
-	public Map<String, Object> getResult() {
-		return switchResult;
-	}
+    /**
+     * Returns the result.
+     */
+    @Override
+    public Map<String, Object> getResult() {
+        return switchResult;
+    }
 
 }
