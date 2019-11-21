@@ -21,7 +21,7 @@ public class App {
 
     static final Logger logger = LoggerFactory.getLogger(App.class);
 
-    public static void main(String[] args) throws MissingInputDataException {
+    public static void main(String[] args) {
         long time = System.currentTimeMillis();
 
         // Disable hostname verification (enable OpenWhisk connections)
@@ -44,7 +44,7 @@ public class App {
             Map<String, Object> input = new HashMap<String, Object>();
             input.put("some source", "34477227772222299999");// for ref gate
             // input.put("some source", "4");// for anomaly
-            input.put("some source", 50);// for parallel and basic files
+            // input.put("some source", 50);// for parallel and basic files
             input.put("some camera source", "0");
             input.put("some sensor source", "0");
 
@@ -55,7 +55,7 @@ public class App {
                 logger.error(e.getMessage(), e);
             }
 
-            logger.info("Execution took " + (System.currentTimeMillis() - time) + "ms!");
+            logger.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
         }
     }
 }
