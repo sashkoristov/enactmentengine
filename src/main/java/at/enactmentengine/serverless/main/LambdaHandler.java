@@ -3,7 +3,6 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -14,9 +13,11 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -28,54 +29,64 @@ import java.util.Properties;
  * based on @author markusmoosbrugger, jakobnoeckl
  * extended by @author stefanpedratscher
  */
-@SuppressWarnings("unused")
+
 public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, String> {
+
+    static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public String handleRequest(InputObject inputObject, Context context) {
         long startTime = System.currentTimeMillis();
-        System.out.println("got \"" + inputObject + "\" from call" + " [" + System.currentTimeMillis() + "ms]");
-        final Logger logger = LoggerFactory.getLogger(App.class);
-        if (inputObject == null || /*inputObject.getBucketname() == null ||*/ inputObject.getFilename() == null) {
-            return "{\"result\": \"Workflow stopped with errors! Input missing!\"}";
+
+        // Check if input is valid
+        if (inputObject == null || /*inputObject.getBucketName() == null ||*/ inputObject.getFilename() == null) {
+            return "{\"result\": \"Error: Could not run workflow. Input not valid.\"}";
         }
 
-        ExecutableWorkflow ex;
-        try {
-            String in = inputObject.getFilename();
-            YAMLParser yamlParser = new YAMLParser();
-            ex = yamlParser.parseExecutableWorkflow(in);
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            return "{\"result\": \"Workflow stopped with errors! See Logs!\"}";
-        }
+        // Parse and create executable workflow
+        ExecutableWorkflow ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename());
 
+        // Check if conversion to an executable workflow succeeded
         if (ex != null) {
+
+            // Set the workflow input
             Map<String, Object> input = new HashMap<String, Object>();
             input.put("some source", "34477227772222299999");// for ref gate
-            input.put("some source", "10");// for anomaly
+            //input.put("some source", "10");// for anomaly
             input.put("some camera source", "0");
             input.put("some sensor source", "0");
 
+            // Add params from EE call as input
             if (inputObject.getParams() != null) {
                 inputObject.getParams().forEach((k, v) -> input.put(k, v));
             }
 
+            // Execute workflow
             try {
                 ex.executeWorkflow(input);
             } catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
-                return "{\"result\": \"Workflow stopped with errors! See Logs!\"}";
+                return "{\"result\": \"Error: Could not run workflow. See logs for more details.\"}";
             }
         } else {
-            return "{\"result\": \"Workflow was not created!\"}";
+            return "{\"result\": \"Error: Could not convert to executable workflow.\"}";
         }
+
         long endTime = System.currentTimeMillis();
-        return "{\"result\": \"Workflow ran without errors in " + (endTime - startTime) + "ms!\"}" + startTime;
+
+        return "{\"result\": \"Workflow ran without errors in " + (endTime - startTime) + "ms. Start: "+ startTime +", End: " + endTime + "\"}";
     }
 
+    /**
+     * Read a yaml workflow from S3
+     *
+     * @param inputObject of the request
+     * @return an executable workflow
+     * @throws Exception on failure
+     */
     private static ExecutableWorkflow readFileFromS3(InputObject inputObject) throws Exception {
-        S3Object fullObject = null, objectPortion = null, headerOverrideObject = null;
+        S3Object fullObject = null;
 
+        // Read the aws credentials
         String awsAccessKey = null;
         String awsSecretKey = null;
         try {
@@ -87,51 +98,55 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             e.printStackTrace();
         }
 
-
-        BasicAWSCredentials awsCreds = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-
-        ExecutableWorkflow ex = null;
         try {
+            // Authenticate
+            BasicAWSCredentials awsCreds = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_2)
                     .withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();
 
-            // Get an object and print its contents.
-            System.out.println("Downloading an object");
+            // Get the object from the bucket
             fullObject = s3Client
-                    .getObject(new GetObjectRequest(inputObject.getBucketname(), inputObject.getFilename()));
-            System.out.println("Content-Type: " + fullObject.getObjectMetadata().getContentType());
-            System.out.println("Content: ");
+                    .getObject(new GetObjectRequest(inputObject.getBucketName(), inputObject.getFilename()));
 
             YAMLParser yamlParser = new YAMLParser();
-            // TODO change to string or to inputStream
-            //ex = yamlParser.parseExecutableWorkflow(fullObject.getObjectContent());
+
+            // Download file and save as yaml
+            String pathname = "/tmp/workflow.yaml";
+            FileUtils.copyInputStreamToFile(fullObject.getObjectContent(), new File(pathname));
+            ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(pathname);
+
             s3Client.shutdown();
 
-        } catch (AmazonServiceException e) {
-            throw e;
+            return ex;
+
         } catch (SdkClientException e) {
             throw e;
         } finally {
-            // To ensure that the network connection doesn't remain open, close any open
-            // input streams.
+            // To ensure that the network connection doesn't remain open, close any open input streams.
             if (fullObject != null) {
                 fullObject.close();
             }
-            if (objectPortion != null) {
-                objectPortion.close();
-            }
-            if (headerOverrideObject != null) {
-                headerOverrideObject.close();
-            }
         }
-
-        return ex;
     }
 
+    /**
+     * InputObject represents the input
+     * of the EE in AWS Lambda
+     */
     public static class InputObject {
+
+        // Filename of the workflow
         private String filename;
-        private String bucketname;
+
+        // Potential bucket where the file is stored
+        private String bucketName;
+
+        // Additional parameters
         private Map<String, String> params;
+
+        /*
+        * Getter and Setter
+        */
 
         public String getFilename() {
             return filename;
@@ -141,12 +156,12 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             this.filename = filename;
         }
 
-        public String getBucketname() {
-            return bucketname;
+        public String getBucketName() {
+            return bucketName;
         }
 
-        public void setBucketname(String bucketname) {
-            this.bucketname = bucketname;
+        public void setBucketName(String bucketName) {
+            this.bucketName = bucketName;
         }
 
         public Map<String, String> getParams() {
