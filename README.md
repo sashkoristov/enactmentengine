@@ -12,3 +12,45 @@
     aws_secret_key=<your_aws_secret_key>
     ibm_api_key=<your_ibm_api_key>
     ````
+    
+---------------
+    
+## Deploy
+
+Currently, the easiest way to run a custom yaml file is to put it in the .jar file. (NOTE: ! This will be changed !)
+
+#### Local
+Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/App.java) and pass the workflow yaml file as parameter.
+
+#### AWS
+1. Create an AWS Lambda function representing the EE (Upload the .jar)
+   ````
+   Runtime: Java8
+   Handler: at.enactmentengine.serverless.main.LambdaHandler::handleRequest
+   ````
+2. Invoke the function with a specific input file:
+    ````
+    {
+      "filename": "<your_workflow.yaml>"
+    }
+    ````
+
+#### IBM
+1. Create an IBM action representing the EE
+    ````
+    wsk action create EnactmentEngine <exported_ee.jar> --main at.enactmentengine.serverless.main.OpenWhiskHandler#main
+    ````
+2. Invoke the action with a specific input file:
+    Input:
+    ````
+    wsk action invoke --result EnactmentEngine --param filename <your_workflow.yaml>
+    ````
+    or
+    ````
+    {
+        "filename": "<your_workflow.yaml>"
+    }
+    ````
+
+
+  
