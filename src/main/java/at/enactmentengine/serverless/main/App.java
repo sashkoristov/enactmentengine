@@ -2,6 +2,7 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ public class App {
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
-        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName);
+        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML);
         if (ex != null) {
 
             // Set workflow input

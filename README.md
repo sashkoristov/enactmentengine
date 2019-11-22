@@ -29,13 +29,15 @@ Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/Ap
 2. Invoke the function with a specific input file:
     ````
     {
-      "filename": "<your_workflow.yaml>"
+      "filename": "<your_workflow.yaml>",
+      "language": "yaml"
     }
     ````
     or
     ````
     {
-      "workflow": "<your_workflow_json_string>"
+      "workflow": "<your_workflow_json_string>",
+      "language": "json"
     }
     ````
     Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
@@ -53,13 +55,15 @@ Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/Ap
     or
     ````
     {
-        "filename": "<your_workflow.yaml>"
+      "filename": "<your_workflow.yaml>",
+      "language": "yaml"
     }
     ````
     or
     ````
     {
-      "workflow": "<your_workflow_json_string>"
+      "workflow": "<your_workflow_json_string>",
+      "language": "json"
     }
     ````
     Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.

@@ -2,6 +2,7 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -39,6 +40,16 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
         ExecutableWorkflow ex = null;
 
+        // Set workflow language
+        Language language = Language.NOT_SET;
+        if(inputObject != null && inputObject.getLanguage() != null){
+            if(inputObject.getLanguage().equals("yaml")){
+                language = Language.YAML;
+            }else if(inputObject.getLanguage().equals("json")){
+                language = Language.JSON;
+            }
+        }
+
         // Check if input is valid
         if (inputObject == null || /*inputObject.getBucketName() == null ||*/ inputObject.getFilename() == null) {
             if(inputObject == null || inputObject.getWorkflow() == null){
@@ -46,11 +57,11 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             }
 
             // Parse and create executable workflow
-            ex = new YAMLParser().parseExecutableWorkflowByStringContent(inputObject.getWorkflow());
+            ex = new YAMLParser().parseExecutableWorkflowByStringContent(inputObject.getWorkflow(), language);
         }else{
 
             // Parse and create executable workflow
-            ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename());
+            ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename(), language);
         }
 
         // Check if conversion to an executable workflow succeeded
@@ -91,7 +102,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
      * @return an executable workflow
      * @throws Exception on failure
      */
-    private static ExecutableWorkflow readFileFromS3(InputObject inputObject) throws Exception {
+    private static ExecutableWorkflow readFileFromS3(InputObject inputObject, Language language) throws Exception {
         S3Object fullObject = null;
 
         // Read the aws credentials
@@ -121,7 +132,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             // Download file and save as yaml
             String pathname = "/tmp/workflow.yaml";
             FileUtils.copyInputStreamToFile(fullObject.getObjectContent(), new File(pathname));
-            ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(pathname);
+            ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(pathname, language);
 
             s3Client.shutdown();
 
@@ -154,6 +165,9 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
         // Workflow as JSON
         private String workflow;
+
+        // Workflow language (JSON, YAML)
+        private String language;
 
         /*
         * Getter and Setter
@@ -189,6 +203,14 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
         public void setWorkflow(String workflow) {
             this.workflow = workflow;
+        }
+
+        public String getLanguage() {
+            return language;
+        }
+
+        public void setLanguage(String language) {
+            this.language = language;
         }
 
         @Override

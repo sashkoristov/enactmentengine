@@ -2,6 +2,7 @@ package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.cloudant.client.api.ClientBuilder;
 import com.cloudant.client.api.CloudantClient;
@@ -41,14 +42,24 @@ public class OpenWhiskHandler {
 
         ExecutableWorkflow ex = null;
 
+        // Set workflow language
+        Language language = Language.NOT_SET;
+        if(args != null && args.has("language")){
+            if(args.getAsJsonPrimitive("language").getAsString().equals("yaml")){
+                language = Language.YAML;
+            }else if(args.getAsJsonPrimitive("language").getAsString().equals("json")){
+                language = Language.JSON;
+            }
+        }
+
         // Get input filename and possible additional parameters
         String filename = null;
         if (args != null && args.has("workflow")) {
-            ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString());
+            ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString(), language);
         }
         if (args != null && args.has("filename")) {
             filename = args.getAsJsonPrimitive("filename").getAsString();
-            ex = new YAMLParser().parseExecutableWorkflow(filename);
+            ex = new YAMLParser().parseExecutableWorkflow(filename, language);
 
             // Check if filename is specified
             if (filename == null) {

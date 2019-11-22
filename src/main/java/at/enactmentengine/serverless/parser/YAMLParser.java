@@ -5,6 +5,7 @@ import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 import com.dps.afcl.utils.Utils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,7 @@ public class YAMLParser {
      * @param filename yaml file to parse
      * @return Instance of class Executable workflow.
      */
-    public ExecutableWorkflow parseExecutableWorkflow(String filename) {
+    public ExecutableWorkflow parseExecutableWorkflow(String filename, Language language) {
 
         // Parse yaml file
         /*String pathname = "/tmp/schema.json";
@@ -42,7 +43,16 @@ public class YAMLParser {
         }
         com.dps.afcl.Workflow workflow = Utils.readYAML(filename, pathname);
         */
-        com.dps.afcl.Workflow workflow = Utils.readYAMLNoValidation(filename);
+        com.dps.afcl.Workflow workflow = null;
+
+        if(language == Language.YAML){
+            workflow = Utils.readYAMLNoValidation(filename);
+        }else if(language == Language.JSON){
+            throw new NotImplementedException("JSON file currently not supported.");
+        }else{
+            throw new NotImplementedException("Workflow language currently not supported.");
+        }
+
 
         return getExecutableWorkflow(workflow);
     }
@@ -53,7 +63,7 @@ public class YAMLParser {
      * @param content JSON string to parse
      * @return Instance of class Executable workflow.
      */
-    public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content) {
+    public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content, Language language) {
 
         // Parse yaml file
         /*String pathname = "/tmp/schema.json";
@@ -63,7 +73,16 @@ public class YAMLParser {
             e.printStackTrace();
         }
         com.dps.afcl.Workflow workflow = Utils.readJSONString(content, pathname);*/
-        com.dps.afcl.Workflow workflow = Utils.readJSONStringNoValidation(content);
+
+        com.dps.afcl.Workflow workflow = null;
+
+        if(language == Language.YAML){
+            throw new NotImplementedException("YAML content currently not supported.");
+        }else if(language == Language.JSON){
+            workflow = Utils.readJSONStringNoValidation(content);
+        }else{
+            throw new NotImplementedException("Workflow language currently not supported.");
+        }
 
         return getExecutableWorkflow(workflow);
     }
