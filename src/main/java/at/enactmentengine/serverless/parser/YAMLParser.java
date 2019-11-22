@@ -3,6 +3,7 @@ package at.enactmentengine.serverless.parser;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
+import com.dps.afcl.Workflow;
 import com.dps.afcl.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +25,36 @@ public class YAMLParser {
      * @return Instance of class Executable workflow.
      */
     public ExecutableWorkflow parseExecutableWorkflow(String filename) {
-        ExecutableWorkflow executableWorkflow = null;
 
         // Parse yaml file
         com.dps.afcl.Workflow workflow = Utils.readYAMLNoValidation(filename);
 
+        return getExecutableWorkflow(workflow);
+    }
+
+    /**
+     * Parses a given JSON string to a workflow, which can be executed.
+     *
+     * @param content JSON string to parse
+     * @return Instance of class Executable workflow.
+     */
+    public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content) {
+
+        // Parse yaml file
+        com.dps.afcl.Workflow workflow = Utils.readJSONStringNoValidation(content);
+
+        return getExecutableWorkflow(workflow);
+    }
+
+    /**
+     * Get an executable workflow
+     *
+     * @param workflow to convert
+     * @return executable workflow
+     */
+    public ExecutableWorkflow getExecutableWorkflow(com.dps.afcl.Workflow workflow) {
+
+        ExecutableWorkflow executableWorkflow = null;
         if (workflow != null) {
             NodeListHelper nodeListHelper = new NodeListHelper();
 

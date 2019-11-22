@@ -37,13 +37,21 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
     public String handleRequest(InputObject inputObject, Context context) {
         long startTime = System.currentTimeMillis();
 
+        ExecutableWorkflow ex = null;
+
         // Check if input is valid
         if (inputObject == null || /*inputObject.getBucketName() == null ||*/ inputObject.getFilename() == null) {
-            return "{\"result\": \"Error: Could not run workflow. Input not valid.\"}";
-        }
+            if(inputObject == null || inputObject.getWorkflow() == null){
+                return "{\"result\": \"Error: Could not run workflow. Input not valid.\"}";
+            }
 
-        // Parse and create executable workflow
-        ExecutableWorkflow ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename());
+            // Parse and create executable workflow
+            ex = new YAMLParser().parseExecutableWorkflowByStringContent(inputObject.getWorkflow());
+        }else{
+
+            // Parse and create executable workflow
+            ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename());
+        }
 
         // Check if conversion to an executable workflow succeeded
         if (ex != null) {
@@ -144,6 +152,9 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
         // Additional parameters
         private Map<String, String> params;
 
+        // Workflow as JSON
+        private String workflow;
+
         /*
         * Getter and Setter
         */
@@ -170,6 +181,14 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
         public void setParams(Map<String, String> params) {
             this.params = params;
+        }
+
+        public String getWorkflow() {
+            return workflow;
+        }
+
+        public void setWorkflow(String workflow) {
+            this.workflow = workflow;
         }
 
         @Override

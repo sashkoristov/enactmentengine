@@ -36,25 +36,31 @@ public class OpenWhiskHandler {
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
 
+        // Create result object
+        JsonObject response = new JsonObject();
+
+        ExecutableWorkflow ex = null;
+
         // Get input filename and possible additional parameters
         String filename = null;
-        if (args != null && args.has("filename"))
+        if (args != null && args.has("workflow")) {
+            ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString());
+        }
+        if (args != null && args.has("filename")) {
             filename = args.getAsJsonPrimitive("filename").getAsString();
+            ex = new YAMLParser().parseExecutableWorkflow(filename);
+
+            // Check if filename is specified
+            if (filename == null) {
+                response.addProperty("result", "Error: No filename specified.");
+                return response;
+            }
+        }
         HashMap jsonMap = new HashMap<>();
         if (args != null && args.has("params"))
             jsonMap = new Gson().fromJson(args.get("params").toString(), HashMap.class);
 
-        // Create result object
-        JsonObject response = new JsonObject();
-
-        // Check if filename is specified
-        if (filename == null) {
-            response.addProperty("result", "Error: No filename specified.");
-            return response;
-        }
-
         // Parse and create executable workflow
-        ExecutableWorkflow ex = new YAMLParser().parseExecutableWorkflow(filename);
         if (ex != null) {
 
             // Set the workflow input
