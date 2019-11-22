@@ -3,10 +3,16 @@ package at.enactmentengine.serverless.parser;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
-import com.dps.afcl.Workflow;
 import com.dps.afcl.utils.Utils;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Paths;
 
 /**
  * Class for parsing YAML files into an executable workflow.
@@ -17,6 +23,7 @@ import org.slf4j.LoggerFactory;
 public class YAMLParser {
 
     final static Logger logger = LoggerFactory.getLogger(YAMLParser.class);
+    final static String JSON_SCHEMA = "schema.json";
 
     /**
      * Parses a given YAML file to a workflow, which can be executed.
@@ -27,6 +34,14 @@ public class YAMLParser {
     public ExecutableWorkflow parseExecutableWorkflow(String filename) {
 
         // Parse yaml file
+        /*String pathname = "/tmp/schema.json";
+        try {
+            FileUtils.copyInputStreamToFile(YAMLParser.class.getResourceAsStream(JSON_SCHEMA), new File(pathname));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        com.dps.afcl.Workflow workflow = Utils.readYAML(filename, pathname);
+        */
         com.dps.afcl.Workflow workflow = Utils.readYAMLNoValidation(filename);
 
         return getExecutableWorkflow(workflow);
@@ -41,6 +56,13 @@ public class YAMLParser {
     public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content) {
 
         // Parse yaml file
+        /*String pathname = "/tmp/schema.json";
+        try {
+            FileUtils.copyInputStreamToFile(YAMLParser.class.getResourceAsStream(JSON_SCHEMA), new File(pathname));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        com.dps.afcl.Workflow workflow = Utils.readJSONString(content, pathname);*/
         com.dps.afcl.Workflow workflow = Utils.readJSONStringNoValidation(content);
 
         return getExecutableWorkflow(workflow);
