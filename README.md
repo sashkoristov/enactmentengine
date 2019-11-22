@@ -17,8 +17,6 @@
     
 ## Deploy
 
-Currently, the easiest way to run a custom yaml file is to put it in the .jar file. (NOTE: ! This will be changed !)
-
 #### Local
 Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/App.java) and pass the workflow yaml file as parameter.
 
@@ -34,7 +32,14 @@ Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/Ap
       "filename": "<your_workflow.yaml>"
     }
     ````
-
+    or
+    ````
+    {
+      "workflow": "<your_workflow_json_string>"
+    }
+    ````
+    Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
+    
 #### IBM
 1. Create an IBM action representing the EE
     ````
@@ -51,6 +56,14 @@ Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/Ap
         "filename": "<your_workflow.yaml>"
     }
     ````
+    or
+    ````
+    {
+      "workflow": "<your_workflow_json_string>"
+    }
+    ````
+    Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
+    
 
 
   
