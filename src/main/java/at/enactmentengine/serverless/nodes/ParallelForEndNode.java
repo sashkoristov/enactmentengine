@@ -70,11 +70,11 @@ public class ParallelForEndNode extends Node {
                     if (data.getType().equals("collection")) {
                         if(parallelResult.containsKey(data.getSource())){
                             JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
-                            resultArray.add((JsonElement) input.get(data.getSource()));
+                            resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
                             parallelResult.put(data.getSource(), resultArray);
                         }else{
                             JsonArray resultArray = new JsonArray();
-                            resultArray.add((JsonElement) input.get(data.getSource()));
+                            resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
                             parallelResult.put(data.getSource(), resultArray);
                         }
                     } else {

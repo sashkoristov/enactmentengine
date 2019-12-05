@@ -110,7 +110,7 @@ public class FunctionNode extends Node {
                     continue;
                 }
                 if (data.getType().equals("number")) {
-                    Object number = (double) jso.get(data.getName()).getAsInt();
+                    Object number = (int) jso.get(data.getName()).getAsInt();
                     out.put(name + "/" + data.getName(), number);
                 } else if (data.getType().equals("string")) {
                     out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsString());
