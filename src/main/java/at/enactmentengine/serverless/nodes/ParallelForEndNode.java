@@ -2,6 +2,8 @@ package at.enactmentengine.serverless.nodes;
 
 import com.dps.afcl.functions.objects.DataOuts;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,12 +46,11 @@ public class ParallelForEndNode extends Node {
             if (parallelResult.containsKey(data.getSource())) {
                 outputValues.put(key, parallelResult.get(data.getSource()));
             } else if (data.getType().equals("collection")) {
-                String jsonResult = new Gson().toJson(parallelResult);
-                outputValues.put(key, jsonResult);
+                outputValues.put(key, parallelResult);
             }
         }
 
-        logger.info("Executing " + name + "ParallelForEndNodeOld with output:" + outputValues.toString());
+        logger.info("Executing " + name + " ParallelForEndNodeOld with output: " + outputValues.toString());
 
         for (Node node : children) {
             node.passResult(outputValues);
@@ -67,16 +68,21 @@ public class ParallelForEndNode extends Node {
             for (DataOuts data : output) {
                 if (input.containsKey(data.getSource())) {
                     if (data.getType().equals("collection")) {
-                        parallelResult.put(data.getSource() + Integer.toString(parallelResult.size()),
-                                input.get(data.getSource()));
+                        if(parallelResult.containsKey(data.getSource())){
+                            JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
+                            resultArray.add((JsonElement) input.get(data.getSource()));
+                            parallelResult.put(data.getSource(), resultArray);
+                        }else{
+                            JsonArray resultArray = new JsonArray();
+                            resultArray.add((JsonElement) input.get(data.getSource()));
+                            parallelResult.put(data.getSource(), resultArray);
+                        }
                     } else {
                         parallelResult.put(data.getSource(), input.get(data.getSource()));
                     }
-
                 }
             }
         }
-
     }
 
     /**
