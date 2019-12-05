@@ -4,9 +4,11 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
+import com.google.gson.JsonArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -34,7 +36,7 @@ public class App {
         if (args.length > 0)
             fileName = args[0];
         else
-            fileName = "src/main/resources/yaml_files/gateChangeAlertCFCL_AWS_1.yaml";
+            fileName = "src/main/resources/new_files/MonteCarlo_CFCL.yaml";
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
@@ -44,6 +46,11 @@ public class App {
             // Set workflow input
             Map<String, Object> input = new HashMap<String, Object>();
             input.put("some source", "34477227772222299999");// for ref gate
+
+            JsonArray arr = new JsonArray();
+            arr.add(1000);
+            arr.add(2000);
+            input.put("monteCarlo_pi_input", arr);// for ref gate
             // input.put("some source", "4");// for anomaly
             // input.put("some source", 50);// for parallel and basic files
             input.put("some camera source", "0");
