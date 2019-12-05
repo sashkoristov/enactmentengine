@@ -110,13 +110,15 @@ public class FunctionNode extends Node {
                     continue;
                 }
                 if (data.getType().equals("number")) {
-                    Object number = (int) jso.get(data.getName()).getAsInt();
+                    Object number = (double) jso.get(data.getName()).getAsInt();
                     out.put(name + "/" + data.getName(), number);
                 } else if (data.getType().equals("string")) {
                     out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsString());
                 } else if (data.getType().equals("collection")) {
                     // array stays array to later decide which type
                     out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsJsonArray());
+                } else if (data.getType().equals("object")) {
+                    out.put(name + "/" + data.getName(), jso);
                 } else {
                     logger.info("Error while trying to parse key in function " + name);
                 }
@@ -169,7 +171,15 @@ public class FunctionNode extends Node {
 
             this.faasInvoker = new LambdaInvoker(awsAccessKey, awsSecretKey);
         } else if (resourceLink.contains("138.232.66.185:31001")) {
-            this.faasInvoker = new OpenWhiskInvoker("MjNiYzQ2YjEtNzFmNi00ZWQ1LThjNTQtODE2YWE0ZjhjNTAyOjEyM3pPM3haQ0xyTU42djJCS0sxZFhZRnBYbFBrY2NPRnFtMTJDZEFzTWdSVTRWck5aOWx5R1ZDR3VNREdJd1A=");
+            String openWhiskKey = null;
+            try {
+                Properties properties = new Properties();
+                properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+                openWhiskKey = properties.getProperty("ibm_api_key");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            this.faasInvoker = new OpenWhiskInvoker(openWhiskKey);
         } else if (resourceLink.contains("tcp")) {
             this.faasInvoker = new DockerInvoker();
         } else {
