@@ -3,6 +3,7 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
+import com.amazonaws.regions.Regions;
 import com.dps.afcl.functions.objects.DataIns;
 import com.dps.afcl.functions.objects.DataOutsAtomic;
 import com.dps.afcl.functions.objects.PropertyConstraint;
@@ -169,7 +170,7 @@ public class FunctionNode extends Node {
                 e.printStackTrace();
             }
 
-            this.faasInvoker = new LambdaInvoker(awsAccessKey, awsSecretKey);
+            this.faasInvoker = new LambdaInvoker(awsAccessKey, awsSecretKey, detectRegion(resourceLink));
         } else if (resourceLink.contains("138.232.66.185:31001")) {
             String openWhiskKey = null;
             try {
@@ -187,6 +188,25 @@ public class FunctionNode extends Node {
         }
         return resourceLink;
 
+    }
+
+    // TODO: This function is only a tmp solution in here.
+    //  It should be placed e.g. in Lambda Invoker (since
+    //  same is needed for IBM, Microsoft and Google)
+    private static Regions detectRegion(String function) {
+        String regionName;
+        int searchIndex = function.indexOf("lambda:");
+        if (searchIndex != -1) {
+            regionName = function.substring(searchIndex + "lambda:".length());
+            regionName = regionName.split(":")[0];
+            try {
+                return Regions.fromName(regionName);
+            } catch (Exception e) {
+                return null;
+            }
+        } else {
+            return null;
+        }
     }
 
     /**

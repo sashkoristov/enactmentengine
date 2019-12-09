@@ -36,7 +36,7 @@ public class App {
         if (args.length > 0)
             fileName = args[0];
         else
-            fileName = "src/main/resources/new_files/MonteCarlo_CFCL.yaml";
+            fileName = "src/main/resources/new_files/MonteCarlo_CFCL.yaml";//"src/main/resources/new_files/MonteCarlo_CFCL.yaml";
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
