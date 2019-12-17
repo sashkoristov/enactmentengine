@@ -1,7 +1,7 @@
 package at.enactmentengine.serverless.nodes;
 
+import afcl.functions.objects.DataIns;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import com.dps.afcl.functions.objects.dataflow.DataInsDataFlow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,11 +19,11 @@ import java.util.concurrent.Future;
  * @author markusmoosbrugger, jakobnoeckl
  */
 public class ParallelStartNode extends Node {
-    private List<DataInsDataFlow> definedInput;
+    private List<DataIns> definedInput;
     final static Logger logger = LoggerFactory.getLogger(ParallelStartNode.class);
     private static int MAX_NUMBER_THREADS = 50;
 
-    public ParallelStartNode(String name, String type, List<DataInsDataFlow> definedInput) {
+    public ParallelStartNode(String name, String type, List<DataIns> definedInput) {
         super(name, type);
         this.definedInput = definedInput;
     }
@@ -35,7 +35,7 @@ public class ParallelStartNode extends Node {
     @Override
     public Boolean call() throws Exception {
         final Map<String, Object> outVals = new HashMap<>();
-        for (DataInsDataFlow data : definedInput) {
+        for (DataIns data : definedInput) {
             if (!dataValues.containsKey(data.getSource())) {
                 throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
                         + " needs " + data.getSource() + "!");
@@ -70,7 +70,7 @@ public class ParallelStartNode extends Node {
             if (dataValues == null) {
                 dataValues = new HashMap<String, Object>();
             }
-            for (DataInsDataFlow data : definedInput) {
+            for (DataIns data : definedInput) {
                 if (input.containsKey(data.getSource())) {
                     dataValues.put(data.getSource(), input.get(data.getSource()));
                 }

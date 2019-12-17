@@ -1,12 +1,9 @@
 package at.enactmentengine.serverless.nodes;
 
+import afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import com.dps.afcl.functions.objects.DataIns;
-import com.dps.afcl.functions.objects.LoopCounter;
-import com.dps.afcl.functions.objects.dataflow.DataFlowBlock;
-import com.dps.afcl.functions.objects.dataflow.DataFlowObject;
-import com.dps.afcl.functions.objects.dataflow.DataFlowString;
-import com.dps.afcl.functions.objects.dataflow.DataInsDataFlow;
+import afcl.functions.objects.DataIns;
+import afcl.functions.objects.LoopCounter;
 import com.google.gson.JsonArray;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -28,7 +25,7 @@ import java.util.concurrent.Future;
 public class ParallelForStartNode extends Node {
     final static Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
     // private String distribution;
-    private List<DataInsDataFlow> definedInput;
+    private List<DataIns> definedInput;
     private Map<String, Object> counterValues;
     private int counterStart;
     private int counterEnd;
@@ -36,7 +33,7 @@ public class ParallelForStartNode extends Node {
     private String[] counterVariableNames;
     private static int MAX_NUMBER_THREADS = 10000;
 
-    public ParallelForStartNode(String name, String type, List<DataInsDataFlow> definedInput, LoopCounter loopCounter) {
+    public ParallelForStartNode(String name, String type, List<DataIns> definedInput, LoopCounter loopCounter) {
         super(name, type);
         this.definedInput = definedInput;
         counterVariableNames = new String[3];
@@ -206,23 +203,19 @@ public class ParallelForStartNode extends Node {
      */
     private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) throws Exception {
         ArrayList<Map<String, Object>> values = null;
-        for (DataInsDataFlow data : definedInput) {
-            if (data.getDataFlow() == null) {
-                continue;
-            }
-
-            DataFlowObject dataFlowObject = data.getDataFlow();
-
-            if (dataFlowObject instanceof DataFlowBlock) {
-                DataFlowBlock tmp = (DataFlowBlock) dataFlowObject;
-                if (tmp.getSize() instanceof DataFlowString) {
-                    values = distributeOutValsBlock(data, ((DataFlowString) tmp.getSize()).getStr(), childs);
-                    return values;
-                } else {
-                    throw new NotImplementedException("NESTED BLOCK data flow type for distribution is not implemented.");
+        for (DataIns data : definedInput) {
+            for(PropertyConstraint constraint : data.getConstraints()){
+                if(constraint.getName().equals("distribution")){
+                    if(constraint.getValue().contains("BLOCK")){
+                        String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]","");
+                        values = distributeOutValsBlock(data, blockValue, childs);
+                        return values;
+                    }else{
+                        throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
+                    }
+                }else if (constraint.getName().equals("element-index")){
+                    throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
                 }
-            } else {
-                throw new NotImplementedException("Data flow type for distribution is not implemented.");
             }
         }
         return values;
@@ -237,7 +230,7 @@ public class ParallelForStartNode extends Node {
      * @param childs    The number of children.
      * @return An ArrayList with the data blocks.
      */
-    private ArrayList<Map<String, Object>> distributeOutValsBlock(DataInsDataFlow data, String blockSize, int childs) {
+    private ArrayList<Map<String, Object>> distributeOutValsBlock(DataIns data, String blockSize, int childs) {
         JsonArray jsonArr = (JsonArray) dataValues.get(data.getSource());
         int size = Integer.parseInt(blockSize);
         JsonArray distributedArray = new JsonArray();

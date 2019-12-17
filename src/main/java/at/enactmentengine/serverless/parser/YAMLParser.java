@@ -3,7 +3,7 @@ package at.enactmentengine.serverless.parser;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
-import com.dps.afcl.utils.Utils;
+import afcl.utils.Utils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -43,7 +43,7 @@ public class YAMLParser {
         }
         com.dps.afcl.Workflow workflow = Utils.readYAML(filename, pathname);
         */
-        com.dps.afcl.Workflow workflow = null;
+        afcl.Workflow workflow = null;
 
         if(language == Language.YAML){
             workflow = Utils.readYAMLNoValidation(filename);
@@ -74,7 +74,7 @@ public class YAMLParser {
         }
         com.dps.afcl.Workflow workflow = Utils.readJSONString(content, pathname);*/
 
-        com.dps.afcl.Workflow workflow = null;
+        afcl.Workflow workflow = null;
 
         if(language == Language.YAML){
             throw new NotImplementedException("YAML content currently not supported.");
@@ -93,7 +93,7 @@ public class YAMLParser {
      * @param workflow to convert
      * @return executable workflow
      */
-    public ExecutableWorkflow getExecutableWorkflow(com.dps.afcl.Workflow workflow) {
+    public ExecutableWorkflow getExecutableWorkflow(afcl.Workflow workflow) {
 
         ExecutableWorkflow executableWorkflow = null;
         if (workflow != null) {

@@ -1,10 +1,10 @@
 package at.enactmentengine.serverless.parser;
 
 import at.enactmentengine.serverless.nodes.*;
-import com.dps.afcl.Function;
-import com.dps.afcl.functions.*;
-import com.dps.afcl.functions.objects.Case;
-import com.dps.afcl.functions.objects.Section;
+import afcl.Function;
+import afcl.functions.*;
+import afcl.functions.objects.Case;
+import afcl.functions.objects.Section;
 import org.apache.commons.lang3.NotImplementedException;
 
 /**

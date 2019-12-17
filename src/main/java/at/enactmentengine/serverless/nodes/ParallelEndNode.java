@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
-import com.dps.afcl.functions.objects.DataOuts;
+import afcl.functions.objects.DataOuts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

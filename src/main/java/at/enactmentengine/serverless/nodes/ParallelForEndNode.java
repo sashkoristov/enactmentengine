@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
-import com.dps.afcl.functions.objects.DataOuts;
+import afcl.functions.objects.DataOuts;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
