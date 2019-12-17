@@ -13,11 +13,9 @@ workflowBody:
     - name: "InVal"
       type: "collection"
       source: "ee_splitted_aws/InVal"
-      dataFlow:
-        type: "BLOCK"
-        size:
-          type: "SINGLE"
-          value: "5"
+      constraints:
+        - name: "distribution"
+          value: "BLOCK(5)"
     loopCounter:
       name: "counter"
       type: "number"

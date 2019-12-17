@@ -39,11 +39,9 @@ workflowBody:
     - name: "InVal"
       type: "collection"
       source: "selectPassenger/passengers"
-      dataFlow:
-        type: "BLOCK"
-        size:
-          type: "SINGLE"
-          value: "1"
+      constraints:
+        - name: "distribution"
+          value: "BLOCK(1)"
     loopCounter:
       name: "counter"
       type: "number"

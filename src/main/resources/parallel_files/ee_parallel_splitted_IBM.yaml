@@ -47,11 +47,9 @@ workflowBody:
                     - name: "InVal"
                       type: "collection"
                       source: "parallel/InVal1"
-                      dataFlow:
-                        type: "BLOCK"
-                        size:
-                          type: "SINGLE"
-                          value: "5"
+                      constraints:
+                        - name: "distribution"
+                          value: "BLOCK(5)"
                     loopCounter:
                       name: "counter"
                       type: "number"

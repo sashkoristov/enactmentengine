@@ -86,7 +86,7 @@
         ]
       }
     },
-    "dataInsDataFlowDef": {
+    "dataLoopsDef": {
       "type": "array",
       "items": {
         "type": "object",
@@ -98,7 +98,10 @@
           "type": {
             "type": "string"
           },
-          "source": {
+          "initSource": {
+            "type": "string"
+          },
+          "loopSource": {
             "type": "string"
           },
           "value": {
@@ -112,9 +115,6 @@
           },
           "constraints": {
             "$ref": "#/definitions/propertiesConstraintDef"
-          },
-          "dataFlow": {
-            "$ref": "#/definitions/dataFlowDef"
           }
         },
         "required": [
@@ -123,95 +123,88 @@
         ]
       }
     },
-    "dataFlowDef": {
-      "oneOf": [
-        {
-          "$ref": "#/definitions/dataFlowBlockDef"
-        },
-        {
-          "$ref": "#/definitions/dataFlowReplicateDef"
-        },
-        {
-          "$ref": "#/definitions/dataFlowElementIndexDef"
-        },
-        {
-          "$ref": "#/definitions/dataFlowStringDef"
-        }
-      ]
-    },
-    "dataFlowBlockDef": {
+    "conditionDef": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "type": {
+        "combinedWith": {
           "type": "string",
           "enum": [
-            "BLOCK"
+            "and",
+            "or"
           ]
         },
-        "size": {
-          "$ref": "#/definitions/dataFlowDef"
-        },
-        "overlap": {
-          "$ref": "#/definitions/dataFlowDef"
-        }
-      },
-      "required": [
-        "type"
-      ]
-    },
-    "dataFlowReplicateDef": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "REPLICATE"
-          ]
-        },
-        "times": {
-          "$ref": "#/definitions/dataFlowDef"
-        }
-      },
-      "required": [
-        "type"
-      ]
-    },
-    "dataFlowElementIndexDef": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ELEMENT_INDEX"
-          ]
-        },
-        "index": {
-          "$ref": "#/definitions/dataFlowDef"
+        "conditions": {
+          "type": "array",
+          "items": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "data1": {
+                  "type": "string"
+                },
+                "data2": {
+                  "type": "string"
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "==",
+                    "!=",
+                    ">",
+                    ">=",
+                    "<",
+                    "=<",
+                    "contains",
+                    "startsWith",
+                    "endsWith"
+                  ]
+                },
+                "negation": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "data1",
+                "data2",
+                "operator"
+              ]
+            }
+          ],
+          "additionalItems": false
         }
       },
       "required": [
-        "type"
+        "combinedWith",
+        "conditions"
       ]
     },
-    "dataFlowStringDef": {
+    "loopCounterDef": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "SINGLE"
-          ]
+        "name": {
+          "type": "string"
         },
-        "value": {
+        "type": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "step": {
           "type": "string"
         }
       },
       "required": [
-        "type"
+        "name",
+        "type",
+        "from",
+        "to"
       ]
     },
     "atomicFunctionDef": {
@@ -316,61 +309,7 @@
               "$ref": "#/definitions/dataInsDef"
             },
             "condition": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "combinedWith": {
-                  "type": "string",
-                  "enum": [
-                    "and",
-                    "or"
-                  ]
-                },
-                "conditions": {
-                  "type": "array",
-                  "items": [
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "data1": {
-                          "type": "string"
-                        },
-                        "data2": {
-                          "type": "string"
-                        },
-                        "operator": {
-                          "type": "string",
-                          "enum": [
-                            "==",
-                            "!=",
-                            ">",
-                            ">=",
-                            "<",
-                            "=<",
-                            "contains",
-                            "startsWith",
-                            "endsWith"
-                          ]
-                        },
-                        "negation": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "data1",
-                        "data2",
-                        "operator"
-                      ]
-                    }
-                  ],
-                  "additionalItems": false
-                }
-              },
-              "required": [
-                "combinedWith",
-                "conditions"
-              ]
+              "$ref": "#/definitions/conditionDef"
             },
             "then": {
               "$ref": "#/definitions/functionDef"
@@ -473,6 +412,86 @@
         }
       }
     },
+    "sequentialForDef": {
+      "additionalProperties": false,
+      "properties": {
+        "for": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "dataIns": {
+              "$ref": "#/definitions/dataInsDef"
+            },
+            "dataLoops": {
+              "$ref": "#/definitions/dataLoopsDef"
+            },
+            "loopCounter": {
+              "$ref": "#/definitions/loopCounterDef"
+            },
+            "loopBody": {
+              "$ref": "#/definitions/functionDef"
+            },
+            "dataOuts": {
+              "$ref": "#/definitions/dataOutsDef"
+            },
+            "properties": {
+              "$ref": "#/definitions/propertiesConstraintDef"
+            },
+            "constraints": {
+              "$ref": "#/definitions/propertiesConstraintDef"
+            }
+          },
+          "required": [
+            "name",
+            "loopCounter",
+            "loopBody"
+          ]
+        }
+      }
+    },
+    "sequentialWhileDef": {
+      "additionalProperties": false,
+      "properties": {
+        "while": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "dataIns": {
+              "$ref": "#/definitions/dataInsDef"
+            },
+            "dataLoops": {
+              "$ref": "#/definitions/dataLoopsDef"
+            },
+            "condition": {
+              "$ref": "#/definitions/conditionDef"
+            },
+            "loopBody": {
+              "$ref": "#/definitions/functionDef"
+            },
+            "dataOuts": {
+              "$ref": "#/definitions/dataOutsDef"
+            },
+            "properties": {
+              "$ref": "#/definitions/propertiesConstraintDef"
+            },
+            "constraints": {
+              "$ref": "#/definitions/propertiesConstraintDef"
+            }
+          },
+          "required": [
+            "name",
+            "condition",
+            "loopBody"
+          ]
+        }
+      }
+    },
     "parallelDef": {
       "additionalProperties": false,
       "properties": {
@@ -484,7 +503,7 @@
               "type": "string"
             },
             "dataIns": {
-              "$ref": "#/definitions/dataInsDataFlowDef"
+              "$ref": "#/definitions/dataInsDef"
             },
             "parallelBody": {
               "type": "array",
@@ -528,34 +547,10 @@
               "type": "string"
             },
             "dataIns": {
-              "$ref": "#/definitions/dataInsDataFlowDef"
+              "$ref": "#/definitions/dataInsDef"
             },
             "loopCounter": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "from": {
-                  "type": "string"
-                },
-                "to": {
-                  "type": "string"
-                },
-                "step": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "name",
-                "type",
-                "from",
-                "to"
-              ]
+              "$ref": "#/definitions/loopCounterDef"
             },
             "loopBody": {
               "$ref": "#/definitions/functionDef"
@@ -627,6 +622,12 @@
           },
           {
             "$ref": "#/definitions/parallelForDef"
+          },
+          {
+            "$ref": "#/definitions/sequentialWhileDef"
+          },
+          {
+            "$ref": "#/definitions/sequentialForDef"
           }
         ]
       }

@@ -1,0 +1,53 @@
+---
+name: "MonteCarlo"
+dataIns:
+  - name: "InVal"
+    type: "collection"
+    source: "monteCarlo_pi_input"
+workflowBody:
+  - parallelFor:
+      name: "parallelFor"
+      dataIns:
+        - name: "InVal"
+          type: "collection"
+          source: "MonteCarlo/InVal"
+          constraints:
+            - name: "distribution"
+              value: "BLOCK(1)"
+      loopCounter:
+        name: "counter"
+        type: "number"
+        from: "0"
+        to: "2"
+        step: "1"
+      loopBody:
+        - function:
+            name: "monteCarlo"
+            type: "monteCarloType"
+            dataIns:
+              - name: "total"
+                type: "number"
+                source: "parallelFor/InVal"
+            dataOuts:
+              - name: "result"
+                type: "object"
+            properties:
+              - name: "resource"
+                value: "python:arn:aws:lambda:us-east-1:170392512081:function:EE_exp_1_1_monteCarlo"
+      dataOuts:
+        - name: "OutVal"
+          type: "collection"
+          source: "monteCarlo/result"
+  - function:
+      name: "summary"
+      type: "summaryType"
+      dataIns:
+        - name: "fraction"
+          type: "object"
+          source: "parallelFor/OutVal"
+      dataOuts:
+        - name: "pi"
+          type: "number"
+      properties:
+        - name: "resource"
+          value: "python:arn:aws:lambda:us-east-1:170392512081:function:EE_exp_1_1_monteCarlo_summary"
