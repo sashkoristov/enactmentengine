@@ -3,7 +3,6 @@ package at.enactmentengine.serverless.nodes;
 import afcl.functions.objects.DataOuts;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +55,7 @@ public class ParallelForEndNode extends Node {
             node.passResult(outputValues);
             node.call();
         }
+
         return true;
     }
 
@@ -111,6 +111,22 @@ public class ParallelForEndNode extends Node {
             return this;
 
         return super.clone(endNode);
+    }
+
+    public Map<String, Object> getParallelResult() {
+        return parallelResult;
+    }
+
+    public void setParallelResult(Map<String, Object> parallelResult) {
+        this.parallelResult = parallelResult;
+    }
+
+    public List<DataOuts> getOutput() {
+        return output;
+    }
+
+    public void setOutput(List<DataOuts> output) {
+        this.output = output;
     }
 
 }
