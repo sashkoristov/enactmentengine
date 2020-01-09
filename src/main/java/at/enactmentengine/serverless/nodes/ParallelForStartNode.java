@@ -24,8 +24,9 @@ import java.util.concurrent.Future;
  */
 public class ParallelForStartNode extends Node {
     final static Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
+
     // private String distribution;
-    private List<DataIns> definedInput;
+    public List<DataIns> definedInput;
     private Map<String, Object> counterValues;
     private int counterStart;
     private int counterEnd;
@@ -202,19 +203,45 @@ public class ParallelForStartNode extends Node {
      * @throws Exception
      */
     private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) throws Exception {
-        ArrayList<Map<String, Object>> values = null;
+        ArrayList<Map<String, Object>> values = new ArrayList<>();
         for (DataIns data : definedInput) {
-            for(PropertyConstraint constraint : data.getConstraints()){
-                if(constraint.getName().equals("distribution")){
-                    if(constraint.getValue().contains("BLOCK")){
-                        String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]","");
-                        values = distributeOutValsBlock(data, blockValue, childs);
-                        return values;
-                    }else{
-                        throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
+            if(data.getConstraints() != null) {
+                for (PropertyConstraint constraint : data.getConstraints()) {
+                    if (constraint.getName().equals("distribution")) {
+                        if (constraint.getValue().contains("BLOCK")) {
+                            String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]", "");
+                            ArrayList<Map<String, Object>> tmp = distributeOutValsBlock(data, blockValue, childs);
+                            for (int i = 0; i < tmp.size(); i++) {
+                                if (values.size() > i) {
+                                    values.get(i).putAll(tmp.get(i));
+                                } else {
+                                    values.add(i, tmp.get(i));
+                                }
+                            }
+                        } else {
+                            throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
+                        }
+                    } else if (constraint.getName().equals("element-index")) {
+                        throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
+                    } else {
+                        throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
                     }
-                }else if (constraint.getName().equals("element-index")){
-                    throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
+                }
+            }else{
+                if(data.getPassing() != null && data.getPassing()){
+                    if(outVals.containsKey(this.name + "/" + data.getName())){
+                        for(int i = 0; i < childs; i++){
+                            if (values.size() > i) {
+                                values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                            } else {
+                                Map<String, Object> tmp = new HashMap<>();
+                                tmp.put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                                values.add(i, tmp);
+                            }
+                        }
+                    }else{
+                        System.err.println("Cannot Pass data " + data.getName() + ". No such matching value could be found");
+                    }
                 }
             }
         }
@@ -262,6 +289,14 @@ public class ParallelForStartNode extends Node {
     @Override
     public Map<String, Object> getResult() {
         return null;
+    }
+
+    public List<DataIns> getDefinedInput() {
+        return definedInput;
+    }
+
+    public void setDefinedInput(List<DataIns> definedInput) {
+        this.definedInput = definedInput;
     }
 
 }
