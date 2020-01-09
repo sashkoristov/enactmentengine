@@ -1,19 +1,33 @@
 ---
 name: "MonteCarlo"
 dataIns:
-  - name: "InVal"
+  - name: "array"
     type: "collection"
-    source: "monteCarlo_pi_input"
+    source: "array"
+  - name: "total"
+    type: "number"
+    source: "total"
+  - name: "each"
+    type: "number"
+    source: "each"
 workflowBody:
   - parallelFor:
       name: "parallelFor"
       dataIns:
         - name: "InVal"
-          type: "collection"
-          source: "MonteCarlo/InVal"
+          type: "number"
+          source: "MonteCarlo/array"
           constraints:
             - name: "distribution"
               value: "BLOCK(1)"
+        - name: "total"
+          type: "number"
+          source: "MonteCarlo/total"
+          passing: true
+        - name: "each"
+          type: "number"
+          source: "MonteCarlo/each"
+          passing: true
       loopCounter:
         name: "counter"
         type: "number"
@@ -25,26 +39,38 @@ workflowBody:
             name: "monteCarlo"
             type: "monteCarloType"
             dataIns:
-              - name: "total"
+              - name: "fraction"
                 type: "number"
                 source: "parallelFor/InVal"
             dataOuts:
               - name: "result"
-                type: "object"
+                type: "number"
             properties:
               - name: "resource"
                 value: "python:arn:aws:lambda:us-east-1:170392512081:function:EE_exp_1_1_monteCarlo"
       dataOuts:
-        - name: "OutVal"
+        - name: "array"
           type: "collection"
           source: "monteCarlo/result"
+        - name: "total"
+          type: "number"
+          source: "total"
+        - name: "each"
+          type: "number"
+          source: "each"
   - function:
       name: "summary"
       type: "summaryType"
       dataIns:
-        - name: "fraction"
-          type: "object"
-          source: "parallelFor/OutVal"
+        - name: "array"
+          type: "collection"
+          source: "parallelFor/array"
+        - name: "total"
+          type: "number"
+          source: "parallelFor/total"
+        - name: "each"
+          type: "number"
+          source: "parallelFor/each"
       dataOuts:
         - name: "pi"
           type: "number"

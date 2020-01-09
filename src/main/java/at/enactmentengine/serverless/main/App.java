@@ -48,9 +48,14 @@ public class App {
             input.put("some source", "34477227772222299999");// for ref gate
 
             JsonArray arr = new JsonArray();
-            arr.add(1000);
-            arr.add(2000);
-            input.put("monteCarlo_pi_input", arr);// for ref gate
+            int total = 2;
+            for(int i = 0; i < total; i++){
+                arr.add(1);
+            }
+            input.put("each", 1);
+            input.put("total", total);
+            input.put("array", arr);
+
             // input.put("some source", "4");// for anomaly
             // input.put("some source", 50);// for parallel and basic files
             input.put("some camera source", "0");
