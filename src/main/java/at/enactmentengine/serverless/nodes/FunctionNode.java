@@ -103,25 +103,39 @@ public class FunctionNode extends Node {
     private void getValuesParsed(String resultString, Map<String, Object> out) {
         if (resultString == null || resultString.equals("null"))
             return;
-        try {
-            JsonObject jso = new Gson().fromJson(resultString, JsonObject.class);
-
+        try{
             for (DataOutsAtomic data : output) {
+
+                JsonObject jso;
+                try{
+                    jso = new Gson().fromJson(resultString, JsonObject.class);
+                }catch(com.google.gson.JsonSyntaxException e){
+                    // If there is no JSON object as return value create one
+                    jso = new JsonObject();
+                    jso.addProperty(data.getName(), resultString);
+                }
+
                 if (out.containsKey(name + "/" + data.getName())) {
                     continue;
                 }
-                if (data.getType().equals("number")) {
-                    Object number = (int) jso.get(data.getName()).getAsInt();
-                    out.put(name + "/" + data.getName(), number);
-                } else if (data.getType().equals("string")) {
-                    out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsString());
-                } else if (data.getType().equals("collection")) {
-                    // array stays array to later decide which type
-                    out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsJsonArray());
-                } else if (data.getType().equals("object")) {
-                    out.put(name + "/" + data.getName(), jso);
-                } else {
-                    logger.info("Error while trying to parse key in function " + name);
+                switch (data.getType()) {
+                    case "number":
+                        Object number = (int) jso.get(data.getName()).getAsInt();
+                        out.put(name + "/" + data.getName(), number);
+                        break;
+                    case "string":
+                        out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsString());
+                        break;
+                    case "collection":
+                        // array stays array to later decide which type
+                        out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsJsonArray());
+                        break;
+                    case "object":
+                        out.put(name + "/" + data.getName(), jso);
+                        break;
+                    default:
+                        logger.info("Error while trying to parse key in function " + name);
+                        break;
                 }
             }
 
