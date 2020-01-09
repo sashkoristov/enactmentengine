@@ -49,6 +49,14 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
 
     public abstract Map<String, Object> getResult();
 
+    public Map<String, Object> getDataValues() {
+        return dataValues;
+    }
+
+    public void setDataValues(Map<String, Object> dataValues) {
+        this.dataValues = dataValues;
+    }
+
     public Node clone(Node endNode) throws CloneNotSupportedException {
         Node node = (Node) super.clone();
         node.children = new ArrayList<>();
