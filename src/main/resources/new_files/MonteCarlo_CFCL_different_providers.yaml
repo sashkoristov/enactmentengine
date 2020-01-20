@@ -1,0 +1,157 @@
+---
+name: "MonteCarlo"
+dataIns:
+  - name: "array"
+    type: "collection"
+    source: "array"
+  - name: "total"
+    type: "number"
+    source: "total"
+  - name: "each"
+    type: "number"
+    source: "each"
+workflowBody:
+  - parallel:
+      name: "parallel"
+      dataIns:
+        - name: "array"
+          type: "number"
+          source: "MonteCarlo/array"
+        - name: "total"
+          type: "number"
+          source: "MonteCarlo/total"
+        - name: "each"
+          type: "number"
+          source: "MonteCarlo/each"
+      parallelBody:
+        - section:
+            - parallelFor:
+                name: "parallelFor"
+                dataIns:
+                  - name: "InVal"
+                    type: "number"
+                    source: "parallel/array"
+                    constraints:
+                      - name: "distribution"
+                        value: "BLOCK(1)"
+                  - name: "total"
+                    type: "number"
+                    source: "parallel/total"
+                    passing: true
+                  - name: "each"
+                    type: "number"
+                    source: "parallel/each"
+                    passing: true
+                loopCounter:
+                  name: "counter"
+                  type: "number"
+                  from: "0"
+                  to: "750"
+                  step: "1"
+                loopBody:
+                  - function:
+                      name: "monteCarlo"
+                      type: "monteCarloType"
+                      dataIns:
+                        - name: "fraction"
+                          type: "number"
+                          source: "parallelFor/InVal"
+                      dataOuts:
+                        - name: "result"
+                          type: "number"
+                      properties:
+                        - name: "resource"
+                          value: "python:arn:aws:lambda:us-east-1:170392512081:function:EE_exp_1_1_monteCarlo"
+                dataOuts:
+                  - name: "array"
+                    type: "collection"
+                    source: "monteCarlo/result"
+                  - name: "total"
+                    type: "number"
+                    source: "total"
+                  - name: "each"
+                    type: "number"
+                    source: "each"
+        - section:
+            - parallelFor:
+                name: "parallelFor2"
+                dataIns:
+                  - name: "InVal"
+                    type: "number"
+                    source: "parallel/array"
+                    constraints:
+                      - name: "distribution"
+                        value: "BLOCK(1)"
+                  - name: "total"
+                    type: "number"
+                    source: "parallel/total"
+                    passing: true
+                  - name: "each"
+                    type: "number"
+                    source: "parallel/each"
+                    passing: true
+                loopCounter:
+                  name: "counter"
+                  type: "number"
+                  from: "0"
+                  to: "750"
+                  step: "1"
+                loopBody:
+                  - function:
+                      name: "monteCarlo2"
+                      type: "monteCarlo2Type"
+                      dataIns:
+                        - name: "fraction"
+                          type: "number"
+                          source: "parallelFor2/InVal"
+                      dataOuts:
+                        - name: "inside"
+                          type: "number"
+                      properties:
+                        - name: "resource"
+                          value: "python:https://eu-gb.functions.cloud.ibm.com/api/v1/web/sashko%40dps.uibk.ac.at_dev/default/EE_exp_1_1_monteCarlo.json"
+                dataOuts:
+                  - name: "array"
+                    type: "collection"
+                    source: "monteCarlo2/inside"
+                  - name: "total"
+                    type: "number"
+                    source: "total"
+                  - name: "each"
+                    type: "number"
+                    source: "each"
+      dataOuts:
+        - name: "array"
+          type: "collection"
+          source: "parallelFor/array"
+        - name: "array2"
+          type: "collection"
+          source: "parallelFor2/array"
+        - name: "total"
+          type: "number"
+          source: "parallelFor/total"
+        - name: "each"
+          type: "number"
+          source: "parallelFor/each"
+  - function:
+      name: "summary"
+      type: "summaryType"
+      dataIns:
+        - name: "array"
+          type: "collection"
+          source: "parallel/array"
+        - name: "array2"
+          type: "collection"
+          source: "parallel/array2"
+        - name: "total"
+          type: "number"
+          source: "parallel/total"
+        - name: "each"
+          type: "number"
+          source: "parallel/each"
+      dataOuts:
+        - name: "pi"
+          type: "number"
+      properties:
+        - name: "resource"
+          value: "python:arn:aws:lambda:us-east-1:170392512081:function:EE_exp_1_1_monteCarlo_summary"
