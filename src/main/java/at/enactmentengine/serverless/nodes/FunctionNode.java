@@ -77,11 +77,15 @@ public class FunctionNode extends Node {
         } else {
             logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms]");
         }
+
+        long start = System.currentTimeMillis();
         String resultString = (String) faasInvoker.invokeFunction(resourceLink, functionInputs);
+        long end = System.currentTimeMillis();
+
         if (resultString.length() > 100) {
-            logger.info("Result of function is large" + "[" + System.currentTimeMillis() + "ms]");
+            logger.info("Function took: " + (end-start) + " ms. Result: too large " + "[" + System.currentTimeMillis() + "ms]");
         } else {
-            logger.info("Result from function " + name + " : " + resultString + " [" + System.currentTimeMillis() + "ms]");
+            logger.info("Function took: " + (end-start) + " ms. Result: " + name + " : " + resultString + " [" + System.currentTimeMillis() + "ms]");
         }
         getValuesParsed(resultString, outVals);
         for (Node node : children) {
@@ -170,9 +174,10 @@ public class FunctionNode extends Node {
         resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
 
         // depending on the resource link the different FaaS Invoker are selected
-        if (resourceLink.contains("eu-gb") || resourceLink.contains("amazonaws")) {
+        /*if (resourceLink.contains("eu-gb") || resourceLink.contains("amazonaws")) {
             this.faasInvoker = new HTTPInvoker();
-        } else if (resourceLink.contains("arn:")) {
+        }*/
+        if (resourceLink.contains("arn:")) {
             String awsAccessKey = null;
             String awsSecretKey = null;
             try {
@@ -185,7 +190,7 @@ public class FunctionNode extends Node {
             }
 
             this.faasInvoker = new LambdaInvoker(awsAccessKey, awsSecretKey, detectRegion(resourceLink));
-        } else if (resourceLink.contains("138.232.66.185:31001")) {
+        } else if (resourceLink.contains("functions.cloud.ibm")) {
             String openWhiskKey = null;
             try {
                 Properties properties = new Properties();
