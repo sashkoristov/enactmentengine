@@ -52,11 +52,13 @@ public class ExecutableWorkflow {
     public Map<String, Object> executeWorkflow(Map<String, Object> inputs) throws MissingInputDataException {
 
         final Map<String, Object> outVals = new HashMap<>();
-        for (DataIns data : definedInput) {
-            if (!inputs.containsKey(data.getSource())) {
-                throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
-            } else {
-                outVals.put(workflowName + "/" + data.getName(), inputs.get(data.getSource()));
+        if(definedInput != null){
+            for (DataIns data : definedInput) {
+                if (!inputs.containsKey(data.getSource())) {
+                    throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
+                } else {
+                    outVals.put(workflowName + "/" + data.getName(), inputs.get(data.getSource()));
+                }
             }
         }
 
