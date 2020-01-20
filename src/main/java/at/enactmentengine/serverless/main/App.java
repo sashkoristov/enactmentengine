@@ -36,7 +36,7 @@ public class App {
         if (args.length > 0)
             fileName = args[0];
         else
-            fileName = "src/main/resources/new_files/MonteCarlo_CFCL.yaml";
+            fileName = "src/main/resources/new_files/emptyFunction.yaml";
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
@@ -48,13 +48,19 @@ public class App {
             input.put("some source", "34477227772222299999");// for ref gate
 
             JsonArray arr = new JsonArray();
-            int total = 2;
-            for(int i = 0; i < total; i++){
+            JsonArray arr2 = new JsonArray();
+            int total = 1500; // each
+            for(int i = 0; i < total/2; i++){
+            //for(int i = 0; i < total; i++){
                 arr.add(1);
+            }
+            for(int i = 0; i < total/2; i++){
+               arr2.add(1);
             }
             input.put("each", 1);
             input.put("total", total);
             input.put("array", arr);
+            input.put("array2", arr2);
 
             // input.put("some source", "4");// for anomaly
             // input.put("some source", 50);// for parallel and basic files
