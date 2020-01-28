@@ -1,0 +1,9 @@
+---
+name: "empty"
+workflowBody:
+- function:
+    name: "empty"
+    type: "emptyType"
+    properties:
+    - name: "resource"
+      value: "python:https://jp-tok.functions.cloud.ibm.com/api/v1/web/fdd10035-962a-4ca7-85ed-7b7de49df5d0/default/empty.json"

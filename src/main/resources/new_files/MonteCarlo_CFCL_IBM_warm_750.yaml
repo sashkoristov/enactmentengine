@@ -4,9 +4,6 @@ dataIns:
   - name: "array"
     type: "collection"
     source: "array"
-  - name: "array2"
-    type: "collection"
-    source: "array2"
   - name: "total"
     type: "number"
     source: "total"
@@ -33,10 +30,6 @@ workflowBody:
           type: "collection"
           source: "MonteCarlo/array"
           passing: true
-        - name: "array2"
-          type: "collection"
-          source: "MonteCarlo/array2"
-          passing: true
       dataOuts:
         - name: "inside"
           type: "number"
@@ -46,11 +39,9 @@ workflowBody:
           type: "number"
         - name: "each"
           type: "number"
-        - name: "array2"
-          type: "collection"
       properties:
         - name: "resource"
-          value: "python:https://jp-tok.functions.cloud.ibm.com/api/v1/web/fdd10035-962a-4ca7-85ed-7b7de49df5d0/default/EE_exp_1_1_monteCarlo.json"
+          value: "python:https://eu-de.functions.cloud.ibm.com/api/v1/web/e86727ae-19a4-4279-8983-d145c3d472e1/default/EE_exp_1_1_monteCarlo.json"
   - parallelFor:
       name: "parallelFor"
       dataIns:
@@ -67,10 +58,6 @@ workflowBody:
         - name: "each"
           type: "number"
           source: "monteCarlo0/each"
-          passing: true
-        - name: "array2"
-          type: "number"
-          source: "monteCarlo0/array2"
           passing: true
       loopCounter:
         name: "counter"
@@ -91,7 +78,7 @@ workflowBody:
                 type: "number"
             properties:
               - name: "resource"
-                value: "python:https://jp-tok.functions.cloud.ibm.com/api/v1/web/fdd10035-962a-4ca7-85ed-7b7de49df5d0/default/EE_exp_1_1_monteCarlo.json"
+                value: "python:https://eu-de.functions.cloud.ibm.com/api/v1/web/e86727ae-19a4-4279-8983-d145c3d472e1/default/EE_exp_1_1_monteCarlo.json"
       dataOuts:
         - name: "array"
           type: "collection"
@@ -102,79 +89,19 @@ workflowBody:
         - name: "each"
           type: "number"
           source: "each"
-        - name: "array2"
-          type: "number"
-          source: "array2"
-  - parallelFor:
-      name: "parallelFor2"
-      dataIns:
-        - name: "InVal"
-          type: "number"
-          source: "parallelFor/array2"
-          constraints:
-            - name: "distribution"
-              value: "BLOCK(1)"
-        - name: "total"
-          type: "number"
-          source: "parallelFor/total"
-          passing: true
-        - name: "each"
-          type: "number"
-          source: "parallelFor/each"
-          passing: true
-        - name: "array"
-          type: "number"
-          source: "parallelFor/array"
-          passing: true
-      loopCounter:
-        name: "counter"
-        type: "number"
-        from: "0"
-        to: "750"
-        step: "1"
-      loopBody:
-        - function:
-            name: "monteCarlo2"
-            type: "monteCarlo2Type"
-            dataIns:
-              - name: "fraction"
-                type: "number"
-                source: "parallelFor2/InVal"
-            dataOuts:
-              - name: "inside"
-                type: "number"
-            properties:
-              - name: "resource"
-                value: "python:https://jp-tok.functions.cloud.ibm.com/api/v1/web/fdd10035-962a-4ca7-85ed-7b7de49df5d0/default/EE_exp_1_1_monteCarlo.json"
-      dataOuts:
-        - name: "array2"
-          type: "collection"
-          source: "monteCarlo2/inside"
-        - name: "total"
-          type: "number"
-          source: "total"
-        - name: "each"
-          type: "number"
-          source: "each"
-        - name: "array"
-          type: "number"
-          source: "array"
   - function:
       name: "summary"
       type: "summaryType"
       dataIns:
         - name: "array"
           type: "collection"
-          source: "parallelFor2/array"
-        - name: "array2"
-          type: "collection"
-          source: "parallelFor2/array2"
+          source: "parallelFor/array"
         - name: "total"
           type: "number"
-          source: "parallelFor2/total"
+          source: "parallelFor/total"
         - name: "each"
           type: "number"
-          source: "parallelFor2/each"
+          source: "parallelFor/each"
       dataOuts:
         - name: "pi"
           type: "number"
