@@ -77,9 +77,11 @@ public class ParallelForStartNode extends Node {
             if (counterValues == null) {
                 counterValues = new HashMap<String, Object>();
             }
-            for (DataIns data : definedInput) {
-                if (input.containsKey(data.getSource())) {
-                    dataValues.put(data.getSource(), input.get(data.getSource()));
+            if(definedInput != null){
+                for (DataIns data : definedInput) {
+                    if (input.containsKey(data.getSource())) {
+                        dataValues.put(data.getSource(), input.get(data.getSource()));
+                    }
                 }
             }
             for (String counterValue : counterVariableNames) {
@@ -98,12 +100,14 @@ public class ParallelForStartNode extends Node {
     @Override
     public Boolean call() throws Exception {
         final Map<String, Object> outVals = new HashMap<>();
-        for (DataIns data : definedInput) {
-            if (!dataValues.containsKey(data.getSource())) {
-                throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
-                        + " needs " + data.getSource() + "!");
-            } else {
-                outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+        if(definedInput != null){
+            for (DataIns data : definedInput) {
+                if (!dataValues.containsKey(data.getSource())) {
+                    throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
+                            + " needs " + data.getSource() + "!");
+                } else {
+                    outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                }
             }
         }
 
@@ -117,7 +121,11 @@ public class ParallelForStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
 
         List<Map<String, Object>> outValsForChilds = transferOutVals(children.size(), outVals);
-        for (int i = 0; i < children.size(); i++) {
+        int min = outValsForChilds.size();
+        if(min > children.size()){
+            min = children.size();
+        }
+        for (int i = 0; i < min; i++) {
             Node node = children.get(i);
             // outVals.put("/EE/"+name+"/counter", new Integer(i));
             node.passResult(outValsForChilds.get(i));
@@ -204,43 +212,45 @@ public class ParallelForStartNode extends Node {
      */
     private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) throws Exception {
         ArrayList<Map<String, Object>> values = new ArrayList<>();
-        for (DataIns data : definedInput) {
-            if(data.getConstraints() != null) {
-                for (PropertyConstraint constraint : data.getConstraints()) {
-                    if (constraint.getName().equals("distribution")) {
-                        if (constraint.getValue().contains("BLOCK")) {
-                            String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]", "");
-                            ArrayList<Map<String, Object>> tmp = distributeOutValsBlock(data, blockValue, childs);
-                            for (int i = 0; i < tmp.size(); i++) {
+        if(definedInput != null){
+            for (DataIns data : definedInput) {
+                if(data.getConstraints() != null) {
+                    for (PropertyConstraint constraint : data.getConstraints()) {
+                        if (constraint.getName().equals("distribution")) {
+                            if (constraint.getValue().contains("BLOCK")) {
+                                String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]", "");
+                                ArrayList<Map<String, Object>> tmp = distributeOutValsBlock(data, blockValue, childs);
+                                for (int i = 0; i < tmp.size(); i++) {
+                                    if (values.size() > i) {
+                                        values.get(i).putAll(tmp.get(i));
+                                    } else {
+                                        values.add(i, tmp.get(i));
+                                    }
+                                }
+                            } else {
+                                throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
+                            }
+                        } else if (constraint.getName().equals("element-index")) {
+                            throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
+                        } else {
+                            throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
+                        }
+                    }
+                }else{
+                    if(data.getPassing() != null && data.getPassing()){
+                        if(outVals.containsKey(this.name + "/" + data.getName())){
+                            for(int i = 0; i < childs; i++){
                                 if (values.size() > i) {
-                                    values.get(i).putAll(tmp.get(i));
+                                    values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
                                 } else {
-                                    values.add(i, tmp.get(i));
+                                    Map<String, Object> tmp = new HashMap<>();
+                                    tmp.put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                                    values.add(i, tmp);
                                 }
                             }
-                        } else {
-                            throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
+                        }else{
+                            System.err.println("Cannot Pass data " + data.getName() + ". No such matching value could be found");
                         }
-                    } else if (constraint.getName().equals("element-index")) {
-                        throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
-                    } else {
-                        throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
-                    }
-                }
-            }else{
-                if(data.getPassing() != null && data.getPassing()){
-                    if(outVals.containsKey(this.name + "/" + data.getName())){
-                        for(int i = 0; i < childs; i++){
-                            if (values.size() > i) {
-                                values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
-                            } else {
-                                Map<String, Object> tmp = new HashMap<>();
-                                tmp.put(data.getName(), outVals.get(this.name + "/" + data.getName()));
-                                values.add(i, tmp);
-                            }
-                        }
-                    }else{
-                        System.err.println("Cannot Pass data " + data.getName() + ". No such matching value could be found");
                     }
                 }
             }

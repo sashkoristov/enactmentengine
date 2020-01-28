@@ -40,12 +40,14 @@ public class ParallelForEndNode extends Node {
         }
 
         Map<String, Object> outputValues = new HashMap<>();
-        for (DataOuts data : output) {
-            String key = name + "/" + data.getName();
-            if (parallelResult.containsKey(data.getSource())) {
-                outputValues.put(key, parallelResult.get(data.getSource()));
-            } else if (data.getType().equals("collection")) {
-                outputValues.put(key, parallelResult);
+        if(output != null){
+            for (DataOuts data : output) {
+                String key = name + "/" + data.getName();
+                if (parallelResult.containsKey(data.getSource())) {
+                    outputValues.put(key, parallelResult.get(data.getSource()));
+                } else if (data.getType().equals("collection")) {
+                    outputValues.put(key, parallelResult);
+                }
             }
         }
 
@@ -65,20 +67,22 @@ public class ParallelForEndNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
-            for (DataOuts data : output) {
-                if (input.containsKey(data.getSource())) {
-                    if (data.getType().equals("collection")) {
-                        if(parallelResult.containsKey(data.getSource())){
-                            JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
-                            resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
-                            parallelResult.put(data.getSource(), resultArray);
-                        }else{
-                            JsonArray resultArray = new JsonArray();
-                            resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
-                            parallelResult.put(data.getSource(), resultArray);
+            if(output != null){
+                for (DataOuts data : output) {
+                    if (input.containsKey(data.getSource())) {
+                        if (data.getType().equals("collection")) {
+                            if(parallelResult.containsKey(data.getSource())){
+                                JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
+                                resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
+                                parallelResult.put(data.getSource(), resultArray);
+                            }else{
+                                JsonArray resultArray = new JsonArray();
+                                resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
+                                parallelResult.put(data.getSource(), resultArray);
+                            }
+                        } else {
+                            parallelResult.put(data.getSource(), input.get(data.getSource()));
                         }
-                    } else {
-                        parallelResult.put(data.getSource(), input.get(data.getSource()));
                     }
                 }
             }
