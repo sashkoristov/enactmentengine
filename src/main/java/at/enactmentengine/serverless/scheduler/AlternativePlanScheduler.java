@@ -54,7 +54,7 @@ public class AlternativePlanScheduler {
 							if(tempList != null){
 							int i = 0;
 							for(String altPlanString: tempList){
-								PropertyConstraint tmpConstraint = new PropertyConstraint("FT-AltStrat-"+i,altPlanString);
+								PropertyConstraint tmpConstraint = new PropertyConstraint("FT-AltPlan-"+i,altPlanString);
 								tmpList.add(tmpConstraint);
 								i++;
 							}
