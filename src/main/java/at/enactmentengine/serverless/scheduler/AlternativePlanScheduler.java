@@ -34,8 +34,9 @@ public class AlternativePlanScheduler {
 	 *  Has to be called before EE executes the Workflow
 	 *  parses YAML file and adds Alternative Strategy to each function if "FT-AltStrat-requiredAvailability" is set
 	 *  outputs new YAML file to output location
+	 * @throws Exception 
 	 */
-	public void addAlternativePlansToYAML(String yamlFile,String outputFile){
+	public void addAlternativePlansToYAML(String yamlFile,String outputFile) throws Exception{
 		Map<String, Object> functionInputs = new HashMap<>(); //needed to create temp dummy Func
     	functionInputs.put("null", "null"); 
 		Workflow workflow = afcl.utils.Utils.readYAMLNoValidation(yamlFile);
@@ -188,8 +189,9 @@ public class AlternativePlanScheduler {
 
 	/**
 	 *  Returns a List of Strings that each represent an Alternative Possibility that reaches the required availability
+	 * @throws Exception 
 	 */
-	public List<String> proposeAlternativeStrategy(Function function, double wantedAvailability) {
+	public List<String> proposeAlternativeStrategy(Function function, double wantedAvailability) throws Exception {
 		List<String> proposedAltStrategy = new ArrayList<String>();
 		List<Function> functionAlternativeList = DB.getFunctionAlternatives(function);
 		int i = 1;
@@ -212,7 +214,7 @@ public class AlternativePlanScheduler {
 			}
 		}
 		if (proposedAltStrategy.size() == 0) {
-			return null;
+			throw new Exception("No Alternative Strategy Could Be Found");
 		} else {
 			return proposedAltStrategy;
 		}
