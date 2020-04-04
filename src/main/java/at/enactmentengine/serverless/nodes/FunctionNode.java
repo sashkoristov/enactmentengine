@@ -86,6 +86,14 @@ public class FunctionNode extends Node {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		
+		
+		//Simulate Availability
+		SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+		double simAvail = db.getSimulatedAvail(resourceLink);
+		if(simAvail != 1){ //if this functions avail should be simulated
+			functionInputs.put("availability", simAvail);
+		}
 
 		if (functionInputs.size() > 20) {
 			logger.info("Input for function is large" + " [" + System.currentTimeMillis() + "ms]");
@@ -93,6 +101,8 @@ public class FunctionNode extends Node {
 			logger.info(
 					"Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms]");
 		}
+		
+
 
 		Function functionToInvoke = null;
 		try {
@@ -102,6 +112,7 @@ public class FunctionNode extends Node {
 		}
 		long start = System.currentTimeMillis();
 		String resultString = null;
+		
 	
 		if (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet()) { // Invoke with Fault Tolerance Module
 			FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());

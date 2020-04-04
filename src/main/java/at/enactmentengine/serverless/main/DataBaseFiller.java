@@ -1,5 +1,4 @@
 package at.enactmentengine.serverless.main;
-
 import dps.FTinvoker.database.SQLLiteDatabase;
 import dps.FTinvoker.exception.InvalidResourceException;
 import dps.FTinvoker.function.Function;
@@ -13,16 +12,16 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class DataBaseFiller {
 	public static void fillDatabase(Function func, int minRunningTime, int maxRunningTime, double successRate, int count) throws Exception{
-		SQLLiteDatabase DB = new dps.FTinvoker.database.SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+		SQLLiteDatabase DB = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
 		for (int i = 0; i < count; i++) {
 			int generatedRunningTime = ThreadLocalRandom.current().nextInt(minRunningTime, maxRunningTime + 1);
 			Timestamp start = new Timestamp(System.currentTimeMillis());
 			Timestamp end = new Timestamp(start.getTime() + generatedRunningTime);
 			double d = Math.random();
 			if (d < successRate) {
-				DB.add(func.getUrl(), func.getType(), detectProvider(func.getUrl()), getRegion(func), start, end, "OK", null);
+				DB.addInvocation(func.getUrl(), func.getType(), detectProvider(func.getUrl()), getRegion(func), start, end, "OK", null);
 			} else {
-				DB.add(func.getUrl(), func.getType(), detectProvider(func.getUrl()), getRegion(func), start, end, "Exception", "Execution failed");
+				DB.addInvocation(func.getUrl(), func.getType(), detectProvider(func.getUrl()), getRegion(func), start, end, "ERROR", "Execution failed");
 			}
 		}
 		
