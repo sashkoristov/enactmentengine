@@ -67,7 +67,14 @@ Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/Ap
     }
     ````
     Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
-    
 
+---------------
+	
+# FT-Scheduler
+1. Add your Functions to the **Functions** Table of the Database. You can then add example invocations to set the availability(the Scheduler will use when calculating Alternatives) using the **DataBaseFiller** contained in the EE.
+2. Use the AlternativePlanScheduler's **addAlternativePlansToYAML()** method to generate the AlternativeStrategy at Runtime. The first parameter is the path to the .yaml file containing the "FT-AltStrat-requiredAvailability" settings. The second parameter is the output path to the "Optimized AFCL". This "Optimized AFCL" file can than be executed using the Enactment Engine.
+
+The Enactment Engine will automatically pass Functions with FT or Constraint Settings to the Fault Tolerance Module for execution.
+---------------
 
   
