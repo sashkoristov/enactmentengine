@@ -14,6 +14,9 @@ import org.apache.commons.lang.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.*;
 
 /**
@@ -25,6 +28,7 @@ public class FunctionNode extends Node {
 
     final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
+    static int counter = 0;
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
     private List<DataIns> input;
@@ -46,9 +50,15 @@ public class FunctionNode extends Node {
      */
     @Override
     public Boolean call() throws Exception {
+    	
+    	int id = -1;
+        synchronized (this) {
+			id=counter++;
+		}
+        
         Map<String, Object> outVals = new HashMap<>();
         String resourceLink = setFaaSInvoker();
-        logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis() + "ms]");
+        logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis() + "ms], id=" + id);
 
         // Check if all input data is sent by last node and create an input map
         Map<String, Object> functionInputs = new HashMap<>();
@@ -71,11 +81,11 @@ public class FunctionNode extends Node {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+        
         if (functionInputs.size() > 20) {
-            logger.info("Input for function is large" + " [" + System.currentTimeMillis() + "ms]");
+            logger.info("Input for function is large" + " [" + System.currentTimeMillis() + "ms], id="+id);
         } else {
-            logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms]");
+            logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms], id="+id);
         }
 
         long start = System.currentTimeMillis();
@@ -83,10 +93,11 @@ public class FunctionNode extends Node {
         long end = System.currentTimeMillis();
 
         if (resultString.length() > 100) {
-            logger.info("Function took: " + (end-start) + " ms. Result: too large " + "[" + System.currentTimeMillis() + "ms]");
+            logger.info("Function " + name + " (request: "+start+", response: "+end+") took: " + (end-start) + " ms. Result: too large " + "[" + System.currentTimeMillis() + "ms], id="+id);
         } else {
-            logger.info("Function took: " + (end-start) + " ms. Result: " + name + " : " + resultString + " [" + System.currentTimeMillis() + "ms]");
+            logger.info("Function " + name + " (request: "+start+", response: "+end+") took: " + (end-start) + " ms. Result: " + name + " : " + resultString + " [" + System.currentTimeMillis() + "ms], id="+id);
         }
+        
         getValuesParsed(resultString, outVals);
         for (Node node : children) {
             node.passResult(outVals);
@@ -182,7 +193,12 @@ public class FunctionNode extends Node {
             String awsSecretKey = null;
             try {
                 Properties properties = new Properties();
+                
                 properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+                
+                //TODO do this if .jar file is exported. Need to check
+                //InputStream input = new FileInputStream("resources/credentials.properties");
+                //properties.load(input);
                 awsAccessKey = properties.getProperty("aws_access_key");
                 awsSecretKey = properties.getProperty("aws_secret_key");
             } catch (Exception e) {
@@ -194,7 +210,12 @@ public class FunctionNode extends Node {
             String openWhiskKey = null;
             try {
                 Properties properties = new Properties();
+                
                 properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+                
+                //TODO do this if .jar file is exported. Need to check
+                //InputStream input = new FileInputStream("resources/credentials.properties");
+                //properties.load(input);
                 openWhiskKey = properties.getProperty("ibm_api_key");
             } catch (Exception e) {
                 e.printStackTrace();
