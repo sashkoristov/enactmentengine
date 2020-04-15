@@ -24,6 +24,7 @@ public class App {
 
     public static void main(String[] args) {
         long time = System.currentTimeMillis();
+        
         // Disable hostname verification (enable OpenWhisk connections)
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
@@ -40,22 +41,18 @@ public class App {
         ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML);
         if (ex != null) {
 
-            // Set workflow input
+            // Set some example workflow input
             Map<String, Object> input = new HashMap<String, Object>();
             input.put("some source", "34477227772222299999");// for ref gate
-
             JsonArray arr = new JsonArray();
             JsonArray arr2 = new JsonArray();
             JsonArray arr3 = new JsonArray();
             JsonArray arr4 = new JsonArray();
-            
             int arr1Size = 2000;
             int arr2Size = 0;
             int arr3Size = 0;
             int arr4Size = 0;
-            
             int total = arr1Size + arr2Size + arr3Size + arr4Size; // each
-            
             for(int i = 0; i < arr1Size; i++){
             //for(int i = 0; i < total; i++){
                 arr.add(1);
@@ -75,7 +72,6 @@ public class App {
             input.put("array2", arr2);
             input.put("array3", arr3);
             input.put("array4", arr4);
-
             // input.put("some source", "4");// for anomaly
             // input.put("some source", 50);// for parallel and basic files
             input.put("some camera source", "0");
