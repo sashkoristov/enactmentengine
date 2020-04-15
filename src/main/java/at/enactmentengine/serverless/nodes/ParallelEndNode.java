@@ -47,7 +47,7 @@ public class ParallelEndNode extends Node {
                     outputValues.put(key, parallelResult.get(data.getSource()));
                 } else {
                     for (Entry<String, Object> inputElement : parallelResult.entrySet()) {
-                        if (data.getSource().contains(inputElement.getKey())) {
+                        if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
                             if (data.getType().equals("collection")) {
                                 // combines all results from the executed branches into one collection
                                 outputValues.put(key, parallelResult);
@@ -86,7 +86,7 @@ public class ParallelEndNode extends Node {
                     parallelResult.put(data.getSource(), input.get(data.getSource()));
                 }
                 for (Entry<String, Object> inputElement : input.entrySet()) {
-                    if (data.getSource().contains(inputElement.getKey())) {
+                    if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
                         parallelResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
                     }
                 }
