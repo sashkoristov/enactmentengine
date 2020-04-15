@@ -3,3 +3,8 @@ target/
 src/main/resources/credentials.properties
 out/
 enactment-engine.iml
+.classpath
+.project
+.settings/
+classes/
+src/main/java/META-INF/
