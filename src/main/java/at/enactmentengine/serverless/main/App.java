@@ -8,10 +8,7 @@ import com.google.gson.JsonArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * Main class of enactment engine which specifies the input file and starts the
@@ -21,12 +18,12 @@ import java.util.Properties;
  * extended by @author stefanpedratscher
  */
 public class App {
+	
 
     static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
         long time = System.currentTimeMillis();
-
         // Disable hostname verification (enable OpenWhisk connections)
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
@@ -49,18 +46,35 @@ public class App {
 
             JsonArray arr = new JsonArray();
             JsonArray arr2 = new JsonArray();
-            int total = 1500; // each
-            for(int i = 0; i < total/2; i++){
+            JsonArray arr3 = new JsonArray();
+            JsonArray arr4 = new JsonArray();
+            
+            int arr1Size = 2000;
+            int arr2Size = 0;
+            int arr3Size = 0;
+            int arr4Size = 0;
+            
+            int total = arr1Size + arr2Size + arr3Size + arr4Size; // each
+            
+            for(int i = 0; i < arr1Size; i++){
             //for(int i = 0; i < total; i++){
                 arr.add(1);
             }
-            for(int i = 0; i < total/2; i++){
+            for(int i = 0; i < arr2Size; i++){
                arr2.add(1);
             }
+            for(int i = 0; i < arr3Size; i++){
+                arr3.add(1);
+             }
+            for(int i = 0; i < arr4Size; i++){
+                arr4.add(1);
+             }
             input.put("each", 1);
             input.put("total", total);
             input.put("array", arr);
             input.put("array2", arr2);
+            input.put("array3", arr3);
+            input.put("array4", arr4);
 
             // input.put("some source", "4");// for anomaly
             // input.put("some source", 50);// for parallel and basic files
