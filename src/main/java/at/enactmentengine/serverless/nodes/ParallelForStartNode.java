@@ -11,8 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -32,7 +34,7 @@ public class ParallelForStartNode extends Node {
     private int counterEnd;
     private int counterStepSize;
     private String[] counterVariableNames;
-    private static int MAX_NUMBER_THREADS = 10000;
+    private static int MAX_NUMBER_THREADS = 1000;
 
     public ParallelForStartNode(String name, String type, List<DataIns> definedInput, LoopCounter loopCounter) {
         super(name, type);
@@ -102,8 +104,8 @@ public class ParallelForStartNode extends Node {
         final Map<String, Object> outVals = new HashMap<>();
         if(definedInput != null){
             for (DataIns data : definedInput) {
-                if (!dataValues.containsKey(data.getSource())) {
-                    throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
+            	if (!dataValues.containsKey(data.getSource())) {
+                	throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
                 } else {
                     outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
@@ -121,14 +123,13 @@ public class ParallelForStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
 
         List<Map<String, Object>> outValsForChilds = transferOutVals(children.size(), outVals);
-        int min = outValsForChilds.size();
-        if(min > children.size()){
-            min = children.size();
-        }
-        for (int i = 0; i < min; i++) {
+        
+        for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             // outVals.put("/EE/"+name+"/counter", new Integer(i));
-            node.passResult(outValsForChilds.get(i));
+            if(outValsForChilds != null && i < outValsForChilds.size()) {
+            	node.passResult(outValsForChilds.get(i));
+            }
             futures.add(exec.submit(node));
         }
         for (Future<Boolean> future : futures) {
