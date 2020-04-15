@@ -86,7 +86,9 @@ public class App {
                 ex.executeWorkflow(input);
             } catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
-            }
+            } catch (Exception e) {
+				e.printStackTrace();
+			}
 
             logger.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
         }
