@@ -81,11 +81,14 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
             // Execute workflow
             try {
-                ex.executeWorkflow(input);
-            } catch (MissingInputDataException e) {
+				ex.executeWorkflow(input);
+			}catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
                 return "{\"result\": \"Error: Could not run workflow. See logs for more details.\"}";
-            }
+            } catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         } else {
             return "{\"result\": \"Error: Could not convert to executable workflow.\"}";
         }
