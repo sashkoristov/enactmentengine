@@ -54,7 +54,9 @@ public class ParallelForEndNode extends Node {
         logger.info("Executing " + name + " ParallelForEndNodeOld with output: " + outputValues.toString());
 
         for (Node node : children) {
-            node.passResult(outputValues);
+        	if(outputValues != null) {
+        		node.passResult(outputValues);	
+        	}
             node.call();
         }
 
