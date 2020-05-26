@@ -1,4 +1,4 @@
-# enactmentEngine (EE)
+# enactmentEngine (EE) - dev
 
 - **/externalJars** contain prebuild jars used within the EE. If you import the EE project, you will need to link these external libraries. Keep them upToDate if they work properly.
 - **/src/main** 
