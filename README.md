@@ -1,6 +1,6 @@
 # enactmentEngine (EE)
 
-- **/externalJars** contain prebuild jars used within the EE. If you import the EE project, you will need to link these external libraries. Keep them upToDate if they work properly.
+- **/externalJars** contain pre-build jars used within the EE. Keep them upToDate if they work properly.
 - **/src/main** 
     - **/java** contains the source code of the EE.
     - **/resources** contains example yaml files to test the execution
@@ -17,13 +17,21 @@
     
 ## Deploy
 
-#### Local
+### Local
 Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serverless/main/Local.java) and pass the workflow yaml file as parameter.
 
-#### Service
+### Service
 Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9898 for a `.yml` file and return the result of the execution.
 
-#### AWS
+### Docker
+````
+mvn clean
+mvn package
+docker build -t service .
+docker run service
+````
+
+### AWS
 1. Create an AWS Lambda function representing the EE (Upload the .jar)
    ````
    Runtime: Java8
@@ -45,7 +53,7 @@ Run the [main method in Service.java](src/main/java/at/enactmentengine/serverles
     ````
     Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
     
-#### IBM
+### IBM
 1. Create an IBM action representing the EE
     ````
     wsk action create EnactmentEngine <exported_ee.jar> --main at.enactmentengine.serverless.main.OpenWhiskHandler#main
@@ -73,7 +81,7 @@ Run the [main method in Service.java](src/main/java/at/enactmentengine/serverles
 
 ---------------
 	
-# FT-Scheduler
+## FT-Scheduler
 1. Add your Functions to the **Functions** Table of the Database. You can then add example invocations to set the availability(the Scheduler will use when calculating Alternatives) using the **DataBaseFiller** contained in the EE.
 2. Use the AlternativePlanScheduler's **addAlternativePlansToYAML()** method to generate the AlternativeStrategy at Runtime. The first parameter is the path to the .yaml file containing the "FT-AltStrat-requiredAvailability" settings. The second parameter is the output path to the "Optimized AFCL". This "Optimized AFCL" file can than be executed using the Enactment Engine.
 
