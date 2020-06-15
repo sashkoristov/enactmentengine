@@ -1,6 +1,5 @@
 package at.enactmentengine.serverless.main;
 
-import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -48,8 +47,8 @@ public class Handler implements Runnable{
 			e.printStackTrace();
 		}
         
-        App app = new App();
-        Map<String, Object> result = app.executeWorkflow(Thread.currentThread().getId() + ".yaml");
+        Executor executor = new Executor();
+        Map<String, Object> result = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml");
         
         DataOutputStream dOut;
 		try {

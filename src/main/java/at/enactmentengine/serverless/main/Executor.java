@@ -8,15 +8,6 @@ import com.google.gson.JsonArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.*;
 
 /**
@@ -26,10 +17,10 @@ import java.util.*;
  * based on @author markusmoosbrugger, jakobnoeckl
  * extended by @author stefanpedratscher
  */
-public class App {
-	
+public class Executor {
 
-    static final Logger logger = LoggerFactory.getLogger(App.class);
+
+    static final Logger logger = LoggerFactory.getLogger(Executor.class);
 
     
     public Map<String, Object> executeWorkflow(String fileName) {
@@ -42,7 +33,7 @@ public class App {
 
         // Get the input file as argument or default string
         if (fileName == null) {
-        	System.out.println("Please specify a filename");
+            logger.error("Please specify a filename");
         }
 
         // Create an executable workflow

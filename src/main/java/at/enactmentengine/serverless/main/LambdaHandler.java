@@ -33,7 +33,7 @@ import java.util.Properties;
 
 public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, String> {
 
-    static final Logger logger = LoggerFactory.getLogger(App.class);
+    static final Logger logger = LoggerFactory.getLogger(Local.class);
 
     public String handleRequest(InputObject inputObject, Context context) {
         long startTime = System.currentTimeMillis();
