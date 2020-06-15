@@ -18,7 +18,10 @@
 ## Deploy
 
 #### Local
-Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/App.java) and pass the workflow yaml file as parameter.
+Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serverless/main/Local.java) and pass the workflow yaml file as parameter.
+
+#### Service
+Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9898 for a `.yml` file and return the result of the execution.
 
 #### AWS
 1. Create an AWS Lambda function representing the EE (Upload the .jar)
@@ -75,6 +78,7 @@ Simply run the [main method](src/main/java/at/enactmentengine/serverless/main/Ap
 2. Use the AlternativePlanScheduler's **addAlternativePlansToYAML()** method to generate the AlternativeStrategy at Runtime. The first parameter is the path to the .yaml file containing the "FT-AltStrat-requiredAvailability" settings. The second parameter is the output path to the "Optimized AFCL". This "Optimized AFCL" file can than be executed using the Enactment Engine.
 
 The Enactment Engine will automatically pass Functions with FT or Constraint Settings to the Fault Tolerance Module for execution.
+
 ---------------
 
   
