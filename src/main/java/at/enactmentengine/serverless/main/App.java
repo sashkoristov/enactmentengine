@@ -8,6 +8,15 @@ import com.google.gson.JsonArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.*;
 
 /**
@@ -22,23 +31,24 @@ public class App {
 
     static final Logger logger = LoggerFactory.getLogger(App.class);
 
-    public static void main(String[] args) {
+    
+    public Map<String, Object> executeWorkflow(String fileName) {
+    
         long time = System.currentTimeMillis();
-        
+     
         // Disable hostname verification (enable OpenWhisk connections)
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
 
         // Get the input file as argument or default string
-        String fileName;
-        if (args.length > 0)
-            fileName = args[0];
-        else
-            fileName = "src/main/resources/new_files/emptyFunction.yaml";
+        if (fileName == null) {
+        	System.out.println("Please specify a filename");
+        }
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
         ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML);
+        Map<String, Object> output = null;
         if (ex != null) {
 
             // Set some example workflow input
@@ -79,7 +89,7 @@ public class App {
 
             // Execute the workflow
             try {
-                ex.executeWorkflow(input);
+            	output = ex.executeWorkflow(input);
             } catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
             } catch (Exception e) {
@@ -88,5 +98,6 @@ public class App {
 
             logger.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
         }
+        return output;
     }
 }
