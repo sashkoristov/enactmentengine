@@ -93,7 +93,21 @@
 	    	<artifactId>cloudant-client</artifactId>
 	    	<version>2.17.0</version>
 		</dependency>
-
+		<dependency>
+			<groupId>at.uibk.dps.FT</groupId>
+			<artifactId>fault-tolerance</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>at.uibk.dps.afclcore</groupId>
+			<artifactId>afcl-core</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>at.uibk.dps.jFaaS</groupId>
+			<artifactId>jFaaS</artifactId>
+			<version>1.0</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -112,15 +126,6 @@
 							</excludes>
 						</filter>
 					</filters>
-					<source>1.8</source>
-					<target>1.8</target>
-					<archive>
-						<manifest>
-							<addClasspath>true</addClasspath>
-							<classpathPrefix>lib/</classpathPrefix>
-							<mainClass>at.enactmentengine.serverless.main.Local</mainClass>
-						</manifest>
-					</archive>
 					<createDependencyReducedPom>false</createDependencyReducedPom>
 
 				</configuration>
@@ -151,7 +156,86 @@
 					<target>1.8</target>
 				</configuration>
 			</plugin>
-
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>lib/</classpathPrefix>
+							<mainClass>at.enactmentengine.serverless.main.Service</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>assemble-all</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>install-jFaaS</id>
+						<phase>clean</phase>
+						<configuration>
+							<file>${basedir}/externalJars/jFaaS.jar</file>
+							<repositoryLayout>default</repositoryLayout>
+							<groupId>at.uibk.dps.jFaaS</groupId>
+							<artifactId>jFaaS</artifactId>
+							<version>1.0</version>
+							<packaging>jar</packaging>
+							<generatePom>true</generatePom>
+						</configuration>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>install-FT</id>
+						<phase>clean</phase>
+						<configuration>
+							<file>${basedir}/externalJars/faultTolerance.jar</file>
+							<repositoryLayout>default</repositoryLayout>
+							<groupId>at.uibk.dps.FT</groupId>
+							<artifactId>fault-tolerance</artifactId>
+							<version>1.0</version>
+							<packaging>jar</packaging>
+							<generatePom>true</generatePom>
+						</configuration>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>install-AFCLCore</id>
+						<phase>clean</phase>
+						<configuration>
+							<file>${basedir}/externalJars/WorkflowAPI.jar</file>
+							<repositoryLayout>default</repositoryLayout>
+							<groupId>at.uibk.dps.afclcore</groupId>
+							<artifactId>afcl-core</artifactId>
+							<version>1.0</version>
+							<packaging>jar</packaging>
+							<generatePom>true</generatePom>
+						</configuration>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>
