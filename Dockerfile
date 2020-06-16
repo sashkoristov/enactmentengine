@@ -1,4 +1,4 @@
-FROM java:8
+FROM openjdk:11.0.7-jre-slim
 WORKDIR /
 ADD target/enactment-engine-0.0.1-SNAPSHOT-jar-with-dependencies.jar service.jar
 COPY Database /Database
