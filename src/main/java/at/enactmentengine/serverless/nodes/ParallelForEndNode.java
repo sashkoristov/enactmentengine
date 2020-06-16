@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
-import afcl.functions.objects.DataOuts;
+import at.uibk.dps.afcl.functions.objects.DataOuts;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import org.slf4j.Logger;

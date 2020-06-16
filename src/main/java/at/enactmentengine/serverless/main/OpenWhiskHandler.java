@@ -28,7 +28,7 @@ import java.util.Properties;
  */
 public class OpenWhiskHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(App.class);
+    private static final Logger logger = LoggerFactory.getLogger(Local.class);
 
     public static JsonObject main(JsonObject args) {
         long startTime = System.currentTimeMillis();

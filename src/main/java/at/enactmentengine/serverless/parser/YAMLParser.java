@@ -3,7 +3,7 @@ package at.enactmentengine.serverless.parser;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
-import afcl.utils.Utils;
+import at.uibk.dps.afcl.utils.Utils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -43,10 +43,15 @@ public class YAMLParser {
         }
         com.dps.afcl.Workflow workflow = Utils.readYAML(filename, pathname);
         */
-        afcl.Workflow workflow = null;
+        at.uibk.dps.afcl.Workflow workflow = null;
 
         if(language == Language.YAML){
-            workflow = Utils.readYAMLNoValidation(filename);
+            try {
+                workflow = Utils.readYAMLNoValidation(filename);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
         }else if(language == Language.JSON){
             throw new NotImplementedException("JSON file currently not supported.");
         }else{
@@ -74,12 +79,17 @@ public class YAMLParser {
         }
         com.dps.afcl.Workflow workflow = Utils.readJSONString(content, pathname);*/
 
-        afcl.Workflow workflow = null;
+        at.uibk.dps.afcl.Workflow workflow = null;
 
         if(language == Language.YAML){
             throw new NotImplementedException("YAML content currently not supported.");
         }else if(language == Language.JSON){
-            workflow = Utils.readJSONStringNoValidation(content);
+            try {
+                workflow = Utils.readJSONStringNoValidation(content);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
         }else{
             throw new NotImplementedException("Workflow language currently not supported.");
         }
@@ -93,7 +103,7 @@ public class YAMLParser {
      * @param workflow to convert
      * @return executable workflow
      */
-    public ExecutableWorkflow getExecutableWorkflow(afcl.Workflow workflow) {
+    public ExecutableWorkflow getExecutableWorkflow(at.uibk.dps.afcl.Workflow workflow) {
 
         ExecutableWorkflow executableWorkflow = null;
         if (workflow != null) {

@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
-import afcl.functions.objects.DataIns;
+import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
