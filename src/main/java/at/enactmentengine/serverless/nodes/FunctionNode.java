@@ -33,12 +33,12 @@ public class FunctionNode extends Node {
 
     final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
-    static int counter = 0;
+    private static int counter = 0;
     private List<PropertyConstraint> constraints;
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
     private List<DataIns> input;
-    private Gateway gateway;
+    private static Gateway gateway = new Gateway(FunctionNode.class.getResource("/credentials.properties").getPath());
     private Map<String, Object> result;
 
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
@@ -51,7 +51,6 @@ public class FunctionNode extends Node {
         this.properties = properties;
         this.constraints = constraints;
         this.input = input;
-        this.gateway = new Gateway(FunctionNode.class.getResource("/credentials.properties").getPath());
     }
 
     /**
