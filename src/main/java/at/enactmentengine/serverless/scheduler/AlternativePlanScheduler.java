@@ -6,18 +6,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import afcl.Workflow;
-import afcl.functions.AtomicFunction;
-import afcl.functions.IfThenElse;
-import afcl.functions.Parallel;
-import afcl.functions.ParallelFor;
-import afcl.functions.Sequence;
-import afcl.functions.SequentialFor;
-import afcl.functions.SequentialWhile;
-import afcl.functions.Switch;
-import afcl.functions.objects.Case;
-import afcl.functions.objects.PropertyConstraint;
-import afcl.functions.objects.Section;
+import at.uibk.dps.afcl.Workflow;
+import at.uibk.dps.afcl.functions.AtomicFunction;
+import at.uibk.dps.afcl.functions.IfThenElse;
+import at.uibk.dps.afcl.functions.Parallel;
+import at.uibk.dps.afcl.functions.ParallelFor;
+import at.uibk.dps.afcl.functions.Sequence;
+import at.uibk.dps.afcl.functions.SequentialFor;
+import at.uibk.dps.afcl.functions.SequentialWhile;
+import at.uibk.dps.afcl.functions.Switch;
+import at.uibk.dps.afcl.functions.objects.Case;
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.afcl.functions.objects.Section;
 import dps.FTinvoker.database.SQLLiteDatabase;
 import dps.FTinvoker.function.Function;
 
@@ -39,10 +39,10 @@ public class AlternativePlanScheduler {
 	public void addAlternativePlansToYAML(String yamlFile,String outputFile) throws Exception{
 		Map<String, Object> functionInputs = new HashMap<>(); //needed to create temp dummy Func
     	functionInputs.put("null", "null"); 
-		Workflow workflow = afcl.utils.Utils.readYAMLNoValidation(yamlFile);
+		Workflow workflow = at.uibk.dps.afcl.utils.Utils.readYAMLNoValidation(yamlFile);
 		List<AtomicFunction> AllFunctionsInWorkflowNew = null;
 		AllFunctionsInWorkflowNew = getAllFunctionsInWorkflow(workflow);
-		for (afcl.Function each:AllFunctionsInWorkflowNew){
+		for (at.uibk.dps.afcl.Function each:AllFunctionsInWorkflowNew){
 			List<PropertyConstraint> tmpList = new LinkedList<PropertyConstraint>();
 			AtomicFunction casted = (AtomicFunction) each;
 			for (PropertyConstraint constraint:casted.getConstraints()){
@@ -66,7 +66,7 @@ public class AlternativePlanScheduler {
 			}
 			each.setConstraints(tmpList);
 		}
-		afcl.utils.Utils.writeYamlNoValidation(workflow, outputFile);
+		at.uibk.dps.afcl.utils.Utils.writeYamlNoValidation(workflow, outputFile);
 	}
 	
 	
@@ -93,7 +93,7 @@ public class AlternativePlanScheduler {
 	 *  Used to recursivly add all AtomicFunctions in a Workflow to a list
 	 *  Called by "getAllFunctionsInWorkflow()"
 	 */
-	private void recursiveSolver(afcl.Function function, List<AtomicFunction> listToSaveTo) {
+	private void recursiveSolver(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
 		switch (function.getClass().getSimpleName()) {
 		case "AtomicFunction":
 			AtomicFunction castedToAtomicFunction = (AtomicFunction) function;
@@ -111,16 +111,16 @@ public class AlternativePlanScheduler {
 			break;
 		case "Switch":
 			Switch castedSwitch = (Switch) function;
-			List<afcl.Function> switchDefault = castedSwitch.getDefault();
+			List<at.uibk.dps.afcl.Function> switchDefault = castedSwitch.getDefault();
 			if (switchDefault != null) {
-				for (afcl.Function funcs : castedSwitch.getDefault()) {
+				for (at.uibk.dps.afcl.Function funcs : castedSwitch.getDefault()) {
 					recursiveSolver(funcs, listToSaveTo);
 				}
 			}
 			List<Case> cases = castedSwitch.getCases();
 			if(cases != null){
 			for (Case cases1 : cases) {
-				for (afcl.Function functionsInCase : cases1.getFunctions()) {
+				for (at.uibk.dps.afcl.Function functionsInCase : cases1.getFunctions()) {
 					recursiveSolver(functionsInCase, listToSaveTo);
 				}
 			}
@@ -128,29 +128,29 @@ public class AlternativePlanScheduler {
 			break;
 		case "SequentialWhile":
 			SequentialWhile castedSW = (SequentialWhile) function;
-			List<afcl.Function> loopBodySW = castedSW.getLoopBody();
-			for (afcl.Function each : loopBodySW) {
+			List<at.uibk.dps.afcl.Function> loopBodySW = castedSW.getLoopBody();
+			for (at.uibk.dps.afcl.Function each : loopBodySW) {
 				recursiveSolver(each, listToSaveTo);
 			}
 			break;
 		case "SequentialFor":
 			SequentialFor castedSF = (SequentialFor) function;
-			List<afcl.Function> loopBodySF = castedSF.getLoopBody();
-			for (afcl.Function each : loopBodySF) {
+			List<at.uibk.dps.afcl.Function> loopBodySF = castedSF.getLoopBody();
+			for (at.uibk.dps.afcl.Function each : loopBodySF) {
 				recursiveSolver(each, listToSaveTo);
 			}
 			break;
 		case "Sequence":
 			Sequence castedSequence = (Sequence) function;
-			List<afcl.Function> sequenceBody = castedSequence.getSequenceBody();
-			for (afcl.Function each : sequenceBody) {
+			List<at.uibk.dps.afcl.Function> sequenceBody = castedSequence.getSequenceBody();
+			for (at.uibk.dps.afcl.Function each : sequenceBody) {
 				recursiveSolver(each, listToSaveTo);
 			}
 			break;
 		case "ParallelFor":
 			ParallelFor castedParallelFor = (ParallelFor) function;
-			List<afcl.Function> loopBody = castedParallelFor.getLoopBody();
-			for (afcl.Function each : loopBody) {
+			List<at.uibk.dps.afcl.Function> loopBody = castedParallelFor.getLoopBody();
+			for (at.uibk.dps.afcl.Function each : loopBody) {
 				recursiveSolver(each, listToSaveTo);
 			}
 			break;
@@ -158,17 +158,17 @@ public class AlternativePlanScheduler {
 			Parallel castedParallel = (Parallel) function;
 			List<Section> sectionList = castedParallel.getParallelBody();
 			for (Section section : sectionList) {
-				for (afcl.Function functionInSection : section.getSection()) {
+				for (at.uibk.dps.afcl.Function functionInSection : section.getSection()) {
 					recursiveSolver(functionInSection, listToSaveTo);
 				}
 			}
 			break;
 		case "IfThenElse":
 			IfThenElse castedIfThenElse = (IfThenElse) function;
-			for (afcl.Function funcs : castedIfThenElse.getThen()) {
+			for (at.uibk.dps.afcl.Function funcs : castedIfThenElse.getThen()) {
 				recursiveSolver(funcs, listToSaveTo);
 			}
-			for (afcl.Function funcs : castedIfThenElse.getElse()) {
+			for (at.uibk.dps.afcl.Function funcs : castedIfThenElse.getElse()) {
 				recursiveSolver(funcs, listToSaveTo);
 			}
 			break;
@@ -179,9 +179,9 @@ public class AlternativePlanScheduler {
 	 *  Returns all AtomicFunctions in a Workflow
 	 */
 	public List<AtomicFunction> getAllFunctionsInWorkflow(Workflow workflow) {
-		List<afcl.Function> workflowFunctionObjectList = workflow.getWorkflowBody();
+		List<at.uibk.dps.afcl.Function> workflowFunctionObjectList = workflow.getWorkflowBody();
 		List<AtomicFunction> returnList = new LinkedList<AtomicFunction>();
-		for (afcl.Function function : workflowFunctionObjectList) {
+		for (at.uibk.dps.afcl.Function function : workflowFunctionObjectList) {
 			recursiveSolver(function, returnList);
 		}
 		return returnList;

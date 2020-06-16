@@ -3,9 +3,9 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
-import afcl.functions.objects.DataIns;
-import afcl.functions.objects.DataOutsAtomic;
-import afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.afcl.functions.objects.DataIns;
+import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 

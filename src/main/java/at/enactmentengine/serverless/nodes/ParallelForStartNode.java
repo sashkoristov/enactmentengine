@@ -1,9 +1,9 @@
 package at.enactmentengine.serverless.nodes;
 
-import afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import afcl.functions.objects.DataIns;
-import afcl.functions.objects.LoopCounter;
+import at.uibk.dps.afcl.functions.objects.DataIns;
+import at.uibk.dps.afcl.functions.objects.LoopCounter;
 import com.google.gson.JsonArray;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;

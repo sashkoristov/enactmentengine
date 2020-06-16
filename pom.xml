@@ -222,7 +222,7 @@
 						<id>install-AFCLCore</id>
 						<phase>clean</phase>
 						<configuration>
-							<file>${basedir}/externalJars/WorkflowAPI.jar</file>
+							<file>${basedir}/externalJars/afclCore.jar</file>
 							<repositoryLayout>default</repositoryLayout>
 							<groupId>at.uibk.dps.afclcore</groupId>
 							<artifactId>afcl-core</artifactId>
