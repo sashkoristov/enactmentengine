@@ -125,7 +125,7 @@ class NodeListHelper {
         for (int j = 1; j < function.getLoopBody().size(); j++) {
             ListPair<Node, Node> current = toNodeList(function.getLoopBody().get(j));
             currentEnd.addChild(current.getStart());
-            current.getStart().addChild(currentEnd);
+            current.getStart().addParent(currentEnd);
             currentEnd = current.getEnd();
         }
         currentEnd.addChild(parallelForEndNode);
