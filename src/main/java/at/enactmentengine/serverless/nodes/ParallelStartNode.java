@@ -35,7 +35,7 @@ public class ParallelStartNode extends Node {
     @Override
     public Boolean call() throws Exception {
         final Map<String, Object> outVals = new HashMap<>();
-        if(definedInput != null){
+        if (definedInput != null) {
             for (DataIns data : definedInput) {
                 if (!dataValues.containsKey(data.getSource())) {
                     throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
@@ -72,7 +72,7 @@ public class ParallelStartNode extends Node {
             if (dataValues == null) {
                 dataValues = new HashMap<String, Object>();
             }
-            if(definedInput != null){
+            if (definedInput != null) {
                 for (DataIns data : definedInput) {
                     if (input.containsKey(data.getSource())) {
                         dataValues.put(data.getSource(), input.get(data.getSource()));
@@ -90,6 +90,7 @@ public class ParallelStartNode extends Node {
     /**
      * Clones this node and its children.
      */
+    @Override
     public Node clone(Node endnode) throws CloneNotSupportedException {
         Node node = (Node) super.clone();
         node.children = new ArrayList<>();

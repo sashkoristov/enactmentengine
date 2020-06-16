@@ -4,16 +4,11 @@ import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.nodes.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 import at.uibk.dps.afcl.utils.Utils;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Paths;
 
 /**
  * Class for parsing YAML files into an executable workflow.
@@ -45,16 +40,16 @@ public class YAMLParser {
         */
         at.uibk.dps.afcl.Workflow workflow = null;
 
-        if(language == Language.YAML){
+        if (language == Language.YAML) {
             try {
                 workflow = Utils.readYAMLNoValidation(filename);
             } catch (IOException e) {
                 e.printStackTrace();
                 return null;
             }
-        }else if(language == Language.JSON){
+        } else if (language == Language.JSON) {
             throw new NotImplementedException("JSON file currently not supported.");
-        }else{
+        } else {
             throw new NotImplementedException("Workflow language currently not supported.");
         }
 
@@ -81,16 +76,16 @@ public class YAMLParser {
 
         at.uibk.dps.afcl.Workflow workflow = null;
 
-        if(language == Language.YAML){
+        if (language == Language.YAML) {
             throw new NotImplementedException("YAML content currently not supported.");
-        }else if(language == Language.JSON){
+        } else if (language == Language.JSON) {
             try {
                 workflow = Utils.readJSONStringNoValidation(content);
             } catch (IOException e) {
                 e.printStackTrace();
                 return null;
             }
-        }else{
+        } else {
             throw new NotImplementedException("Workflow language currently not supported.");
         }
 

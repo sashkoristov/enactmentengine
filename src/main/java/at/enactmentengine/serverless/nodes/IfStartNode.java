@@ -49,17 +49,17 @@ public class IfStartNode extends Node {
             evaluate = evaluate(conditionElement, ifInputValues);
             // if combined with is "or" and one condition element is true the whole
             // condition evaluates to true
-            if (condition.getCombinedWith().equals("or") && evaluate) {
+            if ("or".equals(condition.getCombinedWith()) && evaluate) {
                 break;
             }
             // if combined with is "and" and one condition element is false the whole
             // condition evaluates to false
-            if (condition.getCombinedWith().equals("and") && !evaluate) {
+            if ("and".equals(condition.getCombinedWith()) && !evaluate) {
                 break;
             }
         }
 
-        Node node = null;
+        Node node;
         if (evaluate) {
             node = children.get(0);
             logger.info("Executing " + name + " IfStartNodeOld in if branch.");
@@ -81,7 +81,7 @@ public class IfStartNode extends Node {
      * @param ifInputValues    The input values for the condition.
      * @return true when the condition element is evaluated to true, otherwise
      * false.
-     * @throws MissingInputDataException
+     * @throws MissingInputDataException on missing input data description
      */
     private boolean evaluate(ACondition conditionElement, Map<String, Object> ifInputValues)
             throws MissingInputDataException {
@@ -112,8 +112,9 @@ public class IfStartNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
-            if (dataValues == null)
+            if (dataValues == null) {
                 dataValues = new HashMap<>();
+            }
             for (DataIns data : dataIns) {
                 if (input.containsKey(data.getSource())) {
                     dataValues.put(data.getSource(), input.get(data.getSource()));
@@ -130,7 +131,7 @@ public class IfStartNode extends Node {
      * @param string        The string which is parsed to an integer.
      * @param ifInputValues A map that contains the needed input values.
      * @return The parsed value as integer.
-     * @throws MissingInputDataException
+     * @throws MissingInputDataException on missing input
      */
     private int parseCondition(String string, Map<String, Object> ifInputValues) throws MissingInputDataException {
         String conditionName = null;

@@ -59,7 +59,7 @@ public class FunctionNode extends Node {
     @Override
     public Boolean call() throws Exception {
 
-        int id = -1;
+        int id;
         synchronized (this) {
             id = counter++;
         }
@@ -80,10 +80,11 @@ public class FunctionNode extends Node {
                     } else {
                         // if (data.getPass()!=null &&
                         // data.getPass().equals("true"))
-                        if (data.getPassing() != null && data.getPassing())
+                        if (data.getPassing() != null && data.getPassing()) {
                             outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
-                        else
+                        } else {
                             functionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                        }
                     }
                 }
             }

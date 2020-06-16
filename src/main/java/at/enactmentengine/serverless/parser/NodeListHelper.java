@@ -30,8 +30,8 @@ class NodeListHelper {
     ListPair<Node, Node> toNodeList(Function function) {
         if (function instanceof AtomicFunction) {
             AtomicFunction tmp = (AtomicFunction) function;
-            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(),tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts());
-            return new ListPair<Node, Node>(functionNode, functionNode);
+            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts());
+            return new ListPair<>(functionNode, functionNode);
         } else if (function instanceof IfThenElse) {
             return toNodeListIf((IfThenElse) function);
         } else if (function instanceof Parallel) {
@@ -58,7 +58,7 @@ class NodeListHelper {
 
         // Switch cases
         for (Case switchCase : function.getCases()) {
-            ListPair<Node, Node> switchPair = new ListPair<Node, Node>();
+            ListPair<Node, Node> switchPair = new ListPair<>();
             ListPair<Node, Node> startNode = toNodeList(switchCase.getFunctions().get(0));
             switchPair.setStart(startNode.getStart());
             Node currentEnd = startNode.getEnd();
@@ -78,7 +78,7 @@ class NodeListHelper {
 
         // Default case
         if (function.getDefault() != null) {
-            ListPair<Node, Node> switchPair = new ListPair<Node, Node>();
+            ListPair<Node, Node> switchPair = new ListPair<>();
             ListPair<Node, Node> startNode = toNodeList(function.getDefault().get(0));
             switchPair.setStart(startNode.getStart());
             Node currentEnd = startNode.getEnd();
@@ -95,7 +95,7 @@ class NodeListHelper {
             end.addParent(switchPair.getEnd());
         }
 
-        return new ListPair<Node, Node>(start, end);
+        return new ListPair<>(start, end);
     }
 
     /**
@@ -125,13 +125,13 @@ class NodeListHelper {
         for (int j = 1; j < function.getLoopBody().size(); j++) {
             ListPair<Node, Node> current = toNodeList(function.getLoopBody().get(j));
             currentEnd.addChild(current.getStart());
-            current.getStart().addChild(currentEnd);
+            current.getStart().addParent(currentEnd);
             currentEnd = current.getEnd();
         }
         currentEnd.addChild(parallelForEndNode);
         parallelForEndNode.addParent(currentEnd);
 
-        return new ListPair<Node, Node>(parallelForStartNode, parallelForEndNode);
+        return new ListPair<>(parallelForStartNode, parallelForEndNode);
     }
 
     /**
@@ -152,7 +152,7 @@ class NodeListHelper {
             end.addParent(currentListPair.getEnd());
         }
 
-        return new ListPair<Node, Node>(start, end);
+        return new ListPair<>(start, end);
     }
 
     /**
@@ -162,7 +162,7 @@ class NodeListHelper {
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListSection(Section section) {
-        ListPair<Node, Node> sectionPair = new ListPair<Node, Node>();
+        ListPair<Node, Node> sectionPair = new ListPair<>();
         ListPair<Node, Node> startNode = toNodeList(section.getSection().get(0));
 
         sectionPair.setStart(startNode.getStart());
@@ -188,7 +188,7 @@ class NodeListHelper {
         IfStartNode start = new IfStartNode(function.getName(), function.getDataIns(), function.getCondition());
         IfEndNode end = new IfEndNode(function.getName(), function.getDataOuts());
 
-        ListPair<Node, Node> thenPair = new ListPair<Node, Node>();
+        ListPair<Node, Node> thenPair = new ListPair<>();
         ListPair<Node, Node> startNode = toNodeList(function.getThen().get(0));
         thenPair.setStart(startNode.getStart());
         Node currentEnd = startNode.getEnd();
@@ -203,7 +203,7 @@ class NodeListHelper {
         currentEnd.addChild(end);
         end.addParent(thenPair.getEnd());
 
-        ListPair<Node, Node> elsePair = new ListPair<Node, Node>();
+        ListPair<Node, Node> elsePair = new ListPair<>();
         startNode = toNodeList(function.getElse().get(0));
         elsePair.setStart(startNode.getStart());
         currentEnd = startNode.getEnd();
@@ -218,6 +218,6 @@ class NodeListHelper {
         currentEnd.addChild(end);
         end.addParent(elsePair.getEnd());
 
-        return new ListPair<Node, Node>(start, end);
+        return new ListPair<>(start, end);
     }
 }

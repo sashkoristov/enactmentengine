@@ -17,16 +17,16 @@ import java.util.*;
  * based on @author markusmoosbrugger, jakobnoeckl
  * extended by @author stefanpedratscher
  */
-public class Executor {
+class Executor {
 
 
-    static final Logger logger = LoggerFactory.getLogger(Executor.class);
+    private static final Logger logger = LoggerFactory.getLogger(Executor.class);
 
-    
-    public Map<String, Object> executeWorkflow(String fileName) {
-    
+
+    Map<String, Object> executeWorkflow(String fileName) {
+
         long time = System.currentTimeMillis();
-     
+
         // Disable hostname verification (enable OpenWhisk connections)
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
@@ -43,7 +43,7 @@ public class Executor {
         if (ex != null) {
 
             // Set some example workflow input
-            Map<String, Object> input = new HashMap<String, Object>();
+            Map<String, Object> input = new HashMap<>();
             input.put("some source", "34477227772222299999");// for ref gate
             JsonArray arr = new JsonArray();
             JsonArray arr2 = new JsonArray();
@@ -54,19 +54,19 @@ public class Executor {
             int arr3Size = 0;
             int arr4Size = 0;
             int total = arr1Size + arr2Size + arr3Size + arr4Size; // each
-            for(int i = 0; i < arr1Size; i++){
-            //for(int i = 0; i < total; i++){
+            for (int i = 0; i < arr1Size; i++) {
+                //for(int i = 0; i < total; i++){
                 arr.add(1);
             }
-            for(int i = 0; i < arr2Size; i++){
-               arr2.add(1);
+            for (int i = 0; i < arr2Size; i++) {
+                arr2.add(1);
             }
-            for(int i = 0; i < arr3Size; i++){
+            for (int i = 0; i < arr3Size; i++) {
                 arr3.add(1);
-             }
-            for(int i = 0; i < arr4Size; i++){
+            }
+            for (int i = 0; i < arr4Size; i++) {
                 arr4.add(1);
-             }
+            }
             input.put("each", 1);
             input.put("total", total);
             input.put("array", arr);
@@ -80,12 +80,12 @@ public class Executor {
 
             // Execute the workflow
             try {
-            	output = ex.executeWorkflow(input);
+                output = ex.executeWorkflow(input);
             } catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
             } catch (Exception e) {
-				e.printStackTrace();
-			}
+                e.printStackTrace();
+            }
 
             logger.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
         }

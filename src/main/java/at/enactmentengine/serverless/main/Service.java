@@ -32,6 +32,7 @@ public class Service {
             logger.info("Handle client in thread " + handler.getId());
         }
 
+        assert socket != null;
         socket.close();
         serverSocket.close();
     }

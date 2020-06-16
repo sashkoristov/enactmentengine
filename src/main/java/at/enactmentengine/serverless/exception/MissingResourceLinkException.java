@@ -12,5 +12,4 @@ public class MissingResourceLinkException extends Exception {
     public MissingResourceLinkException(String message) {
         super(message);
     }
-
 }
