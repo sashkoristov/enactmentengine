@@ -6,7 +6,6 @@ package at.enactmentengine.serverless.exception;
  * based on @author markusmoosbrugger, jakobnoeckl
  */
 public class MissingInputDataException extends Exception {
-
     private static final long serialVersionUID = 1L;
 
     public MissingInputDataException(String message) {

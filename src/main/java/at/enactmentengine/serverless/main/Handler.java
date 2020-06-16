@@ -9,61 +9,67 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Map;
 
-public class Handler implements Runnable{
+public class Handler implements Runnable {
 
-	Socket socket;
-	
-	public Handler(Socket socket) {
-		this.socket = socket;
-	}
-	
-	@Override
-	public void run() {
-		
-		InputStream in = null;
+    private Socket socket;
+
+    public Handler(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+
+        InputStream in = null;
         OutputStream out = null;
 
-		try {
+        try {
             in = socket.getInputStream();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
         try {
-            out = new FileOutputStream(Thread.currentThread().getId() + ".yaml");                        
+            out = new FileOutputStream(Thread.currentThread().getId() + ".yaml");
         } catch (FileNotFoundException ex) {
             ex.printStackTrace();
         }
 
-        byte[] bytes = new byte[16*1024];
+        byte[] bytes = new byte[16 * 1024];
         int count;
         try {
-			while ((count = in.read(bytes)) >= 0) {
-			    out.write(bytes, 0, count);
-			    if(in.available() == 0) break;
-			}
-			out.flush();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-        
+            assert in != null;
+            while ((count = in.read(bytes)) >= 0) {
+                assert out != null;
+                out.write(bytes, 0, count);
+                if (in.available() == 0) {
+                    break;
+                }
+            }
+            assert out != null;
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         Executor executor = new Executor();
         Map<String, Object> result = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml");
-        
+
         DataOutputStream dOut;
-		try {
-			dOut = new DataOutputStream(socket.getOutputStream());
-		    dOut.writeUTF(result.toString());
-		    dOut.flush();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
-        
         try {
-			out.close();
+            dOut = new DataOutputStream(socket.getOutputStream());
+            dOut.writeUTF(result.toString());
+            dOut.flush();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+
+        try {
             in.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+            assert out != null;
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

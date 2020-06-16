@@ -11,10 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -28,7 +26,7 @@ public class ParallelForStartNode extends Node {
     final static Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
 
     // private String distribution;
-    public List<DataIns> definedInput;
+    private List<DataIns> definedInput;
     private Map<String, Object> counterValues;
     private int counterStart;
     private int counterEnd;
@@ -48,7 +46,7 @@ public class ParallelForStartNode extends Node {
      * Parses the loop counter. Tries to cast each value as integer. If casting as
      * integer is not possible it assumes that the value comes from a variable.
      *
-     * @param loopCounter
+     * @param loopCounter loopCounter
      */
     private void parseLoopCounter(LoopCounter loopCounter) {
 
@@ -74,12 +72,12 @@ public class ParallelForStartNode extends Node {
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
             if (dataValues == null) {
-                dataValues = new HashMap<String, Object>();
+                dataValues = new HashMap<>();
             }
             if (counterValues == null) {
-                counterValues = new HashMap<String, Object>();
+                counterValues = new HashMap<>();
             }
-            if(definedInput != null){
+            if (definedInput != null) {
                 for (DataIns data : definedInput) {
                     if (input.containsKey(data.getSource())) {
                         dataValues.put(data.getSource(), input.get(data.getSource()));
@@ -102,10 +100,10 @@ public class ParallelForStartNode extends Node {
     @Override
     public Boolean call() throws Exception {
         final Map<String, Object> outVals = new HashMap<>();
-        if(definedInput != null){
+        if (definedInput != null) {
             for (DataIns data : definedInput) {
-            	if (!dataValues.containsKey(data.getSource())) {
-                	throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
+                if (!dataValues.containsKey(data.getSource())) {
+                    throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
                 } else {
                     outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
@@ -123,12 +121,12 @@ public class ParallelForStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
 
         List<Map<String, Object>> outValsForChilds = transferOutVals(children.size(), outVals);
-        
+
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
             // outVals.put("/EE/"+name+"/counter", new Integer(i));
-            if(outValsForChilds != null && i < outValsForChilds.size()) {
-            	node.passResult(outValsForChilds.get(i));
+            if (outValsForChilds != null && i < outValsForChilds.size()) {
+                node.passResult(outValsForChilds.get(i));
             }
             futures.add(exec.submit(node));
         }
@@ -145,8 +143,8 @@ public class ParallelForStartNode extends Node {
      *
      * @param outVals The output values of the parent functions. These are also the
      *                input values for the children of this node.
-     * @throws MissingInputDataException
-     * @throws CloneNotSupportedException
+     * @throws MissingInputDataException on missing input
+     * @throws CloneNotSupportedException on unsupported clone
      */
     private void addChildren(Map<String, Object> outVals) throws MissingInputDataException, CloneNotSupportedException {
         // add children depending on the counter value
@@ -175,6 +173,7 @@ public class ParallelForStartNode extends Node {
             children.add(node);
 
         }
+        assert endNode != null;
         endNode.setNumberOfChildren(children.size());
     }
 
@@ -213,11 +212,11 @@ public class ParallelForStartNode extends Node {
      */
     private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) throws Exception {
         ArrayList<Map<String, Object>> values = new ArrayList<>();
-        if(definedInput != null){
+        if (definedInput != null) {
             for (DataIns data : definedInput) {
-                if(data.getConstraints() != null) {
+                if (data.getConstraints() != null) {
                     for (PropertyConstraint constraint : data.getConstraints()) {
-                        if (constraint.getName().equals("distribution")) {
+                        if ("distribution".equals(constraint.getName())) {
                             if (constraint.getValue().contains("BLOCK")) {
                                 String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]", "");
                                 ArrayList<Map<String, Object>> tmp = distributeOutValsBlock(data, blockValue, childs);
@@ -231,16 +230,16 @@ public class ParallelForStartNode extends Node {
                             } else {
                                 throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
                             }
-                        } else if (constraint.getName().equals("element-index")) {
+                        } else if ("element-index".equals(constraint.getName())) {
                             throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
                         } else {
                             throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
                         }
                     }
-                }else{
-                    if(data.getPassing() != null && data.getPassing()){
-                        if(outVals.containsKey(this.name + "/" + data.getName())){
-                            for(int i = 0; i < childs; i++){
+                } else {
+                    if (data.getPassing() != null && data.getPassing()) {
+                        if (outVals.containsKey(this.name + "/" + data.getName())) {
+                            for (int i = 0; i < childs; i++) {
                                 if (values.size() > i) {
                                     values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
                                 } else {
@@ -249,7 +248,7 @@ public class ParallelForStartNode extends Node {
                                     values.add(i, tmp);
                                 }
                             }
-                        }else{
+                        } else {
                             System.err.println("Cannot Pass data " + data.getName() + ". No such matching value could be found");
                         }
                     }
@@ -285,8 +284,9 @@ public class ParallelForStartNode extends Node {
                         o = distributedArray.get(0).getAsString();
                     }
                     map.put(name + "/" + data.getName(), o);
-                } else
+                } else {
                     map.put(name + "/" + data.getName(), distributedArray);
+                }
 
                 distributedValues.add(map);
                 distributedArray = new JsonArray();

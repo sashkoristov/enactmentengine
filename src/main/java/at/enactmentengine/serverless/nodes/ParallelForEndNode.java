@@ -40,12 +40,12 @@ public class ParallelForEndNode extends Node {
         }
 
         Map<String, Object> outputValues = new HashMap<>();
-        if(output != null){
+        if (output != null) {
             for (DataOuts data : output) {
                 String key = name + "/" + data.getName();
                 if (parallelResult.containsKey(data.getSource())) {
                     outputValues.put(key, parallelResult.get(data.getSource()));
-                } else if (data.getType().equals("collection")) {
+                } else if ("collection".equals(data.getType())) {
                     outputValues.put(key, parallelResult);
                 }
             }
@@ -54,9 +54,9 @@ public class ParallelForEndNode extends Node {
         logger.info("Executing " + name + " ParallelForEndNodeOld with output: " + outputValues.toString());
 
         for (Node node : children) {
-        	if(outputValues != null) {
-        		node.passResult(outputValues);	
-        	}
+            if (outputValues != null) {
+                node.passResult(outputValues);
+            }
             node.call();
         }
 
@@ -69,15 +69,15 @@ public class ParallelForEndNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
-            if(output != null){
+            if (output != null) {
                 for (DataOuts data : output) {
                     if (input.containsKey(data.getSource())) {
-                        if (data.getType().equals("collection")) {
-                            if(parallelResult.containsKey(data.getSource())){
+                        if ("collection".equals(data.getType())) {
+                            if (parallelResult.containsKey(data.getSource())) {
                                 JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
                                 resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
                                 parallelResult.put(data.getSource(), resultArray);
-                            }else{
+                            } else {
                                 JsonArray resultArray = new JsonArray();
                                 resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
                                 parallelResult.put(data.getSource(), resultArray);
@@ -102,7 +102,7 @@ public class ParallelForEndNode extends Node {
     /**
      * Sets the number of children. These number is needed for the synchronization.
      *
-     * @param number
+     * @param number of children
      */
     public void setNumberOfChildren(int number) {
         this.numberOfChildren = number;
@@ -112,9 +112,11 @@ public class ParallelForEndNode extends Node {
      * Stops the cloning mechanism at this node because it's the end of the
      * parallelFor branch that was cloned.
      */
+    @Override
     public Node clone(Node endNode) throws CloneNotSupportedException {
-        if (endNode == this)
+        if (endNode == this) {
             return this;
+        }
 
         return super.clone(endNode);
     }

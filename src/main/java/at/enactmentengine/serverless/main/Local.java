@@ -27,6 +27,6 @@ public class Local {
             result = executor.executeWorkflow("src/main/resources/new_files/emptyFunction.yaml");
         }
 
-        System.out.println("Result:" + result);
+        logger.info("Result: " + result);
     }
 }

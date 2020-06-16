@@ -1,16 +1,13 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import at.enactmentengine.serverless.main.LambdaHandler;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -49,12 +46,12 @@ public class ExecutableWorkflow {
      * Starts the execution of the workflow.
      *
      * @param inputs The input values for the first workflow element.
-     * @throws Exception 
+     * @throws Exception
      */
     public Map<String, Object> executeWorkflow(Map<String, Object> inputs) throws Exception {
-    	
+
         final Map<String, Object> outVals = new HashMap<>();
-        if(definedInput != null){
+        if (definedInput != null) {
             for (DataIns data : definedInput) {
                 if (!inputs.containsKey(data.getSource())) {
                     throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
@@ -70,16 +67,15 @@ public class ExecutableWorkflow {
         Future<Boolean> future = exec.submit(startNode);
         try {
             if (future.get()) {
-            	if(endNode.getResult() == null)
-            	{
-            		logger.error("Workflow Failed! End result is Null");
-            	}else{
-            		logger.info("Workflow completed: " + endNode.getResult());
-            	}   
+                if (endNode.getResult() == null) {
+                    logger.error("Workflow Failed! End result is Null");
+                } else {
+                    logger.info("Workflow completed: " + endNode.getResult());
+                }
             }
         } catch (Exception e) {
-        	future.cancel(true);
-        	exec.shutdownNow();
+            future.cancel(true);
+            exec.shutdownNow();
             logger.error(e.getMessage(), e);
             // HAVE TO CALL SCHEDULER TO RESCHEDULE OR FIX EXCEPTION HERE
             throw e;
@@ -87,7 +83,6 @@ public class ExecutableWorkflow {
         exec.shutdown();
         return endNode.getResult();
     }
-    
-   
+
 
 }

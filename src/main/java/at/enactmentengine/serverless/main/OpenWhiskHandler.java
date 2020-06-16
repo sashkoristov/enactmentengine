@@ -44,10 +44,10 @@ public class OpenWhiskHandler {
 
         // Set workflow language
         Language language = Language.NOT_SET;
-        if(args != null && args.has("language")){
-            if(args.getAsJsonPrimitive("language").getAsString().equals("yaml")){
+        if (args != null && args.has("language")) {
+            if ("yaml".equals(args.getAsJsonPrimitive("language").getAsString())) {
                 language = Language.YAML;
-            }else if(args.getAsJsonPrimitive("language").getAsString().equals("json")){
+            } else if ("json".equals(args.getAsJsonPrimitive("language").getAsString())) {
                 language = Language.JSON;
             }
         }
@@ -86,19 +86,19 @@ public class OpenWhiskHandler {
             // Execute workflow
 
             try {
-				ex.executeWorkflow(input);
-			}catch (MissingInputDataException e) {
+                ex.executeWorkflow(input);
+            } catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
                 response.addProperty("result", "Error: Could not run workflow. See logs for more details.");
                 return response;
             } catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
 
         long endTime = System.currentTimeMillis();
-        response.addProperty("result", "Workflow ran without errors in " + (endTime - startTime) + "ms. Start: "+ startTime +", End: " + endTime);
+        response.addProperty("result", "Workflow ran without errors in " + (endTime - startTime) + "ms. Start: " + startTime + ", End: " + endTime);
         return response;
     }
 

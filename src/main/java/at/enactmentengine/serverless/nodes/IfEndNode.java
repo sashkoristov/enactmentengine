@@ -56,7 +56,7 @@ public class IfEndNode extends Node {
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
             if (ifResult == null) {
-                ifResult = new HashMap<String, Object>();
+                ifResult = new HashMap<>();
             }
             if (dataOuts != null) {
                 for (DataOuts data : dataOuts) {

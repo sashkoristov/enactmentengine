@@ -18,7 +18,7 @@ import java.util.Map.Entry;
 public class ParallelEndNode extends Node {
     final static Logger logger = LoggerFactory.getLogger(ParallelEndNode.class);
     private int waitcounter = 0;
-    private List<DataOuts> output = new ArrayList<>();
+    private List<DataOuts> output;
     private Map<String, Object> parallelResult = new HashMap<>();
     private Node currentCopy;
 
@@ -48,7 +48,7 @@ public class ParallelEndNode extends Node {
                 } else {
                     for (Entry<String, Object> inputElement : parallelResult.entrySet()) {
                         if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
-                            if (data.getType().equals("collection")) {
+                            if ("collection".equals(data.getType())) {
                                 // combines all results from the executed branches into one collection
                                 outputValues.put(key, parallelResult);
                                 break;
@@ -79,8 +79,9 @@ public class ParallelEndNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
-            if (output == null)
+            if (output == null) {
                 return;
+            }
             for (DataOuts data : output) {
                 if (input.containsKey(data.getSource())) {
                     parallelResult.put(data.getSource(), input.get(data.getSource()));
@@ -117,7 +118,7 @@ public class ParallelEndNode extends Node {
         Node node = (Node) super.clone();
         node.children = new ArrayList<>();
         for (Node childrenNode : children) {
-            node.children.add((Node) childrenNode.clone(endNode));
+            node.children.add(childrenNode.clone(endNode));
         }
         currentCopy = node;
         return node;

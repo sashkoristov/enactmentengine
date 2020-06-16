@@ -4,7 +4,6 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Regions;
@@ -33,32 +32,33 @@ import java.util.Properties;
 
 public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, String> {
 
-    static final Logger logger = LoggerFactory.getLogger(Local.class);
+    private static final Logger logger = LoggerFactory.getLogger(Local.class);
 
+    @Override
     public String handleRequest(InputObject inputObject, Context context) {
         long startTime = System.currentTimeMillis();
 
-        ExecutableWorkflow ex = null;
+        ExecutableWorkflow ex;
 
         // Set workflow language
         Language language = Language.NOT_SET;
-        if(inputObject != null && inputObject.getLanguage() != null){
-            if(inputObject.getLanguage().equals("yaml")){
+        if (inputObject != null && inputObject.getLanguage() != null) {
+            if ("yaml".equals(inputObject.getLanguage())) {
                 language = Language.YAML;
-            }else if(inputObject.getLanguage().equals("json")){
+            } else if ("json".equals(inputObject.getLanguage())) {
                 language = Language.JSON;
             }
         }
 
         // Check if input is valid
         if (inputObject == null || /*inputObject.getBucketName() == null ||*/ inputObject.getFilename() == null) {
-            if(inputObject == null || inputObject.getWorkflow() == null){
+            if (inputObject == null || inputObject.getWorkflow() == null) {
                 return "{\"result\": \"Error: Could not run workflow. Input not valid.\"}";
             }
 
             // Parse and create executable workflow
             ex = new YAMLParser().parseExecutableWorkflowByStringContent(inputObject.getWorkflow(), language);
-        }else{
+        } else {
 
             // Parse and create executable workflow
             ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename(), language);
@@ -68,7 +68,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
         if (ex != null) {
 
             // Set the workflow input
-            Map<String, Object> input = new HashMap<String, Object>();
+            Map<String, Object> input = new HashMap<>();
             input.put("some source", "34477227772222299999");// for ref gate
             //input.put("some source", "10");// for anomaly
             input.put("some camera source", "0");
@@ -76,26 +76,26 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
             // Add params from EE call as input
             if (inputObject.getParams() != null) {
-                inputObject.getParams().forEach((k, v) -> input.put(k, v));
+                inputObject.getParams().forEach(input::put);
             }
 
             // Execute workflow
             try {
-				ex.executeWorkflow(input);
-			}catch (MissingInputDataException e) {
+                ex.executeWorkflow(input);
+            } catch (MissingInputDataException e) {
                 logger.error(e.getMessage(), e);
                 return "{\"result\": \"Error: Could not run workflow. See logs for more details.\"}";
             } catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         } else {
             return "{\"result\": \"Error: Could not convert to executable workflow.\"}";
         }
 
         long endTime = System.currentTimeMillis();
 
-        return "{\"result\": \"Workflow ran without errors in " + (endTime - startTime) + "ms. Start: "+ startTime +", End: " + endTime + "\"}";
+        return "{\"result\": \"Workflow ran without errors in " + (endTime - startTime) + "ms. Start: " + startTime + ", End: " + endTime + "\"}";
     }
 
     /**
@@ -122,6 +122,8 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
         try {
             // Authenticate
+            assert awsAccessKey != null;
+            assert awsSecretKey != null;
             BasicAWSCredentials awsCreds = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
             AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_2)
                     .withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();
@@ -141,8 +143,6 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
 
             return ex;
 
-        } catch (SdkClientException e) {
-            throw e;
         } finally {
             // To ensure that the network connection doesn't remain open, close any open input streams.
             if (fullObject != null) {
@@ -173,8 +173,8 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
         private String language;
 
         /*
-        * Getter and Setter
-        */
+         * Getter and Setter
+         */
 
         public String getFilename() {
             return filename;
