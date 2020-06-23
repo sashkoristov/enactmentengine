@@ -1,4 +1,4 @@
-FROM adoptopenjdk/openjdk14:ubi
+FROM openjdk:14
 WORKDIR /
 ADD enactment-engine-all.jar service.jar
 COPY Database /Database

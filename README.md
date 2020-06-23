@@ -24,7 +24,10 @@ Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serv
 Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9898 for a `.yml` file and return the result of the execution.
 
 ### Docker
-Follow the readme in [/docker](docker)
+````
+gradle updateDocker
+````
+Follow the readme in [/docker](docker) to run
 
 ### AWS
 1. Create an AWS Lambda function representing the EE (Upload the .jar)
