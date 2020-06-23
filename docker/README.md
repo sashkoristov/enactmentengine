@@ -1,6 +1,5 @@
 ### Update
 ````
-gradle build
 gradle updateDocker
 ````
 
