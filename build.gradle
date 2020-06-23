@@ -47,3 +47,20 @@ shadowJar {
     classifier = null
     version = null
 }
+
+task copyJar(type: Copy) {
+    dependsOn   'shadowJar'
+    from        "build/libs/enactment-engine-all.jar"
+    into        './docker'
+}
+
+task copyDatabase(type: Copy) {
+    mkdir "Database"
+    from        "Database"
+    include "**"
+    into        './docker/Database'
+}
+
+task updateDocker(type: Copy) {
+    dependsOn   'copyJar', 'copyDatabase'
+}
