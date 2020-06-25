@@ -10,3 +10,4 @@ classes/
 src/main/java/META-INF/
 .gradle
 build/
+bin/

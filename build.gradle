@@ -7,6 +7,11 @@ buildscript {
     }
 }
 
+plugins {
+	id "com.palantir.docker" version "0.25.0"
+	id "com.palantir.docker-run" version "0.25.0"
+}
+
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'application'
@@ -51,7 +56,7 @@ shadowJar {
 task copyJar(type: Copy) {
     dependsOn   'shadowJar'
     from        "build/libs/enactment-engine-all.jar"
-    into        './docker'
+    into        './docker/Database/'
 }
 
 task copyDatabase(type: Copy) {
@@ -63,4 +68,32 @@ task copyDatabase(type: Copy) {
 
 task updateDocker(type: Copy) {
     dependsOn   'copyJar', 'copyDatabase'
+}
+
+docker {
+	name "enactment_engine"
+	dockerfile project.file('./docker/Dockerfile')
+	copySpec.from("./Database").into("Database")
+	files './docker/enactment-engine-all.jar'
+}
+
+dockerRun {
+	name "enactment_engine"
+	image "enactment_engine"
+	clean true
+	arguments "--network=afclplatform"
+}
+
+task dockerupdate {
+	dependsOn 'clean'
+	dependsOn 'build'
+	dependsOn 'copyJar'
+	dependsOn 'docker'
+	dependsOn 'dockerStop'
+	dependsOn 'dockerRun'
+	tasks.findByName('build').mustRunAfter 'clean'
+	tasks.findByName('dockerRun').mustRunAfter 'dockerStop'
+	tasks.findByName('dockerStop').mustRunAfter 'docker'
+	tasks.findByName('docker').mustRunAfter 'copyJar'
+	tasks.findByName('copyJar').mustRunAfter 'build'
 }
