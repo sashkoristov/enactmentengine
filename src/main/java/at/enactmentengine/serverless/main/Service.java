@@ -10,7 +10,7 @@ import java.net.Socket;
 
 public class Service {
 
-    private static int port = 9898;
+    private static int port = 9000;
     private static boolean running = true;
 
     static final Logger logger = LoggerFactory.getLogger(Service.class);
