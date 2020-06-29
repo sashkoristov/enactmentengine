@@ -1,6 +1,6 @@
 ### Run
 ````
 cd docker
-docker build -t service .
-docker run service
+docker build -t ee-service .
+docker run ee-service
 ````
