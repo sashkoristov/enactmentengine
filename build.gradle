@@ -71,15 +71,15 @@ task updateDocker(type: Copy) {
 }
 
 docker {
-	name "enactment_engine"
+	name "ee-service"
 	dockerfile project.file('./docker/Dockerfile')
+	files './docker/Database/enactment-engine-all.jar'
 	copySpec.from("./Database").into("Database")
-	files './docker/enactment-engine-all.jar'
 }
 
 dockerRun {
-	name "enactment_engine"
-	image "enactment_engine"
+	name "ee-service"
+	image "ee-service"
 	clean true
 	arguments "--network=afclplatform"
 }
