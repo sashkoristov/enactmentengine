@@ -3,6 +3,7 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
+import at.enactmentengine.serverless.object.FunctionInvocation;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
@@ -33,12 +34,14 @@ public class FunctionNode extends Node {
 
     final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
+    public static List<FunctionInvocation> functionInvocations = new ArrayList<>();
+
     private static int counter = 0;
     private List<PropertyConstraint> constraints;
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
     private List<DataIns> input;
-    private static Gateway gateway = new Gateway(FunctionNode.class.getResource("/credentials.properties").getPath());
+    private static Gateway gateway = new Gateway("credentials.properties");
     private Map<String, Object> result;
 
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
@@ -128,11 +131,11 @@ public class FunctionNode extends Node {
         }
         long end = System.currentTimeMillis();
 
-        if (resultString.length() > 100) {
-            logger.info("Function took: " + (end - start) + " ms. Result: too large " + "[" + System.currentTimeMillis()
+        if (resultString.length() > 100000) {
+            logger.info("FunctionInvocation took: " + (end - start) + " ms. Result: too large " + "[" + System.currentTimeMillis()
                     + "ms], id=" + id);
         } else {
-            logger.info("Function took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
+            logger.info("FunctionInvocation took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
                     + System.currentTimeMillis() + "ms], id=" + id);
         }
 
@@ -142,7 +145,53 @@ public class FunctionNode extends Node {
             node.call();
         }
         result = outVals;
+
+        String[] providerRegion = getProviderAndRegion(resourceLink);
+        FunctionInvocation functionInvocation = new FunctionInvocation(
+                resourceLink,
+                providerRegion[0],
+                providerRegion[1],
+                new Timestamp(start).toString(),
+                new Timestamp(end).toString(),
+                (end - start),
+
+                // TODO check if this is correct?
+                resultString.contains("error") ? "ERROR" : "OK",
+                null);
+
+        synchronized (this){
+            functionInvocations.add(functionInvocation);
+        }
+
         return true;
+    }
+
+    private String[] getProviderAndRegion(String resourceLink){
+        String[] res = new String[2];
+        res[0] = "NOT_FOUND";
+        res[1] = "NOT_FOUND";
+        if(resourceLink.contains("functions.cloud.ibm")){
+            res[0] = "IBM";
+            res[1] = resourceLink.split("https://")[1].split("functions\\.cloud\\.ibm")[0];
+        } else if(resourceLink.contains("arn")){
+            res[0] = "AWS";
+            res[1] = resourceLink.split("lambda:")[1].split(":")[0];
+        } else if(resourceLink.contains("cloudfunctions.net")){
+            res[0] = "GOOGLE";
+            res[1] = resourceLink.split("https://")[1].split("\\.cloudfunctions\\.net")[0];
+        } else if(resourceLink.contains("azure")){
+            res[0] = "AZURE";
+        } else if(resourceLink.contains("fc.aliyuncs")){
+            res[0] = "ALIBABA";
+        }
+        return res;
+    }
+
+    private String getRegion(String resourceLink){
+        if(resourceLink.contains("arn")){
+            return "AWS";
+        }
+        return null;
     }
 
     /**
@@ -219,8 +268,9 @@ public class FunctionNode extends Node {
                 break;
             }
         }
-        if (resourceLink == null)
+        if (resourceLink == null) {
             throw new MissingResourceLinkException("No resource link on function node " + this.toString());
+        }
 
         resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
         return resourceLink;
@@ -255,7 +305,7 @@ public class FunctionNode extends Node {
 
     /**
      * parses function Settings.
-     * returns Function Object with correct Constraint and FT Settings
+     * returns FunctionInvocation Object with correct Constraint and FT Settings
      */
     private Function parseThisNodesFunction(String resourceLink, Map<String, Object> functionInputs) {
         List<PropertyConstraint> constraintList = this.constraints;
