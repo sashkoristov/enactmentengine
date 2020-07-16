@@ -1,5 +1,7 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.nodes.FunctionNode;
+import at.enactmentengine.serverless.object.FunctionInvocation;
 import com.google.gson.Gson;
 
 import java.io.DataOutputStream;
@@ -11,8 +13,12 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Handler implements Runnable {
+
+    private final static Logger LOGGER = Logger.getLogger(Handler.class.getName());
 
     private Socket socket;
 
@@ -58,11 +64,15 @@ public class Handler implements Runnable {
         Executor executor = new Executor();
         Map<String, Object> result = new HashMap<>();
         result.put("wfResult", executor.executeWorkflow(Thread.currentThread().getId() + ".yaml"));
+        result.put("fInvocations", FunctionNode.functionInvocations);
+
+        String jsonResult = new Gson().toJson(result);
+        LOGGER.log(Level.INFO, "Sending back result " + jsonResult);
 
         DataOutputStream dOut;
         try {
             dOut = new DataOutputStream(socket.getOutputStream());
-            dOut.writeUTF(new Gson().toJson(result));
+            dOut.writeUTF(jsonResult);
             dOut.flush();
         } catch (IOException e1) {
             e1.printStackTrace();
