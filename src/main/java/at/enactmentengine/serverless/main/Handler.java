@@ -1,5 +1,7 @@
 package at.enactmentengine.serverless.main;
 
+import com.google.gson.Gson;
+
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -7,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.Map;
 
 public class Handler implements Runnable {
@@ -53,12 +56,13 @@ public class Handler implements Runnable {
         }
 
         Executor executor = new Executor();
-        Map<String, Object> result = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml");
+        Map<String, Object> result = new HashMap<>();
+        result.put("wfResult", executor.executeWorkflow(Thread.currentThread().getId() + ".yaml"));
 
         DataOutputStream dOut;
         try {
             dOut = new DataOutputStream(socket.getOutputStream());
-            dOut.writeUTF(result.toString());
+            dOut.writeUTF(new Gson().toJson(result));
             dOut.flush();
         } catch (IOException e1) {
             e1.printStackTrace();
