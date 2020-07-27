@@ -22,6 +22,9 @@ import jFaaS.Gateway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -29,14 +32,16 @@ import java.util.*;
  * Class which handles the execution of a function.
  *
  * @author markusmoosbrugger, jakobnoeckl
+ *
+ * adapted by @author stefanpedratscher
  */
 public class FunctionNode extends Node {
 
     final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
-    public static List<FunctionInvocation> functionInvocations = new ArrayList<>();
-
     private static int counter = 0;
+    private int executionId;
+
     private List<PropertyConstraint> constraints;
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
@@ -45,7 +50,7 @@ public class FunctionNode extends Node {
     private Map<String, Object> result;
 
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
-                        List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output) {
+                        List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
         super(name, type);
         this.output = output;
         if (output == null) {
@@ -54,6 +59,7 @@ public class FunctionNode extends Node {
         this.properties = properties;
         this.constraints = constraints;
         this.input = input;
+        this.executionId = executionId;
     }
 
     /**
@@ -132,10 +138,10 @@ public class FunctionNode extends Node {
         long end = System.currentTimeMillis();
 
         if (resultString.length() > 100000) {
-            logger.info("FunctionInvocation took: " + (end - start) + " ms. Result: too large " + "[" + System.currentTimeMillis()
+            logger.info("Function took: " + (end - start) + " ms. Result: too large " + "[" + System.currentTimeMillis()
                     + "ms], id=" + id);
         } else {
-            logger.info("FunctionInvocation took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
+            logger.info("Function took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
                     + System.currentTimeMillis() + "ms], id=" + id);
         }
 
@@ -151,19 +157,56 @@ public class FunctionNode extends Node {
                 resourceLink,
                 providerRegion[0],
                 providerRegion[1],
-                new Timestamp(start).toString(),
-                new Timestamp(end).toString(),
+                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString(),
+                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString(),
                 (end - start),
 
-                // TODO check if this is correct?
-                resultString.contains("error") ? "ERROR" : "OK",
+                // TODO check if this is correct? How are errors reported?
+                resultString.contains("error:") ? "ERROR" : "OK",
                 null);
-
-        synchronized (this){
+        logFunctionInvocation(functionInvocation);
+        /*synchronized (this){
             functionInvocations.add(functionInvocation);
-        }
+        }*/
 
         return true;
+    }
+
+    private void logFunctionInvocation(FunctionInvocation functionInvocation){
+        try {
+            logger.info("Connecting to logger service...");
+            Socket loggerService = new Socket("logger-service", 9005);
+
+            // Send request
+            JsonObject jsonRequest = new JsonObject();
+            jsonRequest.addProperty("requestType", "INSERT_INVOCATION");
+
+            JsonObject jsonFunctionInvocation = new JsonObject();
+            jsonFunctionInvocation.addProperty("link", functionInvocation.getFunctionLink());
+            jsonFunctionInvocation.addProperty("provider", functionInvocation.getProvider());
+            jsonFunctionInvocation.addProperty("region", functionInvocation.getRegion());
+            jsonFunctionInvocation.addProperty("invokeTime", functionInvocation.getInvokeTime());
+            jsonFunctionInvocation.addProperty("returnTime", functionInvocation.getReturnTime());
+            jsonFunctionInvocation.addProperty("executionTime", functionInvocation.getExecutionTime());
+            jsonFunctionInvocation.addProperty("status", functionInvocation.getStatus());
+            jsonFunctionInvocation.addProperty("errorMessage", functionInvocation.getErrorMessage());
+            jsonFunctionInvocation.addProperty("executionId", executionId);
+
+            jsonRequest.add("invocation", jsonFunctionInvocation);
+
+            String request = jsonRequest.toString();
+
+            logger.info("Sending request " + request + "...");
+            ObjectOutputStream out = new ObjectOutputStream(loggerService.getOutputStream());
+            out.writeObject(request);
+            out.flush();
+
+            logger.info("Closing connection to logger service...");
+            loggerService.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private String[] getProviderAndRegion(String resourceLink){
@@ -172,7 +215,7 @@ public class FunctionNode extends Node {
         res[1] = "NOT_FOUND";
         if(resourceLink.contains("functions.cloud.ibm")){
             res[0] = "IBM";
-            res[1] = resourceLink.split("https://")[1].split("functions\\.cloud\\.ibm")[0];
+            res[1] = resourceLink.split("https://")[1].split("\\.functions\\.cloud\\.ibm")[0];
         } else if(resourceLink.contains("arn")){
             res[0] = "AWS";
             res[1] = resourceLink.split("lambda:")[1].split(":")[0];

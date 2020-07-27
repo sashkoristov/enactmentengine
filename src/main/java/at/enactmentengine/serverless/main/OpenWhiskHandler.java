@@ -55,11 +55,11 @@ public class OpenWhiskHandler {
         // Get input filename and possible additional parameters
         String filename = null;
         if (args != null && args.has("workflow")) {
-            ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString(), language);
+            ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString(), language, -1);
         }
         if (args != null && args.has("filename")) {
             filename = args.getAsJsonPrimitive("filename").getAsString();
-            ex = new YAMLParser().parseExecutableWorkflow(filename, language);
+            ex = new YAMLParser().parseExecutableWorkflow(filename, language, -1);
 
             // Check if filename is specified
             if (filename == null) {

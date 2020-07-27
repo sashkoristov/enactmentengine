@@ -14,6 +14,8 @@ import org.apache.commons.lang3.NotImplementedException;
  */
 class NodeListHelper {
 
+    public int executionId;
+
     /**
      * Default constructor for NodeList helper
      */
@@ -30,7 +32,7 @@ class NodeListHelper {
     ListPair<Node, Node> toNodeList(Function function) {
         if (function instanceof AtomicFunction) {
             AtomicFunction tmp = (AtomicFunction) function;
-            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts());
+            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(functionNode, functionNode);
         } else if (function instanceof IfThenElse) {
             return toNodeListIf((IfThenElse) function);

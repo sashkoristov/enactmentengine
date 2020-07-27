@@ -77,11 +77,11 @@ public class Handler implements Runnable {
         Long start = System.currentTimeMillis();
 
         /* Get the execution id of the workflow execution */
-        FunctionNode.executionId = getExecutionId();
+        int executionId = getExecutionId();
 
         /* Execute the workflow */
         Executor executor = new Executor();
-        Map<String, Object> executionResult = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml");
+        Map<String, Object> executionResult = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml", executionId);
 
         /* Stop measuring time for workflow execution */
         Long end = System.currentTimeMillis();
@@ -93,7 +93,7 @@ public class Handler implements Runnable {
         result.put("wfResult", executionResult);
 
         /* Workflow execution identifier */
-        result.put("executionId", FunctionNode.executionId);
+        result.put("executionId", executionId);
 
         /* Enactment engine statistics */
         Map<String, Object> eeStats = new HashMap<>();

@@ -32,7 +32,7 @@ public class ParallelForStartNode extends Node {
     private int counterEnd;
     private int counterStepSize;
     private String[] counterVariableNames;
-    private static int MAX_NUMBER_THREADS = 1000;
+    public static int MAX_NUMBER_THREADS = 1000;
 
     public ParallelForStartNode(String name, String type, List<DataIns> definedInput, LoopCounter loopCounter) {
         super(name, type);

@@ -27,7 +27,7 @@ public class YAMLParser {
      * @param filename yaml file to parse
      * @return Instance of class Executable workflow.
      */
-    public ExecutableWorkflow parseExecutableWorkflow(String filename, Language language) {
+    public ExecutableWorkflow parseExecutableWorkflow(String filename, Language language, int executionId) {
 
         // Parse yaml file
         /*String pathname = "/tmp/schema.json";
@@ -54,7 +54,7 @@ public class YAMLParser {
         }
 
 
-        return getExecutableWorkflow(workflow);
+        return getExecutableWorkflow(workflow, executionId);
     }
 
     /**
@@ -63,7 +63,7 @@ public class YAMLParser {
      * @param content JSON string to parse
      * @return Instance of class Executable workflow.
      */
-    public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content, Language language) {
+    public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content, Language language, int executionId) {
 
         // Parse yaml file
         /*String pathname = "/tmp/schema.json";
@@ -89,7 +89,7 @@ public class YAMLParser {
             throw new NotImplementedException("Workflow language currently not supported.");
         }
 
-        return getExecutableWorkflow(workflow);
+        return getExecutableWorkflow(workflow, executionId);
     }
 
     /**
@@ -98,11 +98,12 @@ public class YAMLParser {
      * @param workflow to convert
      * @return executable workflow
      */
-    public ExecutableWorkflow getExecutableWorkflow(at.uibk.dps.afcl.Workflow workflow) {
+    public ExecutableWorkflow getExecutableWorkflow(at.uibk.dps.afcl.Workflow workflow, int executionId) {
 
         ExecutableWorkflow executableWorkflow = null;
         if (workflow != null) {
             NodeListHelper nodeListHelper = new NodeListHelper();
+            nodeListHelper.executionId = executionId;
 
             // Create node pairs from workflow functions
             ListPair<Node, Node> workflowPair = new ListPair<Node, Node>();

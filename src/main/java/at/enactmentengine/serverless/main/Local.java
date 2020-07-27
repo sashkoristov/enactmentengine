@@ -22,9 +22,9 @@ public class Local {
 
         Map<String, Object> result;
         if (args.length > 0) {
-            result = executor.executeWorkflow(args[0]);
+            result = executor.executeWorkflow(args[0], -1);
         } else {
-            result = executor.executeWorkflow("src/main/resources/new_files/emptyFunction.yaml");
+            result = executor.executeWorkflow("src/main/resources/new_files/emptyFunction.yaml", -1);
         }
 
         logger.info("Result: " + result);

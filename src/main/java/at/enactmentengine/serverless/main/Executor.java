@@ -23,7 +23,7 @@ class Executor {
     private static final Logger logger = LoggerFactory.getLogger(Executor.class);
 
 
-    Map<String, Object> executeWorkflow(String fileName) {
+    Map<String, Object> executeWorkflow(String fileName, int executionId) {
 
         long time = System.currentTimeMillis();
 
@@ -38,7 +38,7 @@ class Executor {
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
-        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML);
+        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML, executionId);
         Map<String, Object> output = null;
         if (ex != null) {
 

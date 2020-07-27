@@ -57,11 +57,11 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             }
 
             // Parse and create executable workflow
-            ex = new YAMLParser().parseExecutableWorkflowByStringContent(inputObject.getWorkflow(), language);
+            ex = new YAMLParser().parseExecutableWorkflowByStringContent(inputObject.getWorkflow(), language, -1);
         } else {
 
             // Parse and create executable workflow
-            ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename(), language);
+            ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename(), language, -1);
         }
 
         // Check if conversion to an executable workflow succeeded
@@ -137,7 +137,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             // Download file and save as yaml
             String pathname = "/tmp/workflow.yaml";
             FileUtils.copyInputStreamToFile(fullObject.getObjectContent(), new File(pathname));
-            ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(pathname, language);
+            ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(pathname, language, -1);
 
             s3Client.shutdown();
 
