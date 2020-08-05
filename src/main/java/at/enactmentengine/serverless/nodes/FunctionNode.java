@@ -216,7 +216,10 @@ public class FunctionNode extends Node {
         if(resourceLink.contains("functions.cloud.ibm")){
             res[0] = "IBM";
             res[1] = resourceLink.split("https://")[1].split("\\.functions\\.cloud\\.ibm")[0];
-        } else if(resourceLink.contains("arn")){
+        } else if(resourceLink.contains("functions.appdomain.cloud")){
+            res[0] = "IBM";
+            res[1] = resourceLink.split("https://")[1].split("\\.functions\\.appdomain\\.cloud")[0];
+        }else if(resourceLink.contains("arn")){
             res[0] = "AWS";
             res[1] = resourceLink.split("lambda:")[1].split(":")[0];
         } else if(resourceLink.contains("cloudfunctions.net")){
