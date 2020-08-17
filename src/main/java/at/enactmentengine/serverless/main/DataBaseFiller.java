@@ -4,6 +4,7 @@ import dps.FTinvoker.database.SQLLiteDatabase;
 import dps.FTinvoker.exception.InvalidResourceException;
 import dps.FTinvoker.function.Function;
 
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -16,10 +17,10 @@ public class DataBaseFiller {
     public static void fillDatabase(Function func, int minRunningTime, int maxRunningTime, double successRate, int count) throws Exception {
         SQLLiteDatabase DB = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
         for (int i = 0; i < count; i++) {
-            int generatedRunningTime = ThreadLocalRandom.current().nextInt(minRunningTime, maxRunningTime + 1);
+            int generatedRunningTime = new SecureRandom().nextInt((maxRunningTime + 1) - minRunningTime) + minRunningTime;
             Timestamp start = new Timestamp(System.currentTimeMillis());
             Timestamp end = new Timestamp(start.getTime() + generatedRunningTime);
-            double d = Math.random();
+            double d = new SecureRandom().nextDouble();
             if (d < successRate) {
                 DB.addInvocation(func.getUrl(), func.getType(), detectProvider(func.getUrl()), getRegion(func), start, end, "OK", null);
             } else {
