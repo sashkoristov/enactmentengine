@@ -1,12 +1,9 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.google.gson.JsonArray;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -19,9 +16,7 @@ import java.util.*;
  */
 class Executor {
 
-
-    private static final Logger logger = LoggerFactory.getLogger(Executor.class);
-
+    private final static java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Executor.class.getName());
 
     Map<String, Object> executeWorkflow(String fileName, int executionId) {
 
@@ -33,7 +28,7 @@ class Executor {
 
         // Get the input file as argument or default string
         if (fileName == null) {
-            logger.error("Please specify a filename");
+            LOGGER.severe("Please specify a filename");
         }
 
         // Create an executable workflow
@@ -81,13 +76,11 @@ class Executor {
             // Execute the workflow
             try {
                 output = ex.executeWorkflow(input);
-            } catch (MissingInputDataException e) {
-                logger.error(e.getMessage(), e);
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.severe(e.getMessage());
             }
 
-            logger.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
+            LOGGER.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
         }
         return output;
     }

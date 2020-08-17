@@ -106,7 +106,7 @@ public class Handler implements Runnable {
             socket.close();
 
         } catch (IOException ex) {
-            ex.printStackTrace();
+            LOGGER.severe(ex.getMessage());
         }
     }
 

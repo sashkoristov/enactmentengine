@@ -98,7 +98,7 @@ public class FunctionNode extends Node {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
         //Simulate Availability
@@ -119,7 +119,7 @@ public class FunctionNode extends Node {
         try {
             functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
         String resultString = null;
@@ -204,7 +204,7 @@ public class FunctionNode extends Node {
             logger.info("Closing connection to logger service...");
             loggerService.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
     }
@@ -290,8 +290,8 @@ public class FunctionNode extends Node {
             return true;
 
         } catch (Exception e) {
-            e.printStackTrace();
-            logger.info("Error while trying to parse key in function " + name);
+            logger.error(e.getMessage(), e);
+            logger.error("Error while trying to parse key in function " + name);
             return false;
         }
     }
@@ -335,7 +335,7 @@ public class FunctionNode extends Node {
                     node.passResult(input);
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
 
@@ -428,7 +428,7 @@ public class FunctionNode extends Node {
             awsAccessKey = properties.getProperty("aws_access_key");
             awsSecretKey = properties.getProperty("aws_secret_key");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         return new AWSAccount(awsAccessKey, awsSecretKey);
     }
@@ -440,7 +440,7 @@ public class FunctionNode extends Node {
             properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
             ibmKey = properties.getProperty("ibm_api_key");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
         return new IBMAccount(ibmKey);
     }

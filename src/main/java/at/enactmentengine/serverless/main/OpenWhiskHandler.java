@@ -87,13 +87,10 @@ public class OpenWhiskHandler {
 
             try {
                 ex.executeWorkflow(input);
-            } catch (MissingInputDataException e) {
+            } catch (Exception e) {
                 logger.error(e.getMessage(), e);
                 response.addProperty("result", "Error: Could not run workflow. See logs for more details.");
                 return response;
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
             }
         }
 

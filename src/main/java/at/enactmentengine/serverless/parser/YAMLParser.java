@@ -44,7 +44,7 @@ public class YAMLParser {
             try {
                 workflow = Utils.readYAMLNoValidation(filename);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
                 return null;
             }
         } else if (language == Language.JSON) {
@@ -82,7 +82,7 @@ public class YAMLParser {
             try {
                 workflow = Utils.readJSONStringNoValidation(content);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
                 return null;
             }
         } else {
