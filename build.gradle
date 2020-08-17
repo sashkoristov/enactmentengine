@@ -10,6 +10,17 @@ buildscript {
 plugins {
 	id "com.palantir.docker" version "0.25.0"
 	id "com.palantir.docker-run" version "0.25.0"
+    id "org.sonarqube" version "2.7"
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectName", "enactmentengine"
+        // Check that this one is the same as the one used in the buildBreaker.py
+        property "sonar.projectKey", "abo:enactmentengine"
+        // URL of the sonarQube host (comment out when working with SonarQube in localhost)
+        //property "sonar.host.url", "http://138.232.66.154:3000"
+    }
 }
 
 apply plugin: 'java'
