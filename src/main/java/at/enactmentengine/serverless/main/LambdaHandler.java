@@ -1,26 +1,15 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * LambdaHandler to allow the execution of the Enactment Engine as Lambda
@@ -32,7 +21,7 @@ import java.util.Properties;
 
 public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, String> {
 
-    private static final Logger logger = LoggerFactory.getLogger(Local.class);
+    private static final Logger logger = LoggerFactory.getLogger(LambdaHandler.class);
 
     @Override
     public String handleRequest(InputObject inputObject, Context context) {
@@ -41,14 +30,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
         ExecutableWorkflow ex;
 
         // Set workflow language
-        Language language = Language.NOT_SET;
-        if (inputObject != null && inputObject.getLanguage() != null) {
-            if ("yaml".equals(inputObject.getLanguage())) {
-                language = Language.YAML;
-            } else if ("json".equals(inputObject.getLanguage())) {
-                language = Language.JSON;
-            }
-        }
+        Language language = readLanguage(inputObject);
 
         // Check if input is valid
         if (inputObject == null || /*inputObject.getBucketName() == null ||*/ inputObject.getFilename() == null) {
@@ -96,56 +78,20 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
     }
 
     /**
-     * Read a yaml workflow from S3
+     * Read the language of the input object.
      *
-     * @param inputObject of the request
-     * @return an executable workflow
-     * @throws Exception on failure
+     * @param inputObject to read from.
+     * @return yaml, json or undefined.
      */
-    private static ExecutableWorkflow readFileFromS3(InputObject inputObject, Language language) throws Exception {
-        S3Object fullObject = null;
-
-        // Read the aws credentials
-        String awsAccessKey = null;
-        String awsSecretKey = null;
-        try {
-            Properties properties = new Properties();
-            properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
-            awsAccessKey = properties.getProperty("aws_access_key");
-            awsSecretKey = properties.getProperty("aws_secret_key");
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-
-        try {
-            // Authenticate
-            assert awsAccessKey != null;
-            assert awsSecretKey != null;
-            BasicAWSCredentials awsCreds = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-            AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_2)
-                    .withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();
-
-            // Get the object from the bucket
-            fullObject = s3Client
-                    .getObject(new GetObjectRequest(inputObject.getBucketName(), inputObject.getFilename()));
-
-            YAMLParser yamlParser = new YAMLParser();
-
-            // Download file and save as yaml
-            String pathname = "/tmp/workflow.yaml";
-            FileUtils.copyInputStreamToFile(fullObject.getObjectContent(), new File(pathname));
-            ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(pathname, language, -1);
-
-            s3Client.shutdown();
-
-            return ex;
-
-        } finally {
-            // To ensure that the network connection doesn't remain open, close any open input streams.
-            if (fullObject != null) {
-                fullObject.close();
+    private Language readLanguage(InputObject inputObject) {
+        if (inputObject != null && inputObject.getLanguage() != null) {
+            if ("yaml".equals(inputObject.getLanguage())) {
+                return Language.YAML;
+            } else if ("json".equals(inputObject.getLanguage())) {
+                return Language.JSON;
             }
         }
+        return Language.NOT_SET;
     }
 
     /**

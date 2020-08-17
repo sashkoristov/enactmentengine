@@ -1,6 +1,5 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.nodes.FunctionNode;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -23,7 +22,7 @@ public class Handler implements Runnable {
     /**
      * Logger for request handler.
      */
-    private final static Logger LOGGER = Logger.getLogger(Handler.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Handler.class.getName());
 
     /**
      * Connected client sending the request.
@@ -92,7 +91,7 @@ public class Handler implements Runnable {
 
             /* Send back json string because other modules might not have GSON */
             String jsonResult = new Gson().toJson(result);
-            LOGGER.log(Level.INFO, "Sending back result " + jsonResult);
+            LOGGER.log(Level.INFO, "Sending back result {}", jsonResult);
 
             /* Send response back to client */
             DataOutputStream dOut;
@@ -102,7 +101,6 @@ public class Handler implements Runnable {
 
             /* Close connection */
             in.close();
-            out.close();
             socket.close();
 
         } catch (IOException ex) {
@@ -126,7 +124,7 @@ public class Handler implements Runnable {
             JsonObject request = new JsonObject();
             request.addProperty("requestType", "GET_EXECUTION_ID");
             String requestString = request.toString();
-            LOGGER.info("Sending request " + requestString + "...");
+            LOGGER.log(Level.INFO, "Sending request {}...",  requestString);
             ObjectOutputStream out = new ObjectOutputStream(loggerService.getOutputStream());
             out.writeObject(requestString);
             out.flush();
@@ -138,16 +136,15 @@ public class Handler implements Runnable {
 
             /* Close connection */
             LOGGER.info("Closing connection to logger service...");
-            loggerService.close();
 
             /* Check if logger service returned a valid execution identifier */
-            if(result == null || (result != null && "-1".equals(result))){
+            if(result == null || ("-1".equals(result))){
                 LOGGER.warning("Logger service returned an invalid executionId.");
                 return -1;
             }
 
             /* Return response */
-            LOGGER.info("Response got: " + result);
+            LOGGER.log(Level.INFO, "Response got: {}", result);
             return Integer.parseInt(result);
         } catch (IOException | ClassNotFoundException e) {
 

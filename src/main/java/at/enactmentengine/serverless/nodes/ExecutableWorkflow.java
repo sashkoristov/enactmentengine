@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -20,7 +21,7 @@ import java.util.concurrent.Future;
  */
 public class ExecutableWorkflow {
 
-    final static Logger logger = LoggerFactory.getLogger(ExecutableWorkflow.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExecutableWorkflow.class);
     private Node startNode;
     private Node endNode;
     private String workflowName;
@@ -48,7 +49,7 @@ public class ExecutableWorkflow {
      * @param inputs The input values for the first workflow element.
      * @throws Exception
      */
-    public Map<String, Object> executeWorkflow(Map<String, Object> inputs) throws Exception {
+    public Map<String, Object> executeWorkflow(Map<String, Object> inputs) throws MissingInputDataException, ExecutionException, InterruptedException {
 
         final Map<String, Object> outVals = new HashMap<>();
         if (definedInput != null) {
@@ -62,22 +63,20 @@ public class ExecutableWorkflow {
         }
 
         // Start workflow execution
-        logger.info("Starting execution of workflow: \"" + workflowName + "\"" + "  [at " + System.currentTimeMillis() + "ms]");
+        logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
         startNode.passResult(outVals);
         Future<Boolean> future = exec.submit(startNode);
         try {
-            if (future.get()) {
+            if (Boolean.TRUE.equals(future.get())) {
                 if (endNode.getResult() == null) {
                     logger.error("Workflow Failed! End result is Null");
                 } else {
-                    logger.info("Workflow completed: " + endNode.getResult());
+                    logger.info("Workflow completed: {}", endNode.getResult());
                 }
             }
-        } catch (Exception e) {
+        } catch (InterruptedException | ExecutionException e) {
             future.cancel(true);
             exec.shutdownNow();
-            logger.error(e.getMessage(), e);
-            // HAVE TO CALL SCHEDULER TO RESCHEDULE OR FIX EXCEPTION HERE
             throw e;
         }
         exec.shutdown();

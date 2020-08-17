@@ -1,20 +1,14 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import com.cloudant.client.api.ClientBuilder;
-import com.cloudant.client.api.CloudantClient;
-import com.cloudant.client.api.Database;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -28,7 +22,12 @@ import java.util.Properties;
  */
 public class OpenWhiskHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(Local.class);
+    private static final Logger logger = LoggerFactory.getLogger(OpenWhiskHandler.class);
+    private static final String RESULT_FIELD = "result";
+    private static final String LANGUAGE_FIELD = "language";
+
+    OpenWhiskHandler(){
+    }
 
     public static JsonObject main(JsonObject args) {
         long startTime = System.currentTimeMillis();
@@ -43,14 +42,7 @@ public class OpenWhiskHandler {
         ExecutableWorkflow ex = null;
 
         // Set workflow language
-        Language language = Language.NOT_SET;
-        if (args != null && args.has("language")) {
-            if ("yaml".equals(args.getAsJsonPrimitive("language").getAsString())) {
-                language = Language.YAML;
-            } else if ("json".equals(args.getAsJsonPrimitive("language").getAsString())) {
-                language = Language.JSON;
-            }
-        }
+        Language language = readLanguage(args);
 
         // Get input filename and possible additional parameters
         String filename = null;
@@ -63,19 +55,20 @@ public class OpenWhiskHandler {
 
             // Check if filename is specified
             if (filename == null) {
-                response.addProperty("result", "Error: No filename specified.");
+                response.addProperty(RESULT_FIELD, "Error: No filename specified.");
                 return response;
             }
         }
-        HashMap jsonMap = new HashMap<>();
-        if (args != null && args.has("params"))
+        HashMap<String, Object> jsonMap = new HashMap<>();
+        if (args != null && args.has("params")) {
             jsonMap = new Gson().fromJson(args.get("params").toString(), HashMap.class);
+        }
 
         // Parse and create executable workflow
         if (ex != null) {
 
             // Set the workflow input
-            Map<String, Object> input = new HashMap<String, Object>();
+            Map<String, Object> input = new HashMap<>();
             input.put("some source", "5");// for ref gate
             input.put("some camera source", "0");
             input.put("some sensor source", "0");
@@ -89,47 +82,30 @@ public class OpenWhiskHandler {
                 ex.executeWorkflow(input);
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
-                response.addProperty("result", "Error: Could not run workflow. See logs for more details.");
+                response.addProperty(RESULT_FIELD, "Error: Could not run workflow. See logs for more details.");
                 return response;
             }
         }
 
         long endTime = System.currentTimeMillis();
-        response.addProperty("result", "Workflow ran without errors in " + (endTime - startTime) + "ms. Start: " + startTime + ", End: " + endTime);
+        response.addProperty(RESULT_FIELD, "Workflow ran without errors in " + (endTime - startTime) + "ms. Start: " + startTime + ", End: " + endTime);
         return response;
     }
 
     /**
-     * Get a file from cloudant
+     * Read the language of the input object.
      *
-     * @param docId id of the document
-     * @return InputStream of the file
+     * @param args to read from.
+     * @return yaml, json or undefined.
      */
-    private static InputStream getFileFromCloudant(String docId) {
-
-        // Authenticate
-        CloudantClient client = null;
-        try {
-            Properties properties = new Properties();
-            properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
-            String apikey = properties.getProperty("ibm_api_key");
-            client = ClientBuilder
-                    .url(new URL(
-                            "https://256ea85e-21ba-4e92-aafa-1a1fb6ae2498-bluemix.cloudantnosqldb.appdomain.cloud/"))
-                    .iamApiKey(apikey).build();
-        } catch (Exception e) {
-            throw new RuntimeException("Client not created", e);
+    private static Language readLanguage(JsonObject args) {
+        if (args != null && args.has(LANGUAGE_FIELD)) {
+            if ("yaml".equals(args.getAsJsonPrimitive(LANGUAGE_FIELD).getAsString())) {
+                return Language.YAML;
+            } else if ("json".equals(args.getAsJsonPrimitive(LANGUAGE_FIELD).getAsString())) {
+                return Language.JSON;
+            }
         }
-
-        // Database access
-        Database db = null;
-        try {
-            db = client.database("input_files", false);
-        } catch (Exception e) {
-            throw new RuntimeException("DB Not found", e);
-        }
-        InputStream is = db.getAttachment("yaml_files", docId);
-
-        return is;
+        return Language.NOT_SET;
     }
 }

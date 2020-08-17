@@ -37,7 +37,7 @@ import java.util.*;
  */
 public class FunctionNode extends Node {
 
-    final static Logger logger = LoggerFactory.getLogger(FunctionNode.class);
+    private static final Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
     private static int counter = 0;
     private int executionId;

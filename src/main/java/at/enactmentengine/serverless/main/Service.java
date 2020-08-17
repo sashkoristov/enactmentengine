@@ -19,7 +19,7 @@ public class Service {
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
 
-            logger.info("Server is up and running at " + InetAddress.getLocalHost().getHostAddress() + ":" + port);
+            logger.info("Server is up and running at {}:{}",InetAddress.getLocalHost().getHostAddress(), port);
 
             Socket socket = null;
             while (running) {
@@ -28,12 +28,11 @@ public class Service {
 
                 Thread handler = new Thread(new Handler(socket));
                 handler.start();
-                logger.info("Handle client in thread " + handler.getId());
+                logger.info("Handle client in thread {}", handler.getId());
             }
 
             assert socket != null;
             socket.close();
-            serverSocket.close();
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }

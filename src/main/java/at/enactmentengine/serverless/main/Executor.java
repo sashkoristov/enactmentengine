@@ -4,6 +4,8 @@ import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.google.gson.JsonArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -16,11 +18,11 @@ import java.util.*;
  */
 class Executor {
 
-    private final static java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Executor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(Executor.class);
 
     Map<String, Object> executeWorkflow(String fileName, int executionId) {
 
-        long time = System.currentTimeMillis();
+        long start = System.currentTimeMillis();
 
         // Disable hostname verification (enable OpenWhisk connections)
         final Properties props = System.getProperties();
@@ -28,7 +30,7 @@ class Executor {
 
         // Get the input file as argument or default string
         if (fileName == null) {
-            LOGGER.severe("Please specify a filename");
+            LOGGER.error("Please specify a filename");
         }
 
         // Create an executable workflow
@@ -50,7 +52,6 @@ class Executor {
             int arr4Size = 0;
             int total = arr1Size + arr2Size + arr3Size + arr4Size; // each
             for (int i = 0; i < arr1Size; i++) {
-                //for(int i = 0; i < total; i++){
                 arr.add(1);
             }
             for (int i = 0; i < arr2Size; i++) {
@@ -77,10 +78,11 @@ class Executor {
             try {
                 output = ex.executeWorkflow(input);
             } catch (Exception e) {
-                LOGGER.severe(e.getMessage());
+                LOGGER.error(e.getMessage(), e);
             }
 
-            LOGGER.info("Execution took " + (System.currentTimeMillis() - time) + "ms.");
+            long end = System.currentTimeMillis();
+            LOGGER.info("Execution took {}ms.", (end - start));
         }
         return output;
     }
