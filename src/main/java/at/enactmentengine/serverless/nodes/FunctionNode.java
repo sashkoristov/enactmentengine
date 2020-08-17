@@ -173,9 +173,9 @@ public class FunctionNode extends Node {
     }
 
     private void logFunctionInvocation(FunctionInvocation functionInvocation){
-        try {
-            logger.info("Connecting to logger service...");
-            Socket loggerService = new Socket("logger-service", 9005);
+
+        logger.info("Connecting to logger service...");
+        try (Socket loggerService = new Socket("logger-service", 9005)) {
 
             // Send request
             JsonObject jsonRequest = new JsonObject();

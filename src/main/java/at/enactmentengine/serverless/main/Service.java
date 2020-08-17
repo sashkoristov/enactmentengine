@@ -15,25 +15,27 @@ public class Service {
 
     static final Logger logger = LoggerFactory.getLogger(Service.class);
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
 
-        ServerSocket serverSocket = null;
-        serverSocket = new ServerSocket(port);
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
 
-        logger.info("Server is up and running at " + InetAddress.getLocalHost().getHostAddress() + ":" + port);
+            logger.info("Server is up and running at " + InetAddress.getLocalHost().getHostAddress() + ":" + port);
 
-        Socket socket = null;
-        while (running) {
-            logger.info("Waiting for client(s)...");
-            socket = serverSocket.accept();
+            Socket socket = null;
+            while (running) {
+                logger.info("Waiting for client(s)...");
+                socket = serverSocket.accept();
 
-            Thread handler = new Thread(new Handler(socket));
-            handler.start();
-            logger.info("Handle client in thread " + handler.getId());
+                Thread handler = new Thread(new Handler(socket));
+                handler.start();
+                logger.info("Handle client in thread " + handler.getId());
+            }
+
+            assert socket != null;
+            socket.close();
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        assert socket != null;
-        socket.close();
-        serverSocket.close();
     }
 }

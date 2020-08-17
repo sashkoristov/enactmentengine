@@ -45,84 +45,68 @@ public class Handler implements Runnable {
     @Override
     public void run() {
 
-        /* Get input and output stream */
-        InputStream in = null;
-        OutputStream out = null;
-        try {
-            in = socket.getInputStream();
-            out = new FileOutputStream(Thread.currentThread().getId() + ".yaml");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
+        try (OutputStream out = new FileOutputStream(Thread.currentThread().getId() + ".yaml")) {
 
-        /* Read bytes and write to output stream */
-        byte[] bytes = new byte[16 * 1024];
-        int count;
-        try {
+            /* Get input and output stream */
+            InputStream in = socket.getInputStream();
+
+            /* Read bytes and write to output stream */
+            byte[] bytes = new byte[16 * 1024];
+            int count;
             assert in != null;
             while ((count = in.read(bytes)) >= 0) {
-                assert out != null;
                 out.write(bytes, 0, count);
                 if (in.available() == 0) {
                     break;
                 }
             }
-            assert out != null;
             out.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-        /* Start measuring time for workflow execution */
-        Long start = System.currentTimeMillis();
+            /* Start measuring time for workflow execution */
+            long start = System.currentTimeMillis();
 
-        /* Get the execution id of the workflow execution */
-        int executionId = getExecutionId();
+            /* Get the execution id of the workflow execution */
+            int executionId = getExecutionId();
 
-        /* Execute the workflow */
-        Executor executor = new Executor();
-        Map<String, Object> executionResult = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml", executionId);
+            /* Execute the workflow */
+            Executor executor = new Executor();
+            Map<String, Object> executionResult = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml", executionId);
 
-        /* Stop measuring time for workflow execution */
-        Long end = System.currentTimeMillis();
+            /* Stop measuring time for workflow execution */
+            long end = System.currentTimeMillis();
 
-        /* Prepare the execution result */
-        Map<String, Object> result = new HashMap<>();
+            /* Prepare the execution result */
+            Map<String, Object> result = new HashMap<>();
 
-        /* Workflow result */
-        result.put("wfResult", executionResult);
+            /* Workflow result */
+            result.put("wfResult", executionResult);
 
-        /* Workflow execution identifier */
-        result.put("executionId", executionId);
+            /* Workflow execution identifier */
+            result.put("executionId", executionId);
 
-        /* Enactment engine statistics */
-        Map<String, Object> eeStats = new HashMap<>();
-        eeStats.put("start", new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString());
-        eeStats.put("end", new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString());
-        result.put("eeStats", eeStats);
+            /* Enactment engine statistics */
+            Map<String, Object> eeStats = new HashMap<>();
+            eeStats.put("start", new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString());
+            eeStats.put("end", new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString());
+            result.put("eeStats", eeStats);
 
-        /* Send back json string because other modules might not have GSON */
-        String jsonResult = new Gson().toJson(result);
-        LOGGER.log(Level.INFO, "Sending back result " + jsonResult);
+            /* Send back json string because other modules might not have GSON */
+            String jsonResult = new Gson().toJson(result);
+            LOGGER.log(Level.INFO, "Sending back result " + jsonResult);
 
-        /* Send response back to client */
-        DataOutputStream dOut;
-        try {
+            /* Send response back to client */
+            DataOutputStream dOut;
             dOut = new DataOutputStream(socket.getOutputStream());
             dOut.writeUTF(jsonResult);
             dOut.flush();
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
 
-        /* Close connection */
-        try {
+            /* Close connection */
             in.close();
-            assert out != null;
             out.close();
             socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -132,10 +116,11 @@ public class Handler implements Runnable {
      * @return execution identifier
      */
     private int getExecutionId(){
-        try {
-            /* Connect to logger service */
-            LOGGER.info("Connecting to logger service...");
-            Socket loggerService = new Socket("logger-service", 9005);
+
+        /* Connect to logger service */
+        LOGGER.info("Connecting to logger service...");
+
+        try (Socket loggerService = new Socket("logger-service", 9005)) {
 
             /* Prepare and send request */
             JsonObject request = new JsonObject();

@@ -85,7 +85,7 @@ public class SwitchStartNode extends Node {
             case "string":
                 return object.equals((String) switchVal);
             case "number":
-                return Integer.parseInt((String) object) == ((Integer) switchVal).intValue();
+                return switchVal != null && Integer.parseInt((String) object) == ((Integer) switchVal).intValue();
             default:
                 logger.info("Unknown type for condition data type " + dataEval.getType());
         }
