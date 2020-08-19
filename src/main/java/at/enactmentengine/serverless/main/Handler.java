@@ -1,5 +1,9 @@
 package at.enactmentengine.serverless.main;
 
+import at.uibk.dps.SocketUtils;
+import at.uibk.dps.communication.EnactmentEngineRequest;
+import at.uibk.dps.communication.EnactmentEngineResponse;
+import at.uibk.dps.communication.entity.Statistics;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -44,22 +48,12 @@ public class Handler implements Runnable {
     @Override
     public void run() {
 
-        try (OutputStream out = new FileOutputStream(Thread.currentThread().getId() + ".yaml")) {
+        try {
+            /* Wait for request */
+            EnactmentEngineRequest enactmentEngineRequest = SocketUtils.receiveJsonObject(socket, EnactmentEngineRequest.class);
 
-            /* Get input and output stream */
-            InputStream in = socket.getInputStream();
-
-            /* Read bytes and write to output stream */
-            byte[] bytes = new byte[16 * 1024];
-            int count;
-            assert in != null;
-            while ((count = in.read(bytes)) >= 0) {
-                out.write(bytes, 0, count);
-                if (in.available() == 0) {
-                    break;
-                }
-            }
-            out.flush();
+            /* Store to file */
+            SocketUtils.writeToFile(enactmentEngineRequest.getWorkflowFileContent(), Thread.currentThread().getId() + ".yaml");
 
             /* Start measuring time for workflow execution */
             long start = System.currentTimeMillis();
@@ -75,32 +69,19 @@ public class Handler implements Runnable {
             long end = System.currentTimeMillis();
 
             /* Prepare the execution result */
-            Map<String, Object> result = new HashMap<>();
-
-            /* Workflow result */
-            result.put("wfResult", executionResult);
-
-            /* Workflow execution identifier */
-            result.put("executionId", executionId);
-
-            /* Enactment engine statistics */
-            Map<String, Object> eeStats = new HashMap<>();
-            eeStats.put("start", new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString());
-            eeStats.put("end", new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString());
-            result.put("eeStats", eeStats);
+            EnactmentEngineResponse response = new EnactmentEngineResponse(
+                    new Gson().toJsonTree(executionResult).getAsJsonObject(),
+                    executionId,
+                    new Statistics(new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)))
+            );
 
             /* Send back json string because other modules might not have GSON */
-            String jsonResult = new Gson().toJson(result);
-            LOGGER.log(Level.INFO, "Sending back result {}", jsonResult);
+            LOGGER.log(Level.INFO, "Sending back result");
 
             /* Send response back to client */
-            DataOutputStream dOut;
-            dOut = new DataOutputStream(socket.getOutputStream());
-            dOut.writeUTF(jsonResult);
-            dOut.flush();
+            SocketUtils.sendJsonObject(socket, response);
 
             /* Close connection */
-            in.close();
             socket.close();
 
         } catch (IOException ex) {
