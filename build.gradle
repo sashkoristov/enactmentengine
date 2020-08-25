@@ -98,13 +98,14 @@ dockerRun {
 task dockerupdate {
 	dependsOn 'clean'
 	dependsOn 'build'
-	dependsOn 'copyJar'
+	dependsOn 'updateDocker'
 	dependsOn 'docker'
 	dependsOn 'dockerStop'
 	dependsOn 'dockerRun'
 	tasks.findByName('build').mustRunAfter 'clean'
 	tasks.findByName('dockerRun').mustRunAfter 'dockerStop'
 	tasks.findByName('dockerStop').mustRunAfter 'docker'
-	tasks.findByName('docker').mustRunAfter 'copyJar'
-	tasks.findByName('copyJar').mustRunAfter 'build'
+	tasks.findByName('docker').mustRunAfter 'updateDocker'
+	tasks.findByName('updateDocker').mustRunAfter 'build'
 }
+
