@@ -4,9 +4,13 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
 import at.enactmentengine.serverless.object.FunctionInvocation;
+import at.uibk.dps.SocketUtils;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.communication.InvocationLogManagerRequest;
+import at.uibk.dps.communication.InvocationLogManagerRequestFactory;
+import at.uibk.dps.communication.entity.Invocation;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -153,17 +157,19 @@ public class FunctionNode extends Node {
         result = outVals;
 
         String[] providerRegion = getProviderAndRegion(resourceLink);
-        FunctionInvocation functionInvocation = new FunctionInvocation(
+        Invocation functionInvocation = new Invocation(
                 resourceLink,
                 providerRegion[0],
                 providerRegion[1],
-                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString(),
-                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)).toString(),
+                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
                 (end - start),
 
                 // TODO check if this is correct? How are errors reported?
                 resultString.contains("error:") ? "ERROR" : "OK",
-                null);
+                null,
+                executionId
+        );
         logFunctionInvocation(functionInvocation);
         /*synchronized (this){
             functionInvocations.add(functionInvocation);
@@ -172,37 +178,16 @@ public class FunctionNode extends Node {
         return true;
     }
 
-    private void logFunctionInvocation(FunctionInvocation functionInvocation){
+    private void logFunctionInvocation(Invocation functionInvocation){
 
         logger.info("Connecting to logger service...");
         try (Socket loggerService = new Socket("logger-service", 9005)) {
 
-            // Send request
-            JsonObject jsonRequest = new JsonObject();
-            jsonRequest.addProperty("requestType", "INSERT_INVOCATION");
-
-            JsonObject jsonFunctionInvocation = new JsonObject();
-            jsonFunctionInvocation.addProperty("link", functionInvocation.getFunctionLink());
-            jsonFunctionInvocation.addProperty("provider", functionInvocation.getProvider());
-            jsonFunctionInvocation.addProperty("region", functionInvocation.getRegion());
-            jsonFunctionInvocation.addProperty("invokeTime", functionInvocation.getInvokeTime());
-            jsonFunctionInvocation.addProperty("returnTime", functionInvocation.getReturnTime());
-            jsonFunctionInvocation.addProperty("executionTime", functionInvocation.getExecutionTime());
-            jsonFunctionInvocation.addProperty("status", functionInvocation.getStatus());
-            jsonFunctionInvocation.addProperty("errorMessage", functionInvocation.getErrorMessage());
-            jsonFunctionInvocation.addProperty("executionId", executionId);
-
-            jsonRequest.add("invocation", jsonFunctionInvocation);
-
-            String request = jsonRequest.toString();
-
-            logger.info("Sending request " + request + "...");
-            ObjectOutputStream out = new ObjectOutputStream(loggerService.getOutputStream());
-            out.writeObject(request);
-            out.flush();
+            InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getInsertFunctionInvocationRequest(functionInvocation, executionId);
+            logger.info("Sending request to logger-service...");
+            SocketUtils.sendJsonObject(loggerService, invocationLogManagerRequest);
 
             logger.info("Closing connection to logger service...");
-            loggerService.close();
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
