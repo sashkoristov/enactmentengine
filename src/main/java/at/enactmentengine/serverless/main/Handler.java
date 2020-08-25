@@ -1,8 +1,7 @@
 package at.enactmentengine.serverless.main;
 
 import at.uibk.dps.SocketUtils;
-import at.uibk.dps.communication.EnactmentEngineRequest;
-import at.uibk.dps.communication.EnactmentEngineResponse;
+import at.uibk.dps.communication.*;
 import at.uibk.dps.communication.entity.Statistics;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -102,32 +101,28 @@ public class Handler implements Runnable {
         try (Socket loggerService = new Socket("logger-service", 9005)) {
 
             /* Prepare and send request */
-            JsonObject request = new JsonObject();
-            request.addProperty("requestType", "GET_EXECUTION_ID");
-            String requestString = request.toString();
-            LOGGER.log(Level.INFO, "Sending request {}...",  requestString);
-            ObjectOutputStream out = new ObjectOutputStream(loggerService.getOutputStream());
-            out.writeObject(requestString);
-            out.flush();
+            InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getCreateExecutionIdRequest();
+            LOGGER.log(Level.INFO, "Sending request to logger service.");
+            SocketUtils.sendJsonObject(loggerService, invocationLogManagerRequest);
 
             /* Wait for response (wait for filtered resources) */
             LOGGER.info("Waiting for response from logger service...");
-            ObjectInputStream objectInputStream = new ObjectInputStream(loggerService.getInputStream());
-            String result = (String) objectInputStream.readObject();
+            InvocationLogManagerResponse invocationLogManagerResponse = SocketUtils.receiveJsonObject(loggerService, InvocationLogManagerResponse.class);
+            int executionId = invocationLogManagerResponse.getExecutionId();
 
             /* Close connection */
             LOGGER.info("Closing connection to logger service...");
 
             /* Check if logger service returned a valid execution identifier */
-            if(result == null || ("-1".equals(result))){
+            if(executionId == -1){
                 LOGGER.warning("Logger service returned an invalid executionId.");
                 return -1;
             }
 
             /* Return response */
-            LOGGER.log(Level.INFO, "Response got: {}", result);
-            return Integer.parseInt(result);
-        } catch (IOException | ClassNotFoundException e) {
+            LOGGER.log(Level.INFO, "Got response from logger service");
+            return executionId;
+        } catch (IOException e) {
 
             /* Log error on failure */
             LOGGER.severe("Could not get execution Id: " + e.getLocalizedMessage());
