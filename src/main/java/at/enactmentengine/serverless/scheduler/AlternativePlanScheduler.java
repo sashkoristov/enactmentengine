@@ -18,8 +18,8 @@ import at.uibk.dps.afcl.functions.Switch;
 import at.uibk.dps.afcl.functions.objects.Case;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.afcl.functions.objects.Section;
-import dps.FTinvoker.database.SQLLiteDatabase;
-import dps.FTinvoker.function.Function;
+import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.function.Function;
 
 /**
  * Part of Future scheduler

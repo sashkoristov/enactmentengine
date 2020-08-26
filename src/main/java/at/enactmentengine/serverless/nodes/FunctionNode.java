@@ -4,6 +4,9 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
 import at.enactmentengine.serverless.object.FunctionInvocation;
+import at.uibk.dps.AWSAccount;
+import at.uibk.dps.FaultToleranceEngine;
+import at.uibk.dps.IBMAccount;
 import at.uibk.dps.SocketUtils;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
@@ -11,23 +14,19 @@ import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.communication.InvocationLogManagerRequest;
 import at.uibk.dps.communication.InvocationLogManagerRequestFactory;
 import at.uibk.dps.communication.entity.Invocation;
+import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.function.AlternativeStrategy;
+import at.uibk.dps.function.ConstraintSettings;
+import at.uibk.dps.function.FaultToleranceSettings;
+import at.uibk.dps.function.Function;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import dps.FTinvoker.AWSAccount;
-import dps.FTinvoker.FaultToleranceEngine;
-import dps.FTinvoker.IBMAccount;
-import dps.FTinvoker.database.SQLLiteDatabase;
-import dps.FTinvoker.function.AlternativeStrategy;
-import dps.FTinvoker.function.ConstraintSettings;
-import dps.FTinvoker.function.FaultToleranceSettings;
-import dps.FTinvoker.function.Function;
 import jFaaS.Gateway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.*;
@@ -131,6 +130,7 @@ public class FunctionNode extends Node {
         if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) { // Invoke with Fault Tolerance Module
             FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
             try {
+                logger.info("Invoking function with fault tolerance...");
                 resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
             } catch (Exception e) {
                 result = null;

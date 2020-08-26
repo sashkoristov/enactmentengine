@@ -1,8 +1,8 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.RegionDetectionException;
-import dps.FTinvoker.database.SQLLiteDatabase;
-import dps.FTinvoker.function.Function;
+import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.function.Function;
 
 import java.security.SecureRandom;
 import java.sql.Timestamp;
