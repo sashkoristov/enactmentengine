@@ -79,12 +79,101 @@ Follow the readme in [/docker](docker) to run
 
 ---------------
 	
-## FT-Scheduler
+## Fault Tolerance
+
+The enactment engine will automatically pass functions with fault tolerance and constraint settings to the fault tolerance module for execution.
+
+### Features
+
+This section will show the features of the Fault Tolerance engine with some very simple examples. All examples are based on the following simple workflow (only the constraints field of a function needs to be changed within the CFCL file):
+````yaml
+name: "exampleWorkflow"
+workflowBody:
+- function:
+    name: "hello"
+    type: "helloType"
+    properties:
+    - name: "resource"
+      value: "python:https://eu-gb.functions.cloud.ibm.com/<link.to.function>/hello.json"
+    constraints:
+    - name: "<FT-Name>"
+      value: "<FT-Value>"
+    dataOuts:
+    - name: "message"
+      type: "string"
+dataOuts:
+- name: "OutVal"
+  type: "string"
+  source: "hello/message"
+````
+
+- **FT-Retries** and **FT-AltStrat-requiredAvailability**
+
+First we specify the number of times a function should be retried (`FT-Retries`) before the alternative strategy is executed. Additionally we can specify the required availability (`FT-AltStrat-requiredAvailability`) as a double value. `FT-Retries` is mandatory, while `FT-AltStrat-requiredAvailability` is optional when using the fault tolerant execution. 
+
+````yaml
+constraints:
+- name: "FT-Retries"
+  value: "2"
+- name: "FT-AltStrat-requiredAvailability"
+  value: "0.9"
+````
+
+The `FT-AltStrat-requiredAvailability` requires some additional steps to find the alternative plan which is understandable by the enactment engine. For simplicity you can use the `addAlternativePlansToYAML()` method from [AlternativePlanScheduler](src/main/java/at/enactmentengine/serverless/scheduler/AlternativePlanScheduler.java) to find alternative plan(s). Please note that this might be changed in future and this method will be ported to another module. 
+
+In order for the [AlternativePlanScheduler](src/main/java/at/enactmentengine/serverless/scheduler/AlternativePlanScheduler.java) to work properly the following steps are required:
+
+1. A database with function invocations is required to retrieve old executions. Example: [FTDatabase.db](Database/FTDatabase.db). The database should contain the function which will be executed in the **Function** table.
+2. (To generate random invocations to fill the database [DataBaseFiller](src/main/java/at/enactmentengine/serverless/main/DataBaseFiller.java) can be used) 
+3. Now the `addAlternativePlansToYAML("path/to/file.yaml", "path/to/newly/created/optimizedFile.yaml")` can be used to generate the alternative strategy at runtime.
+4. The optimized file can now be executed by the enactment engine.
+
+Possible output from `addAlternativePlansToYAML()`:
+````yaml
+constraints:
+    - name: "FT-AltPlan-0"
+      value: "0.9879;https://jp-tok.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;https://eu-gb.functions.cloud.ibm.com/api/v1/web/<link.to.function>/hello.json;"
+    - name: "FT-AltPlan-1"
+      value: "0.9808;https://eu-de.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;https://us-south.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;"
+````
+
+- **C-latestStartingTime**
+
+````yaml
+constraints:
+- name: "C-latestStartingTime"
+  value: "2011-10-02 18:48:05.123"
+````
+
+will throw an `at.uibk.dps.exception.LatestStartingTimeException` if the start time of the function is before the specified time. 
+
+- **C-latestFinishingTime**
+
+````yaml
+constraints:
+- name: "C-latestFinishingTime"
+  value: "2011-10-02 18:48:05.123"
+````
+
+will throw an `at.uibk.dps.exception.LatestFinishingTimeException` if the function did not finish before the specified time.
+
+- **C-maxRunningTime**
+
+````yaml
+constraints:
+- name: "C-maxRunningTime"
+  value: "1240"
+````
+
+will stop waiting for a response of the cloud function after `1240` milliseconds. The enactment-engine will throw an `at.uibk.dps.exception.MaxRunningTimeException` exception if the specified runtime is exceeded.
+
+### FT-Scheduler
 1. Add your Functions to the **Functions** Table of the Database. You can then add example invocations to set the availability(the Scheduler will use when calculating Alternatives) using the **DataBaseFiller** contained in the EE.
 2. Use the AlternativePlanScheduler's **addAlternativePlansToYAML()** method to generate the AlternativeStrategy at Runtime. The first parameter is the path to the .yaml file containing the "FT-AltStrat-requiredAvailability" settings. The second parameter is the output path to the "Optimized AFCL". This "Optimized AFCL" file can than be executed using the Enactment Engine.
 
 The Enactment Engine will automatically pass Functions with FT or Constraint Settings to the Fault Tolerance Module for execution.
 
 ---------------
+
 
   
