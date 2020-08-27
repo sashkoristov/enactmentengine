@@ -1,10 +1,12 @@
 # enactmentEngine (EE)
 
-- **/externalJars** contain pre-build jars used within the EE. Keep them upToDate if they work properly.
-- **/src/main** 
-    - **/java** contains the source code of the EE.
-    - **/resources** contains example yaml files to test the execution
-- You will need to create a **/src/main/resources/credentials.properties** file, which contains the login credentials for the FaaS providers. This file will be ignored from git (**.gitignore**).
+## File structure
+
+- **[externalJars](externalJars)** contain pre-build jars used within the EE. Keep them upToDate if they work properly.
+- **[src/main](src/main)** 
+    - **[/java](src/main/java)** contains the source code of the EE.
+    - **[/resources](src/main/resources)** contains example yaml files to test the execution
+- You will need to create a **credentials.properties** file in the root directory of the project, which contains the login credentials for the FaaS providers. This file will be ignored from git (**[.gitignore](.gitignore)**).
 
     The file should look as follows:
     ````
@@ -21,13 +23,16 @@
 Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serverless/main/Local.java) and pass the workflow yaml file as parameter.
 
 ### Service
-Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9898 for a `.yml` file and return the result of the execution.
+Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9000 for a `.yaml` file and return the result of the execution in json format.
 
 ### Docker
 ````
-gradle updateDocker
+gradle updateDocker         // to start the service in a docker container with a gradle task.
 ````
-Follow the readme in [/docker](docker) to run
+
+Alternatively, follow [/docker/README.md](docker/README.md) to run the container without gradle.
+<!---
+NOT SUPPORTED RIGHT NOW:
 
 ### AWS
 1. Create an AWS Lambda function representing the EE (Upload the .jar)
@@ -76,9 +81,10 @@ Follow the readme in [/docker](docker) to run
     }
     ````
     Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
+--->
 
 ---------------
-	
+
 ## Fault Tolerance
 
 The enactment engine will automatically pass functions with fault tolerance and constraint settings to the fault tolerance module for execution.
