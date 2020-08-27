@@ -1,11 +1,11 @@
-# enactmentEngine (EE)
+# Enactment Engine (EE)
 
 ## File structure
 
 - **[externalJars](externalJars)** contain pre-build jars used within the EE. Keep them upToDate if they work properly.
 - **[src/main](src/main)** 
     - **[/java](src/main/java)** contains the source code of the EE.
-    - **[/resources](src/main/resources)** contains example yaml files to test the execution
+    - **[/resources](src/main/resources)** contains example yaml files to test the execution.
 - You will need to create a **credentials.properties** file in the root directory of the project, which contains the login credentials for the FaaS providers. This file will be ignored from git (**[.gitignore](.gitignore)**).
 
     The file should look as follows:

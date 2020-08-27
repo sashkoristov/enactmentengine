@@ -8,6 +8,11 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * Start the enactment engine as a service.
+ *
+ * @author stefanpedratscher
+ */
 public class Service {
 
     private static int port = 9000;
