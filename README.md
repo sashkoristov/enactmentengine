@@ -137,6 +137,17 @@ constraints:
       value: "0.9808;https://eu-de.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;https://us-south.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;"
 ````
 
+The following example would invoke each function within an alternative plan `2` times:
+````yaml
+constraints:
+    - name: "FT-Retries"
+      value: "2"
+    - name: "FT-AltPlan-0"
+      value: "0.9879;https://jp-tok.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;https://eu-gb.functions.cloud.ibm.com/api/v1/web/<link.to.function>/hello.json;"
+    - name: "FT-AltPlan-1"
+      value: "0.9808;https://eu-de.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;https://us-south.functions.appdomain.cloud/api/v1/web/<link.to.function>/hello.json;"
+````
+
 - **C-latestStartingTime**
 
 ````yaml
