@@ -1,13 +1,13 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.uibk.dps.afcl.functions.objects.DataOuts;
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import com.google.gson.JsonArray;
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 /**
@@ -45,19 +45,21 @@ public class ParallelEndNode extends Node {
                 String key = name + "/" + data.getName();
                 if (parallelResult.containsKey(data.getSource())) {
                     outputValues.put(key, parallelResult.get(data.getSource()));
-                } else {
-                    for (Entry<String, Object> inputElement : parallelResult.entrySet()) {
-                        if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
-                            if ("collection".equals(data.getType())) {
-                                // combines all results from the executed branches into one collection
-                                outputValues.put(key, parallelResult);
-                                break;
-                            } else {
-                                outputValues.put(key, inputElement.getValue());
+                    continue;
+                }
+                for (Entry<String, Object> inputElement : parallelResult.entrySet()) {
+                    if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
+                        if ("collection".equals(data.getType())) {
+                            // Default behaviour for collections is to pass the results
+                            // from the executed branches as key-value pairs
+                            Object valueToPass = parallelResult;
+                            if (data.getConstraints() != null) {
+                                valueToPass = fulfillCollectionOutputConstraints(data.getConstraints(), parallelResult);
                             }
-
+                            outputValues.put(key, valueToPass);
+                            break;
                         }
-
+                        outputValues.put(key, inputElement.getValue());
                     }
                 }
             }
@@ -123,6 +125,38 @@ public class ParallelEndNode extends Node {
         currentCopy = node;
         return node;
 
+    }
+
+    /**
+     * Fulfills the given collection output constraints for the given data elements.
+     *
+     * @param constraints the constraints to consider
+     * @param data        the data elements
+     * @return the resulting data elements
+     */
+    protected Object fulfillCollectionOutputConstraints(List<PropertyConstraint> constraints,
+                                                        Map<String, Object> data) {
+        Object result = data;
+        for (PropertyConstraint constraint : constraints) {
+            if (constraint.getName().equals("aggregation")) {
+                if (constraint.getValue().equals("+")) {
+                    // Combine the results from the executed branches into one collection
+                    JsonArray arr = new JsonArray(data.values().size());
+                    for (Object value : data.values()) {
+                        arr.addAll((JsonArray) value);
+                    }
+                    result = arr;
+                } else if (constraint.getValue().equals(",")) {
+                    // Same as default behaviour - pass the results from the executed branches as key-value pairs
+                    result = data;
+                } else {
+                    throw new NotImplementedException("Aggregation type " + constraint.getValue() + " not implemented.");
+                }
+            } else {
+                throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
+            }
+        }
+        return result;
     }
 
 }
