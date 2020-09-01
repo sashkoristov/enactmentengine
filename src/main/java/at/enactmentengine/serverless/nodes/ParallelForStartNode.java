@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.parser.ElementIndex;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.uibk.dps.afcl.functions.objects.DataIns;
@@ -208,32 +209,31 @@ public class ParallelForStartNode extends Node {
      * @param childs  The number of children.
      * @param outVals The output values.
      * @return the transferred output values.
-     * @throws Exception
      */
-    private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) throws Exception {
+    private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) {
         ArrayList<Map<String, Object>> values = new ArrayList<>();
         if (definedInput != null) {
             for (DataIns data : definedInput) {
                 if (data.getConstraints() != null) {
-                    for (PropertyConstraint constraint : data.getConstraints()) {
-                        if ("distribution".equals(constraint.getName())) {
-                            if (constraint.getValue().contains("BLOCK")) {
-                                String blockValue = constraint.getValue().replaceAll("[^0-9?!\\.]", "");
-                                ArrayList<Map<String, Object>> tmp = distributeOutValsBlock(data, blockValue, childs);
-                                for (int i = 0; i < tmp.size(); i++) {
-                                    if (values.size() > i) {
-                                        values.get(i).putAll(tmp.get(i));
-                                    } else {
-                                        values.add(i, tmp.get(i));
-                                    }
-                                }
-                            } else {
-                                throw new NotImplementedException("Distribution type for " + constraint.getValue() + " not implemented.");
-                            }
-                        } else if ("element-index".equals(constraint.getName())) {
-                            throw new NotImplementedException("Element index " + constraint.getValue() + " not implemented.");
+                    JsonArray dataElements = (JsonArray) dataValues.get(data.getSource());
+                    List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+
+                    for (int i = 0; i < distributedElements.size(); i++) {
+                        Object block = distributedElements.get(i);
+                        if (distributedElements.get(i).size() == 1) {
+                            // Extract single value
+                            JsonArray arr = distributedElements.get(i);
+                            block = data.getType().equals("number") ? arr.get(0).getAsInt() : arr.get(0).getAsString();
+                        }
+
+                        String key = name + "/" + data.getName();
+                        if (values.size() > i) {
+                            // Use the child map we already created for another DataIns port
+                            values.get(i).put(key, block);
                         } else {
-                            throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
+                            Map<String, Object> map = new HashMap<>();
+                            map.put(key, block);
+                            values.add(i, map);
                         }
                     }
                 } else {
@@ -259,42 +259,95 @@ public class ParallelForStartNode extends Node {
     }
 
     /**
-     * Distributes the output values in BLOCK mode. The collection is splitted into
+     * Distributes the given elements in BLOCK mode. The collection is split into
      * blocks of the given size.
      *
-     * @param data      The data element.
+     * @param elements  The data elements to distribute.
      * @param blockSize The block size of each block.
-     * @param childs    The number of children.
-     * @return An ArrayList with the data blocks.
+     * @return The data blocks in a list.
      */
-    private ArrayList<Map<String, Object>> distributeOutValsBlock(DataIns data, String blockSize, int childs) {
-        JsonArray jsonArr = (JsonArray) dataValues.get(data.getSource());
-        int size = Integer.parseInt(blockSize);
-        JsonArray distributedArray = new JsonArray();
-        ArrayList<Map<String, Object>> distributedValues = new ArrayList<>();
-        for (int i = 1; i <= jsonArr.size(); i++) {
-            distributedArray.add(jsonArr.get(i - 1));
-            if ((i % size == 0 && i - size >= 0) || i == jsonArr.size()) {
-                Map<String, Object> map = new HashMap<>();
-                if (distributedArray.size() == 1) {
-                    Object o;
-                    if (data.getType().equals("number")) {
-                        o = new Integer(distributedArray.get(0).getAsInt());
-                    } else {
-                        o = distributedArray.get(0).getAsString();
-                    }
-                    map.put(name + "/" + data.getName(), o);
-                } else {
-                    map.put(name + "/" + data.getName(), distributedArray);
-                }
+    private List<JsonArray> distributeOutValsBlock(JsonArray elements, int blockSize) {
+        List<JsonArray> blocks = new ArrayList<>();
+        JsonArray currentBlock = new JsonArray();
 
-                distributedValues.add(map);
-                distributedArray = new JsonArray();
+        for (int i = 0; i < elements.size(); i++) {
+            currentBlock.add(elements.get(i));
+            // Complete the current block if it is full or we ran out of elements
+            if (currentBlock.size() >= blockSize || i == (elements.size() - 1)) {
+                blocks.add(currentBlock);
+                currentBlock = new JsonArray();
             }
-
         }
 
-        return distributedValues;
+        return blocks;
+    }
+
+    /**
+     * Distributes the given data elements across loop iterations taking into account the given constraints.
+     *
+     * @param dataElements the data elements to distribute
+     * @param constraints  the constraints to consider
+     * @param children     the number of children (iterations)
+     * @return a list containing the distributed elements
+     */
+    protected List<JsonArray> distributeElements(JsonArray dataElements, List<PropertyConstraint> constraints,
+                                                 int children) {
+        // Check for unknown constraints
+        for (PropertyConstraint constraint : constraints) {
+            if (constraint.getName().equals("element-index") || constraint.getName().equals("distribution")) {
+                continue;
+            }
+            throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
+        }
+
+        // Element-index constraint has higher precedence than distribution constraint
+        PropertyConstraint elementIndexConstraint = getPropertyConstraintByName(constraints, "element-index");
+        if (elementIndexConstraint != null) {
+            // Create a subset of the collection using the indices specified in the element-index constraint
+            List<Integer> indices = ElementIndex.parseIndices(elementIndexConstraint.getValue());
+            JsonArray subset = new JsonArray(indices.size());
+            for (Integer i : indices) {
+                subset.add(dataElements.get(i));
+            }
+            dataElements = subset;
+        }
+
+        // Distribute
+        List<JsonArray> distributedElements;
+        PropertyConstraint distributionConstraint = getPropertyConstraintByName(constraints, "distribution");
+        if (distributionConstraint != null) {
+            if (distributionConstraint.getValue().contains("BLOCK")) {
+                int blockSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
+                distributedElements = distributeOutValsBlock(dataElements, blockSize);
+            } else {
+                throw new NotImplementedException("Distribution type for " + distributionConstraint.getValue()
+                        + " not implemented.");
+            }
+        } else {
+            // Provide the same elements to each child if no distribution constraint is specified
+            distributedElements = new ArrayList<>();
+            for (int i = 0; i < children; i++) {
+                distributedElements.add(dataElements);
+            }
+        }
+
+        return distributedElements;
+    }
+
+    /**
+     * Returns the first property constraint with the given name or {@code null} if it does not exist.
+     *
+     * @param propertyConstraints the property constraints
+     * @param name                the name of the property constraint to be searched for
+     * @return the first property constraint with the given name or {@code null} if it does not exist
+     */
+    protected PropertyConstraint getPropertyConstraintByName(List<PropertyConstraint> propertyConstraints,
+                                                             String name) {
+        return propertyConstraints
+                .stream()
+                .filter(x -> x.getName().equals(name))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -309,5 +362,4 @@ public class ParallelForStartNode extends Node {
     public void setDefinedInput(List<DataIns> definedInput) {
         this.definedInput = definedInput;
     }
-
 }
