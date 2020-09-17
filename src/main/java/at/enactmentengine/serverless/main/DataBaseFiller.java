@@ -3,10 +3,8 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.exception.RegionDetectionException;
 import at.uibk.dps.database.SQLLiteDatabase;
 import at.uibk.dps.function.Function;
-
 import java.security.SecureRandom;
 import java.sql.Timestamp;
-
 
 /**
  * Can be used to fill database for simulations

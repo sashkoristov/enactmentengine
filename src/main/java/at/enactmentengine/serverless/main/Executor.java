@@ -38,9 +38,9 @@ class Executor {
         ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML, executionId);
         Map<String, Object> output = null;
         if (ex != null) {
-
             // Set some example workflow input
             Map<String, Object> input = new HashMap<>();
+            /*
             input.put("some source", "34477227772222299999");// for ref gate
             JsonArray arr = new JsonArray();
             JsonArray arr2 = new JsonArray();
@@ -74,6 +74,7 @@ class Executor {
             input.put("some camera source", "0");
             input.put("some sensor source", "0");
 
+             */
             // Execute the workflow
             try {
                 output = ex.executeWorkflow(input);

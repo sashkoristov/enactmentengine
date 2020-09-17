@@ -66,6 +66,7 @@ public class ExecutableWorkflow {
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
         startNode.passResult(outVals);
         Future<Boolean> future = exec.submit(startNode);
+        /*
         try {
             if (Boolean.TRUE.equals(future.get())) {
                 if (endNode.getResult() == null) {
@@ -79,8 +80,12 @@ public class ExecutableWorkflow {
             exec.shutdownNow();
             throw e;
         }
+
+         */
         exec.shutdown();
-        return endNode.getResult();
+        System.out.println("WORKFLOW EXECUTED");
+        //return endNode.getResult();
+        return new HashMap<>();
     }
 
 

@@ -49,7 +49,8 @@ public class FunctionNode extends Node {
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
     private List<DataIns> input;
-    private static Gateway gateway = new Gateway("credentials.properties");
+    //private static Gateway gateway = new Gateway("credentials.properties");
+    private static Gateway gateway = new Gateway("");
     private Map<String, Object> result;
 
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
@@ -77,7 +78,7 @@ public class FunctionNode extends Node {
         }
 
         Map<String, Object> outVals = new HashMap<>();
-        String resourceLink = getResourceLink();
+        String resourceLink = getResourceLinkForVMs();
         logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
                 + "ms], id=" + id);
 
@@ -85,10 +86,14 @@ public class FunctionNode extends Node {
         Map<String, Object> functionInputs = new HashMap<>();
         try {
             if (input != null) {
+                for (int i = 0; i < input.size(); i++) {
+                    functionInputs.put(Integer.toString(i), input.get(i).getValue());
+                }
+                /*
                 for (DataIns data : input) {
                     if (!dataValues.containsKey(data.getSource())) {
-                        throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
-                                + " needs " + data.getSource() + "!");
+                        //throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
+                                //+ " needs " + data.getSource() + "!");
                     } else {
                         // if (data.getPass()!=null &&
                         // data.getPass().equals("true"))
@@ -99,17 +104,22 @@ public class FunctionNode extends Node {
                         }
                     }
                 }
+
+                 */
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
 
+        /*
         //Simulate Availability
         SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
         double simAvail = db.getSimulatedAvail(resourceLink);
         if (simAvail != 1) { //if this functions avail should be simulated
             functionInputs.put("availability", simAvail);
         }
+
+         */
 
         if (functionInputs.size() > 20) {
             logger.info("Input for function is large" + " [" + System.currentTimeMillis() + "ms], id=" + id);
@@ -120,13 +130,15 @@ public class FunctionNode extends Node {
 
         Function functionToInvoke = null;
         try {
-            functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
+            //functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
+            functionToInvoke = new Function(resourceLink, this.type, functionInputs);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
 
         String resultString = null;
         long start = System.currentTimeMillis();
+        /*
         if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) { // Invoke with Fault Tolerance Module
             FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
             try {
@@ -139,6 +151,11 @@ public class FunctionNode extends Node {
         } else {
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
         }
+
+         */
+        System.out.println("INVOKE FUNCTION");
+        resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
+        System.out.println("AFTER INVOKE FUNCTION");
         long end = System.currentTimeMillis();
 
         if (resultString.length() > 100000) {
@@ -304,6 +321,25 @@ public class FunctionNode extends Node {
         }
 
         resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
+        return resourceLink;
+    }
+
+    private String getResourceLinkForVMs() throws MissingResourceLinkException {
+        String resourceLink = null;
+
+        if (properties == null) {
+            throw new MissingResourceLinkException("No properties specified " + this.toString());
+        }
+        for (PropertyConstraint p : properties) {
+            if (p.getName().equals("resource")) {
+                resourceLink = p.getValue();
+                break;
+            }
+        }
+        if (resourceLink == null) {
+            throw new MissingResourceLinkException("No resource link on function node " + this.toString());
+        }
+
         return resourceLink;
     }
 
