@@ -49,8 +49,7 @@ public class FunctionNode extends Node {
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
     private List<DataIns> input;
-    //private static Gateway gateway = new Gateway("credentials.properties");
-    private static Gateway gateway = new Gateway("");
+    private Gateway gateway;
     private Map<String, Object> result;
 
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
@@ -78,7 +77,7 @@ public class FunctionNode extends Node {
         }
 
         Map<String, Object> outVals = new HashMap<>();
-        String resourceLink = getResourceLinkForVMs();
+        String resourceLink = getResourceLink();
         logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
                 + "ms], id=" + id);
 
@@ -86,40 +85,40 @@ public class FunctionNode extends Node {
         Map<String, Object> functionInputs = new HashMap<>();
         try {
             if (input != null) {
-                for (int i = 0; i < input.size(); i++) {
-                    functionInputs.put(Integer.toString(i), input.get(i).getValue());
+                if (resourceLink.contains(":VM:")) {
+                    for (int i = 0; i < input.size(); i++) {
+                        functionInputs.put(Integer.toString(i), input.get(i).getValue());
+                    }
                 }
-                /*
-                for (DataIns data : input) {
-                    if (!dataValues.containsKey(data.getSource())) {
-                        //throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
-                                //+ " needs " + data.getSource() + "!");
-                    } else {
-                        // if (data.getPass()!=null &&
-                        // data.getPass().equals("true"))
-                        if (data.getPassing() != null && data.getPassing()) {
-                            outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                else {
+                    for (DataIns data : input) {
+                        if (!dataValues.containsKey(data.getSource())) {
+                            //throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
+                            //+ " needs " + data.getSource() + "!");
                         } else {
-                            functionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                            // if (data.getPass()!=null &&
+                            // data.getPass().equals("true"))
+                            if (data.getPassing() != null && data.getPassing()) {
+                                outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                            } else {
+                                functionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                            }
                         }
                     }
                 }
-
-                 */
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
 
-        /*
-        //Simulate Availability
-        SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
-        double simAvail = db.getSimulatedAvail(resourceLink);
-        if (simAvail != 1) { //if this functions avail should be simulated
-            functionInputs.put("availability", simAvail);
+        if (!resourceLink.contains(":VM:")) {
+            //Simulate Availability
+            SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+            double simAvail = db.getSimulatedAvail(resourceLink);
+            if (simAvail != 1) { //if this functions avail should be simulated
+                functionInputs.put("availability", simAvail);
+            }
         }
-
-         */
 
         if (functionInputs.size() > 20) {
             logger.info("Input for function is large" + " [" + System.currentTimeMillis() + "ms], id=" + id);
@@ -128,34 +127,32 @@ public class FunctionNode extends Node {
                     "Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms], id=" + id);
         }
 
-        Function functionToInvoke = null;
-        try {
-            //functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
-            functionToInvoke = new Function(resourceLink, this.type, functionInputs);
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-
         String resultString = null;
         long start = System.currentTimeMillis();
-        /*
-        if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) { // Invoke with Fault Tolerance Module
-            FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+        if (!resourceLink.contains(":VM:")) {
+            Function functionToInvoke = null;
             try {
-                logger.info("Invoking function with fault tolerance...");
-                resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
+                functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
             } catch (Exception e) {
-                result = null;
-                throw e;
+                logger.error(e.getMessage(), e);
             }
-        } else {
+
+            if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) { // Invoke with Fault Tolerance Module
+                FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+                try {
+                    logger.info("Invoking function with fault tolerance...");
+                    resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
+                } catch (Exception e) {
+                    result = null;
+                    throw e;
+                }
+            } else {
+                resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
+            }
+        }
+        else {
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
         }
-
-         */
-        System.out.println("INVOKE FUNCTION");
-        resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
-        System.out.println("AFTER INVOKE FUNCTION");
         long end = System.currentTimeMillis();
 
         if (resultString.length() > 100000) {
@@ -173,24 +170,26 @@ public class FunctionNode extends Node {
         }
         result = outVals;
 
-        String[] providerRegion = getProviderAndRegion(resourceLink);
-        Invocation functionInvocation = new Invocation(
-                resourceLink,
-                providerRegion[0],
-                providerRegion[1],
-                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                (end - start),
+        if (!resourceLink.contains(":VM:")) {
+            String[] providerRegion = getProviderAndRegion(resourceLink);
+            Invocation functionInvocation = new Invocation(
+                    resourceLink,
+                    providerRegion[0],
+                    providerRegion[1],
+                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                    (end - start),
 
-                // TODO check if this is correct? How are errors reported?
-                resultString.contains("error:") ? "ERROR" : "OK",
-                null,
-                executionId
-        );
-        logFunctionInvocation(functionInvocation);
+                    // TODO check if this is correct? How are errors reported?
+                    resultString.contains("error:") ? "ERROR" : "OK",
+                    null,
+                    executionId
+            );
+            logFunctionInvocation(functionInvocation);
         /*synchronized (this){
             functionInvocations.add(functionInvocation);
         }*/
+        }
 
         return true;
     }
@@ -319,27 +318,13 @@ public class FunctionNode extends Node {
         if (resourceLink == null) {
             throw new MissingResourceLinkException("No resource link on function node " + this.toString());
         }
-
-        resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
-        return resourceLink;
-    }
-
-    private String getResourceLinkForVMs() throws MissingResourceLinkException {
-        String resourceLink = null;
-
-        if (properties == null) {
-            throw new MissingResourceLinkException("No properties specified " + this.toString());
+        if (resourceLink.contains(":VM:")) {
+            gateway = new Gateway("");
         }
-        for (PropertyConstraint p : properties) {
-            if (p.getName().equals("resource")) {
-                resourceLink = p.getValue();
-                break;
-            }
+        else {
+            resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
+            gateway = new Gateway("credentials.properties");
         }
-        if (resourceLink == null) {
-            throw new MissingResourceLinkException("No resource link on function node " + this.toString());
-        }
-
         return resourceLink;
     }
 

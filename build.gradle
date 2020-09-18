@@ -60,9 +60,9 @@ dependencies {
 }
 
 shadowJar {
-    baseName = 'enactment-engine-all'
-    classifier = null
-    version = null
+    archiveBaseName.set('enactment-engine-all')
+    archiveClassifier.set(null)
+    archiveVersion.set(null)
 }
 
 task copyJar(type: Copy) {
