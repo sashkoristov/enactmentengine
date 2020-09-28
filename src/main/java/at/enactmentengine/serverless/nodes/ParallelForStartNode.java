@@ -219,7 +219,7 @@ public class ParallelForStartNode extends Node {
                         if (distributedElements.get(i).size() == 1) {
                             // Extract single value
                             JsonArray arr = distributedElements.get(i);
-                            block = data.getType().equals("number") ? arr.get(0).getAsInt() : arr.get(0).getAsString();
+                            block = data.getType().equals("number") ? arr.get(0).getAsInt() : arr.get(0);
                         }
 
                         String key = name + "/" + data.getName();

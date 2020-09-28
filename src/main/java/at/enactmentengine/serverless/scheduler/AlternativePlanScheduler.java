@@ -26,7 +26,7 @@ import at.uibk.dps.function.Function;
  * Proposes Alternative Strategy and Changes AFCL before it will be run by EE
  */
 public class AlternativePlanScheduler {
-    private SQLLiteDatabase DB = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+    private SQLLiteDatabase database = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.database");
 
 
     /**
@@ -40,10 +40,10 @@ public class AlternativePlanScheduler {
         Map<String, Object> functionInputs = new HashMap<>(); //needed to create temp dummy Func
         functionInputs.put("null", "null");
         Workflow workflow = at.uibk.dps.afcl.utils.Utils.readYAMLNoValidation(yamlFile);
-        List<AtomicFunction> AllFunctionsInWorkflowNew = null;
-        AllFunctionsInWorkflowNew = getAllFunctionsInWorkflow(workflow);
-        for (at.uibk.dps.afcl.Function each : AllFunctionsInWorkflowNew) {
-            List<PropertyConstraint> tmpList = new LinkedList<PropertyConstraint>();
+        List<AtomicFunction> allFunctionsInWorkflowNew = null;
+        allFunctionsInWorkflowNew = getAllFunctionsInWorkflow(workflow);
+        for (AtomicFunction each : allFunctionsInWorkflowNew) {
+            List<PropertyConstraint> tmpList = new LinkedList<>();
             AtomicFunction casted = (AtomicFunction) each;
             for (PropertyConstraint constraint : casted.getConstraints()) {
                 if ("FT-AltStrat-requiredAvailability".equals(constraint.getName())) { // Has Availability for AltStrat Set
@@ -77,13 +77,13 @@ public class AlternativePlanScheduler {
         if (functionAlternativeList.size() < x) {
             return 0;
         } else {
-            double AvailabilityProduct = 1;
-            double ReachedAvailability = 0;
+            double availabilityProduct = 1;
+            double reachedAvailability = 0;
             for (int i = 0; i < x; i++) {
-                AvailabilityProduct = AvailabilityProduct * (1 - functionAlternativeList.get(i).getSuccessRate());
+                availabilityProduct = availabilityProduct * (1 - functionAlternativeList.get(i).getSuccessRate());
             }
-            ReachedAvailability = 1 - AvailabilityProduct;
-            return ReachedAvailability;
+            reachedAvailability = 1 - availabilityProduct;
+            return reachedAvailability;
         }
     }
 
@@ -195,7 +195,7 @@ public class AlternativePlanScheduler {
      */
     public List<String> proposeAlternativeStrategy(Function function, double wantedAvailability) throws Exception {
         List<String> proposedAltStrategy = new ArrayList<String>();
-        List<Function> functionAlternativeList = DB.getFunctionAlternatives(function);
+        List<Function> functionAlternativeList = database.getFunctionAlternatives(function);
         int i = 1;
         while (i <= functionAlternativeList.size()) {
             if (getSuccessRateOfFirstXFuncs(functionAlternativeList, i) > wantedAvailability) {
