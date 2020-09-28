@@ -24,16 +24,15 @@ import java.util.concurrent.Future;
  * @author markusmoosbrugger, jakobnoeckl
  */
 public class ParallelForStartNode extends Node {
-    final static Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
+    static final Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
 
-    // private String distribution;
     private List<DataIns> definedInput;
     private Map<String, Object> counterValues;
     private int counterStart;
     private int counterEnd;
     private int counterStepSize;
     private String[] counterVariableNames;
-    public static int MAX_NUMBER_THREADS = 1000;
+    public static final int MAX_NUMBER_THREADS = 1000;
 
     public ParallelForStartNode(String name, String type, List<DataIns> definedInput, LoopCounter loopCounter) {
         super(name, type);
@@ -114,9 +113,9 @@ public class ParallelForStartNode extends Node {
 
         // distribute value for next functions
 
-        logger.info("Executing " + name + " ParallelForStartNodeOld");
+        logger.info("Executing {} ParallelForStartNodeOld", name);
 
-        addChildren(outVals);
+        addChildren();
         ExecutorService exec = Executors
                 .newFixedThreadPool(children.size() > MAX_NUMBER_THREADS ? MAX_NUMBER_THREADS : children.size());
         List<Future<Boolean>> futures = new ArrayList<>();
@@ -125,7 +124,6 @@ public class ParallelForStartNode extends Node {
 
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
-            // outVals.put("/EE/"+name+"/counter", new Integer(i));
             if (outValsForChilds != null && i < outValsForChilds.size()) {
                 node.passResult(outValsForChilds.get(i));
             }
@@ -142,12 +140,10 @@ public class ParallelForStartNode extends Node {
      * Adds a specific number of children depending on the values counterStart,
      * counterEnd and counterStepSize.
      *
-     * @param outVals The output values of the parent functions. These are also the
-     *                input values for the children of this node.
      * @throws MissingInputDataException on missing input
      * @throws CloneNotSupportedException on unsupported clone
      */
-    private void addChildren(Map<String, Object> outVals) throws MissingInputDataException, CloneNotSupportedException {
+    private void addChildren() throws MissingInputDataException, CloneNotSupportedException {
         // add children depending on the counter value
         for (String counterKeyName : counterVariableNames) {
             if (counterKeyName != null && !counterValues.containsKey(counterKeyName)) {
@@ -164,13 +160,13 @@ public class ParallelForStartNode extends Node {
         if (counterVariableNames[2] != null) {
             counterStepSize = Integer.parseInt((String) counterValues.get(counterVariableNames[2]));
         }
-        logger.info("Counter values for " + ParallelForStartNode.class.getCanonicalName() + ": counterStart: "
-                + counterStart + ", counterEnd: " + counterEnd + ", stepSize: " + counterStepSize);
+        logger.info("Counter values for {} : counterStart: {}, counterEnd: {}, stepSize: {}",
+                ParallelForStartNode.class.getCanonicalName(), counterStart, counterEnd, counterStepSize);
 
         ParallelForEndNode endNode = findParallelForEndNode(children.get(0), 0);
 
         for (int i = counterStart; i < counterEnd - 1; i += counterStepSize) {
-            Node node = (Node) children.get(0).clone(endNode);
+            Node node = children.get(0).clone(endNode);
             children.add(node);
 
         }
@@ -249,7 +245,7 @@ public class ParallelForStartNode extends Node {
                                 }
                             }
                         } else {
-                            System.err.println("Cannot Pass data " + data.getName() + ". No such matching value could be found");
+                            logger.error("Cannot Pass data {}. No such matching value could be found", data.getName());
                         }
                     }
                 }
