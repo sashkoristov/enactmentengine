@@ -4,12 +4,10 @@ import at.uibk.dps.SocketUtils;
 import at.uibk.dps.communication.*;
 import at.uibk.dps.communication.entity.Statistics;
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 
 import java.io.*;
 import java.net.Socket;
 import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.logging.Level;
