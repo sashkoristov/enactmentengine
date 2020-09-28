@@ -18,8 +18,8 @@ import java.io.IOException;
  */
 public class YAMLParser {
 
-    final static Logger logger = LoggerFactory.getLogger(YAMLParser.class);
-    final static String JSON_SCHEMA = "schema.json";
+    static final Logger logger = LoggerFactory.getLogger(YAMLParser.class);
+    static final String JSON_SCHEMA = "schema.json";
 
     /**
      * Parses a given YAML file to a workflow, which can be executed.
@@ -30,14 +30,6 @@ public class YAMLParser {
     public ExecutableWorkflow parseExecutableWorkflow(String filename, Language language, int executionId) {
 
         // Parse yaml file
-        /*String pathname = "/tmp/schema.json";
-        try {
-            FileUtils.copyInputStreamToFile(YAMLParser.class.getResourceAsStream(JSON_SCHEMA), new File(pathname));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        com.dps.afcl.Workflow workflow = Utils.readYAML(filename, pathname);
-        */
         at.uibk.dps.afcl.Workflow workflow = null;
 
         if (language == Language.YAML) {
@@ -66,14 +58,6 @@ public class YAMLParser {
     public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content, Language language, int executionId) {
 
         // Parse yaml file
-        /*String pathname = "/tmp/schema.json";
-        try {
-            FileUtils.copyInputStreamToFile(YAMLParser.class.getResourceAsStream(JSON_SCHEMA), new File(pathname));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        com.dps.afcl.Workflow workflow = Utils.readJSONString(content, pathname);*/
-
         at.uibk.dps.afcl.Workflow workflow = null;
 
         if (language == Language.YAML) {
@@ -106,7 +90,7 @@ public class YAMLParser {
             nodeListHelper.executionId = executionId;
 
             // Create node pairs from workflow functions
-            ListPair<Node, Node> workflowPair = new ListPair<Node, Node>();
+            ListPair<Node, Node> workflowPair = new ListPair<>();
             ListPair<Node, Node> startNode = nodeListHelper.toNodeList(workflow.getWorkflowBody().get(0));
             workflowPair.setStart(startNode.getStart());
             Node currentEnd = startNode.getEnd();

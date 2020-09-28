@@ -14,7 +14,7 @@ import org.apache.commons.lang3.NotImplementedException;
  */
 class NodeListHelper {
 
-    public int executionId;
+    int executionId;
 
     /**
      * Default constructor for NodeList helper
@@ -107,7 +107,7 @@ class NodeListHelper {
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListSequence(Sequence function) {
-        throw new NotImplementedException("Sequence is default and explicit sequence construct is not implemented.");
+        throw new NotImplementedException("Sequence is default and explicit sequence construct is not implemented. Sequence: " + function.getName());
     }
 
     /**
