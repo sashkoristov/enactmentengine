@@ -17,7 +17,7 @@ import java.util.Map.Entry;
 public class SwitchEndNode extends Node {
     private List<DataOuts> dataOuts;
     private Map<String, Object> switchResult = new HashMap<>();
-    final static Logger logger = LoggerFactory.getLogger(SwitchEndNode.class);
+    static final Logger logger = LoggerFactory.getLogger(SwitchEndNode.class);
 
     public SwitchEndNode(String name, List<DataOuts> dataOuts) {
         super(name, "");
@@ -31,7 +31,7 @@ public class SwitchEndNode extends Node {
     @Override
     public Boolean call() throws Exception {
 
-        logger.info("Executing " + name + " SwitchEndNodeOld");
+        logger.info("Executing {} SwitchEndNodeOld", name);
 
         Map<String, Object> outputValues = new HashMap<>();
 

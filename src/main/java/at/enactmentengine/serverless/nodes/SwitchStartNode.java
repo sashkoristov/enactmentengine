@@ -21,7 +21,7 @@ public class SwitchStartNode extends Node {
     private List<DataIns> dataIns;
     private List<Case> cases;
     private DataEval dataEval;
-    final static Logger logger = LoggerFactory.getLogger(SwitchStartNode.class);
+    static final Logger logger = LoggerFactory.getLogger(SwitchStartNode.class);
 
     public SwitchStartNode(String name, List<DataIns> dataIns, DataEval dataEval, List<Case> cases) {
         super(name, "");
@@ -50,14 +50,14 @@ public class SwitchStartNode extends Node {
                     SwitchStartNode.class.getCanonicalName() + ": " + name + " needs " + dataEval.getSource() + "!");
         }
 
-        logger.info("Executing " + name + " SwitchStartNodeOld");
+        logger.info("Executing {} SwitchStartNodeOld", name);
 
         Object switchValue = parseSwitchCondition();
         // goes through all cases and executes a case if the switch value matches this
         // case
         for (int i = 0; i < cases.size(); i++) {
             if (caseMatches(cases.get(i).getValue(), switchValue)) {
-                logger.info("Switch case " + cases.get(i).getValue() + " fulfilled with value " + switchValue);
+                logger.info("Switch case {} fulfilled with value {}", cases.get(i).getValue(), switchValue);
                 children.get(i).passResult(switchInputValues);
                 children.get(i).call();
                 return true;
@@ -83,11 +83,11 @@ public class SwitchStartNode extends Node {
     private boolean caseMatches(Object object, Object switchVal) {
         switch (dataEval.getType()) {
             case "string":
-                return object.equals((String) switchVal);
+                return object.equals(switchVal);
             case "number":
-                return switchVal != null && Integer.parseInt((String) object) == ((Integer) switchVal).intValue();
+                return switchVal != null && Integer.parseInt((String) object) == (Integer) switchVal;
             default:
-                logger.info("Unknown type for condition data type " + dataEval.getType());
+                logger.info("Unknown type for condition data type {}", dataEval.getType());
         }
         return false;
     }
@@ -100,11 +100,11 @@ public class SwitchStartNode extends Node {
     private Object parseSwitchCondition() {
         switch (dataEval.getType()) {
             case "string":
-                return (String) dataValues.get(dataEval.getSource());
+                return dataValues.get(dataEval.getSource());
             case "number":
-                return (Integer) dataValues.get(dataEval.getSource());
+                return dataValues.get(dataEval.getSource());
             default:
-                logger.info("Unknown type for condition data type " + dataEval.getType());
+                logger.info("Unknown type for condition data type {}", dataEval.getType());
         }
         return null;
 
@@ -116,8 +116,9 @@ public class SwitchStartNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
-            if (dataValues == null)
+            if (dataValues == null) {
                 dataValues = new HashMap<>();
+            }
             for (DataIns data : dataIns) {
                 if (input.containsKey(data.getSource())) {
                     dataValues.put(data.getSource(), input.get(data.getSource()));
@@ -132,7 +133,6 @@ public class SwitchStartNode extends Node {
 
     @Override
     public Map<String, Object> getResult() {
-        // TODO Auto-generated method stub
         return null;
     }
 
