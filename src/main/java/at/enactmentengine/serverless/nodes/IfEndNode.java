@@ -18,7 +18,7 @@ public class IfEndNode extends Node {
 
     private List<DataOuts> dataOuts;
     private Map<String, Object> ifResult;
-    final static Logger logger = LoggerFactory.getLogger(IfEndNode.class);
+    static final Logger logger = LoggerFactory.getLogger(IfEndNode.class);
 
     public IfEndNode(String name, List<DataOuts> dataOuts) {
         super(name, "");
@@ -40,7 +40,7 @@ public class IfEndNode extends Node {
                 }
             }
         }
-        logger.info("Executing " + name + " IfEndNodeOld with output:" + outputValues.toString());
+        logger.info("Executing {} IfEndNodeOld with output: {}", name, outputValues);
         for (Node node : children) {
             node.passResult(outputValues);
             node.call();
@@ -72,7 +72,6 @@ public class IfEndNode extends Node {
 
     @Override
     public Map<String, Object> getResult() {
-        // TODO Auto-generated method stub
         return null;
     }
 
