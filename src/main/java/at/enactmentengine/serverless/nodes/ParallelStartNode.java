@@ -20,8 +20,8 @@ import java.util.concurrent.Future;
  */
 public class ParallelStartNode extends Node {
     private List<DataIns> definedInput;
-    final static Logger logger = LoggerFactory.getLogger(ParallelStartNode.class);
-    private static int MAX_NUMBER_THREADS = 50;
+    static final Logger logger = LoggerFactory.getLogger(ParallelStartNode.class);
+    private static final int MAX_NUMBER_THREADS = 50;
 
     public ParallelStartNode(String name, String type, List<DataIns> definedInput) {
         super(name, type);
@@ -46,7 +46,7 @@ public class ParallelStartNode extends Node {
             }
         }
 
-        logger.info("Executing " + name + " ParallelStartNodeOld");
+        logger.info("Executing {} ParallelStartNodeOld", name);
         ExecutorService exec = Executors
                 .newFixedThreadPool(children.size() > MAX_NUMBER_THREADS ? MAX_NUMBER_THREADS : children.size());
         List<Future<Boolean>> futures = new ArrayList<>();
@@ -96,7 +96,7 @@ public class ParallelStartNode extends Node {
         node.children = new ArrayList<>();
 
         for (int i = 0; i < children.size(); i++) {
-            Node currNode = (Node) children.get(i).clone(endnode);
+            Node currNode = children.get(i).clone(endnode);
             node.children.add(currNode);
             if (i == 0) {
                 endnode = findParallelEndNode(currNode, 0);
