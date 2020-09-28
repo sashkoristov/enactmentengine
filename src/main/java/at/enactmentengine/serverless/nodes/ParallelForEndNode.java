@@ -16,7 +16,7 @@ import java.util.Map;
  * @author markusmoosbrugger, jakobnoeckl
  */
 public class ParallelForEndNode extends Node {
-    final static Logger logger = LoggerFactory.getLogger(ParallelForEndNode.class);
+    static final Logger logger = LoggerFactory.getLogger(ParallelForEndNode.class);
     private int waitCounter = 0;
     private List<DataOuts> output;
     private Map<String, Object> parallelResult = new HashMap<>();
@@ -51,12 +51,10 @@ public class ParallelForEndNode extends Node {
             }
         }
 
-        logger.info("Executing " + name + " ParallelForEndNodeOld with output: " + outputValues.toString());
+        logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, outputValues);
 
         for (Node node : children) {
-            if (outputValues != null) {
-                node.passResult(outputValues);
-            }
+            node.passResult(outputValues);
             node.call();
         }
 
@@ -122,7 +120,7 @@ public class ParallelForEndNode extends Node {
     }
 
     public Map<String, Object> getParallelResult() {
-        return parallelResult;
+        return getResult();
     }
 
     public void setParallelResult(Map<String, Object> parallelResult) {

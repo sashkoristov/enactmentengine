@@ -63,7 +63,7 @@ public class ParallelEndNode extends Node {
                     }
                 }
             }
-            logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues.toString());
+            logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues);
 
         }
 
