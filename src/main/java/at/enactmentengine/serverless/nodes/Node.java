@@ -61,7 +61,7 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         Node node = (Node) super.clone();
         node.children = new ArrayList<>();
         for (Node childrenNode : children) {
-            node.children.add((Node) childrenNode.clone(endNode));
+            node.children.add(childrenNode.clone(endNode));
 
         }
         return node;
