@@ -3,7 +3,6 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
-import at.enactmentengine.serverless.object.FunctionInvocation;
 import at.uibk.dps.AWSAccount;
 import at.uibk.dps.FaultToleranceEngine;
 import at.uibk.dps.IBMAccount;
@@ -78,8 +77,7 @@ public class FunctionNode extends Node {
 
         Map<String, Object> outVals = new HashMap<>();
         String resourceLink = getResourceLink();
-        logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
-                + "ms], id=" + id);
+        logger.info("Executing function {} at resource: {} [{}ms], id={}", name, resourceLink, System.currentTimeMillis(), id);
 
         // Check if all input data is sent by last node and create an input map
         Map<String, Object> functionInputs = new HashMap<>();
@@ -90,8 +88,6 @@ public class FunctionNode extends Node {
                         throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
                                 + " needs " + data.getSource() + "!");
                     } else {
-                        // if (data.getPass()!=null &&
-                        // data.getPass().equals("true"))
                         if (data.getPassing() != null && data.getPassing()) {
                             outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
                         } else {
@@ -112,10 +108,9 @@ public class FunctionNode extends Node {
         }
 
         if (functionInputs.size() > 20) {
-            logger.info("Input for function is large" + " [" + System.currentTimeMillis() + "ms], id=" + id);
+            logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
         } else {
-            logger.info(
-                    "Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms], id=" + id);
+            logger.info("Input for function {} : {} [{}ms], id={}", name, functionInputs, System.currentTimeMillis(), id);
         }
 
         Function functionToInvoke = null;
@@ -142,11 +137,9 @@ public class FunctionNode extends Node {
         long end = System.currentTimeMillis();
 
         if (resultString.length() > 100000) {
-            logger.info("Function took: " + (end - start) + " ms. Result: too large " + "[" + System.currentTimeMillis()
-                    + "ms], id=" + id);
+            logger.info("Function took: {} ms. Result: too large [{}ms], id={}", (end - start), System.currentTimeMillis(), id);
         } else {
-            logger.info("Function took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
-                    + System.currentTimeMillis() + "ms], id=" + id);
+            logger.info("Function took: {} ms. Result: {} : {} [{}ms], id={}", (end - start), name, resultString, System.currentTimeMillis(), id);
         }
 
         getValuesParsed(resultString, outVals);
@@ -268,7 +261,7 @@ public class FunctionNode extends Node {
                         out.put(name + "/" + data.getName(), jso);
                         break;
                     default:
-                        logger.info("Error while trying to parse key in function " + name);
+                        logger.info("Error while trying to parse key in function {}", name);
                         break;
                 }
             }
@@ -276,7 +269,7 @@ public class FunctionNode extends Node {
 
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
-            logger.error("Error while trying to parse key in function " + name);
+            logger.error("Error while trying to parse key in function {}", name);
             return false;
         }
     }
