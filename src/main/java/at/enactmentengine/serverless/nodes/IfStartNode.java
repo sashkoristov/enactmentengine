@@ -19,7 +19,7 @@ import java.util.Map;
 public class IfStartNode extends Node {
     private Condition condition;
     private List<DataIns> dataIns;
-    final static Logger logger = LoggerFactory.getLogger(IfStartNode.class);
+    static final Logger logger = LoggerFactory.getLogger(IfStartNode.class);
 
     public IfStartNode(String name, List<DataIns> dataIns, Condition condition) {
         super(name, "");
@@ -49,12 +49,10 @@ public class IfStartNode extends Node {
             evaluate = evaluate(conditionElement, ifInputValues);
             // if combined with is "or" and one condition element is true the whole
             // condition evaluates to true
-            if ("or".equals(condition.getCombinedWith()) && evaluate) {
-                break;
-            }
             // if combined with is "and" and one condition element is false the whole
             // condition evaluates to false
-            if ("and".equals(condition.getCombinedWith()) && !evaluate) {
+            if (("or".equals(condition.getCombinedWith()) && evaluate) ||
+                    ("and".equals(condition.getCombinedWith()) && !evaluate)) {
                 break;
             }
         }
@@ -62,10 +60,10 @@ public class IfStartNode extends Node {
         Node node;
         if (evaluate) {
             node = children.get(0);
-            logger.info("Executing " + name + " IfStartNodeOld in if branch.");
+            logger.info("Executing {} IfStartNodeOld in if branch.", name);
         } else {
             node = children.get(1);
-            logger.info("Executing " + name + " IfStartNodeOld in else branch.");
+            logger.info("Executing {} IfStartNodeOld in else branch.", name);
         }
 
         node.passResult(ifInputValues);
@@ -101,7 +99,7 @@ public class IfStartNode extends Node {
             case "!=":
                 return data1 != data2;
             default:
-                logger.info("No condition match for operator " + conditionElement.getOperator());
+                logger.info("No condition match for operator {}", conditionElement.getOperator());
         }
         return false;
     }
