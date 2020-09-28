@@ -51,6 +51,8 @@ public class FunctionNode extends Node {
     private static Gateway gateway = new Gateway("credentials.properties");
     private Map<String, Object> result;
 
+    private static final String PROTOCOL = "https://";
+
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
                         List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
         super(name, type);
@@ -164,9 +166,6 @@ public class FunctionNode extends Node {
                 executionId
         );
         logFunctionInvocation(functionInvocation);
-        /*synchronized (this){
-            functionInvocations.add(functionInvocation);
-        }*/
 
         return true;
     }
@@ -193,29 +192,22 @@ public class FunctionNode extends Node {
         res[1] = "NOT_FOUND";
         if(resourceLink.contains("functions.cloud.ibm")){
             res[0] = "IBM";
-            res[1] = resourceLink.split("https://")[1].split("\\.functions\\.cloud\\.ibm")[0];
+            res[1] = resourceLink.split(PROTOCOL)[1].split("\\.functions\\.cloud\\.ibm")[0];
         } else if(resourceLink.contains("functions.appdomain.cloud")){
             res[0] = "IBM";
-            res[1] = resourceLink.split("https://")[1].split("\\.functions\\.appdomain\\.cloud")[0];
+            res[1] = resourceLink.split(PROTOCOL)[1].split("\\.functions\\.appdomain\\.cloud")[0];
         }else if(resourceLink.contains("arn")){
             res[0] = "AWS";
             res[1] = resourceLink.split("lambda:")[1].split(":")[0];
         } else if(resourceLink.contains("cloudfunctions.net")){
             res[0] = "GOOGLE";
-            res[1] = resourceLink.split("https://")[1].split("\\.cloudfunctions\\.net")[0];
+            res[1] = resourceLink.split(PROTOCOL)[1].split("\\.cloudfunctions\\.net")[0];
         } else if(resourceLink.contains("azure")){
             res[0] = "AZURE";
         } else if(resourceLink.contains("fc.aliyuncs")){
             res[0] = "ALIBABA";
         }
         return res;
-    }
-
-    private String getRegion(String resourceLink){
-        if(resourceLink.contains("arn")){
-            return "AWS";
-        }
-        return null;
     }
 
     /**
@@ -225,29 +217,22 @@ public class FunctionNode extends Node {
      * @param resultString The result string from the FaaS function.
      * @param out          The output map of this function.
      * @return
-     * @throws Exception
      */
-    private boolean getValuesParsed(String resultString, Map<String, Object> out) throws Exception {
-        if (resultString == null || resultString.equals("null"))
+    private boolean getValuesParsed(String resultString, Map<String, Object> out) {
+        if (resultString == null || "null".equals(resultString)){
             return false;
+        }
         try {
             for (DataOutsAtomic data : output) {
 
-                JsonObject jso;
-                try {
-                    jso = new Gson().fromJson(resultString, JsonObject.class);
-                } catch (com.google.gson.JsonSyntaxException e) {
-                    // If there is no JSON object as return value create one
-                    jso = new JsonObject();
-                    jso.addProperty(data.getName(), resultString);
-                }
+                JsonObject jso = getReturnAsJson(resultString, data);
 
                 if (out.containsKey(name + "/" + data.getName())) {
                     continue;
                 }
                 switch (data.getType()) {
                     case "number":
-                        Object number = (int) jso.get(data.getName()).getAsInt();
+                        Object number = jso.get(data.getName()).getAsInt();
                         out.put(name + "/" + data.getName(), number);
                         break;
                     case "string":
@@ -273,6 +258,24 @@ public class FunctionNode extends Node {
             return false;
         }
     }
+
+    /**
+     * Get the result as json object.
+     *
+     * @return json result
+     */
+    JsonObject getReturnAsJson(String resultString, DataOutsAtomic data){
+        JsonObject jso;
+        try {
+            jso = new Gson().fromJson(resultString, JsonObject.class);
+        } catch (com.google.gson.JsonSyntaxException e) {
+            // If there is no JSON object as return value create one
+            jso = new JsonObject();
+            jso.addProperty(data.getName(), resultString);
+        }
+        return jso;
+    }
+
 
     /**
      * Sets the FaaSInvoker depending on the resource link. Currently AWS
@@ -335,8 +338,8 @@ public class FunctionNode extends Node {
         List<PropertyConstraint> constraintList = this.constraints;
         // Split Constraints and FT stuff
 
-        List<PropertyConstraint> cList = new LinkedList<PropertyConstraint>();
-        List<PropertyConstraint> ftList = new LinkedList<PropertyConstraint>();
+        List<PropertyConstraint> cList = new LinkedList<>();
+        List<PropertyConstraint> ftList = new LinkedList<>();
 
         // Constraints and Properties are optional, so check if some of them are set
         if (constraintList == null) {
@@ -352,12 +355,12 @@ public class FunctionNode extends Node {
 
         // FT Parsing
         FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
-        List<List<Function>> altStrat = new LinkedList<List<Function>>();
+        List<List<Function>> altStrat = new LinkedList<>();
         for (PropertyConstraint ftConstraint : ftList) {
             if (ftConstraint.getName().compareTo("FT-Retries") == 0) {
                 ftSettings.setRetries(Integer.valueOf(ftConstraint.getValue()));
             } else if (ftConstraint.getName().startsWith("FT-AltPlan-")) {
-                List<Function> altPlan = new LinkedList<Function>();
+                List<Function> altPlan = new LinkedList<>();
                 String workingString = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
                 while (workingString.contains(";")) {
                     String funcString = workingString.substring(0, workingString.indexOf(";"));
@@ -368,7 +371,7 @@ public class FunctionNode extends Node {
                 altStrat.add(altPlan);
             }
         }
-        if (altStrat.size() != 0) {
+        if (altStrat.isEmpty()) {
             AlternativeStrategy altStrategy = new AlternativeStrategy(altStrat);
             ftSettings.setAltStrategy(altStrategy);
         }
@@ -385,11 +388,11 @@ public class FunctionNode extends Node {
             }
         }
         Function finalFunc = null;
-        if (ftSettings.isEmpty() == false && cSettings.isEmpty() == false) { // Both
+        if (!ftSettings.isEmpty() && !cSettings.isEmpty()) { // Both
             finalFunc = new Function(resourceLink, this.type, functionInputs, ftSettings, cSettings);
-        } else if (ftSettings.isEmpty() == false && cSettings.isEmpty() == true) { // Only FT
+        } else if (!ftSettings.isEmpty() && cSettings.isEmpty()) { // Only FT
             finalFunc = new Function(resourceLink, this.type, functionInputs, ftSettings);
-        } else if (ftSettings.isEmpty() == true && cSettings.isEmpty() == false) { // only constraints
+        } else if (ftSettings.isEmpty() && !cSettings.isEmpty()) { // only constraints
             finalFunc = new Function(resourceLink, this.type, functionInputs, cSettings);
         } else { // No Constraints or FT set
             finalFunc = new Function(resourceLink, this.type, functionInputs);
@@ -401,10 +404,10 @@ public class FunctionNode extends Node {
         String awsAccessKey = null;
         String awsSecretKey = null;
         try {
-            Properties properties = new Properties();
-            properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
-            awsAccessKey = properties.getProperty("aws_access_key");
-            awsSecretKey = properties.getProperty("aws_secret_key");
+            Properties propertiesFile = new Properties();
+            propertiesFile.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+            awsAccessKey = propertiesFile.getProperty("aws_access_key");
+            awsSecretKey = propertiesFile.getProperty("aws_secret_key");
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
@@ -414,9 +417,9 @@ public class FunctionNode extends Node {
     private IBMAccount getIBMAccount() {
         String ibmKey = null;
         try {
-            Properties properties = new Properties();
-            properties.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
-            ibmKey = properties.getProperty("ibm_api_key");
+            Properties propertiesFile = new Properties();
+            propertiesFile.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+            ibmKey = propertiesFile.getProperty("ibm_api_key");
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
