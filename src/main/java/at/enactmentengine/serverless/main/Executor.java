@@ -3,10 +3,19 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ptolemy.util.FileUtilities;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -19,8 +28,25 @@ import java.util.*;
 class Executor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Executor.class);
+    private Map<String, Object> input;
 
-    Map<String, Object> executeWorkflow(String fileName, int executionId) {
+    public Executor(){
+        input = new HashMap<>();
+    }
+
+    Map<String, Object> executeWorkflow(String workflow, String workflowInput, int executionId) {
+        try {
+            return executeWorkflow(
+                    workflow == null ? null : FileUtils.readFileToByteArray(new File(workflow)),
+                    workflowInput == null ? null : FileUtils.readFileToByteArray(new File(workflowInput)),
+                    executionId);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    Map<String, Object> executeWorkflow(byte[] workflow, byte[] workflowInput, int executionId) {
 
         long start = System.currentTimeMillis();
 
@@ -29,18 +55,25 @@ class Executor {
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
 
         // Get the input file as argument or default string
-        if (fileName == null) {
-            LOGGER.error("Please specify a filename");
+        if (workflow == null) {
+            LOGGER.error("Please specify a workflow file");
         }
 
         // Create an executable workflow
         YAMLParser yamlParser = new YAMLParser();
-        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(fileName, Language.YAML, executionId);
+        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(workflow, Language.YAML, executionId);
+
+        //JsonObject jsonObject = new JsonObject(new String(workflowInput));
         Map<String, Object> output = null;
         if (ex != null) {
 
+            if(workflowInput != null){
+                String decodedJsonInput = new String(workflowInput, StandardCharsets.UTF_8);
+                input = new Gson().fromJson(decodedJsonInput, new TypeToken<HashMap<String, Object>>() {}.getType());
+            }
+
+            // --> TODO REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
             // Set some example workflow input
-            Map<String, Object> input = new HashMap<>();
             input.put("some source", "34477227772222299999");// for ref gate
             JsonArray arr = new JsonArray();
             JsonArray arr2 = new JsonArray();
@@ -73,6 +106,7 @@ class Executor {
             // input.put("some source", 50);// for parallel and basic files
             input.put("some camera source", "0");
             input.put("some sensor source", "0");
+            // <-- TODO REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
 
             // Execute the workflow
             try {
