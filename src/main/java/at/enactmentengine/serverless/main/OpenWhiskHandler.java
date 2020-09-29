@@ -6,9 +6,12 @@ import at.enactmentengine.serverless.parser.YAMLParser;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -51,7 +54,11 @@ public class OpenWhiskHandler {
         }
         if (args != null && args.has("filename")) {
             filename = args.getAsJsonPrimitive("filename").getAsString();
-            ex = new YAMLParser().parseExecutableWorkflow(filename, language, -1);
+            try {
+                ex = new YAMLParser().parseExecutableWorkflow(FileUtils.readFileToByteArray(new File(filename)), language, -1);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
             // Check if filename is specified
             if (filename == null) {

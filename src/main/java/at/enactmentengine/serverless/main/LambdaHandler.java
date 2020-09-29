@@ -5,9 +5,12 @@ import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,7 +30,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
     public String handleRequest(InputObject inputObject, Context context) {
         long startTime = System.currentTimeMillis();
 
-        ExecutableWorkflow ex;
+        ExecutableWorkflow ex = null;
 
         // Set workflow language
         Language language = readLanguage(inputObject);
@@ -43,7 +46,11 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
         } else {
 
             // Parse and create executable workflow
-            ex = new YAMLParser().parseExecutableWorkflow(inputObject.getFilename(), language, -1);
+            try {
+                ex = new YAMLParser().parseExecutableWorkflow(FileUtils.readFileToByteArray(new File(inputObject.getFilename())), language, -1);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         // Check if conversion to an executable workflow succeeded

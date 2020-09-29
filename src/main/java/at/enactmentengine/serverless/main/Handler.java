@@ -49,9 +49,6 @@ public class Handler implements Runnable {
             /* Wait for request */
             EnactmentEngineRequest enactmentEngineRequest = SocketUtils.receiveJsonObject(socket, EnactmentEngineRequest.class);
 
-            /* Store to file */
-            SocketUtils.writeToFile(enactmentEngineRequest.getWorkflowFileContent(), Thread.currentThread().getId() + ".yaml");
-
             /* Start measuring time for workflow execution */
             long start = System.currentTimeMillis();
 
@@ -60,7 +57,10 @@ public class Handler implements Runnable {
 
             /* Execute the workflow */
             Executor executor = new Executor();
-            Map<String, Object> executionResult = executor.executeWorkflow(Thread.currentThread().getId() + ".yaml", executionId);
+            Map<String, Object> executionResult = executor.executeWorkflow(
+                    enactmentEngineRequest.getWorkflowFileContent(),
+                    enactmentEngineRequest.getWorkflowInputFileContent(),
+                    executionId);
 
             /* Stop measuring time for workflow execution */
             long end = System.currentTimeMillis();
