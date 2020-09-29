@@ -27,7 +27,7 @@ public class YAMLParser {
      * @param filename yaml file to parse
      * @return Instance of class Executable workflow.
      */
-    public ExecutableWorkflow parseExecutableWorkflow(String filename, Language language, int executionId) {
+    public ExecutableWorkflow parseExecutableWorkflow(byte[] filename, Language language, int executionId) {
 
         // Parse yaml file
         at.uibk.dps.afcl.Workflow workflow = null;
