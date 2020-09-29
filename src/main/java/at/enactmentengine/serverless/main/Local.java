@@ -21,10 +21,12 @@ public class Local {
         Executor executor = new Executor();
 
         Map<String, Object> result;
-        if (args.length > 0) {
-            result = executor.executeWorkflow(args[0], -1);
+        if (args.length > 1) {
+            result = executor.executeWorkflow(args[0], args[1],  -1);
+        } else if (args.length > 0) {
+            result = executor.executeWorkflow(args[0], null,  -1);
         } else {
-            result = executor.executeWorkflow("src/main/resources/new_files/emptyFunction.yaml", -1);
+            result = executor.executeWorkflow("src/main/resources/new_files/emptyFunction.yaml",null, -1);
         }
 
         logger.info("Result: {}", result);
