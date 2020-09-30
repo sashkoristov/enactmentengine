@@ -38,7 +38,7 @@ class Executor {
                     workflowInput == null ? null : FileUtils.readFileToByteArray(new File(workflowInput)),
                     executionId);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             return null;
         }
     }

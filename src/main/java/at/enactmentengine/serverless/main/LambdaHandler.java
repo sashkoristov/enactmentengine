@@ -49,7 +49,7 @@ public class LambdaHandler implements RequestHandler<LambdaHandler.InputObject, 
             try {
                 ex = new YAMLParser().parseExecutableWorkflow(FileUtils.readFileToByteArray(new File(inputObject.getFilename())), language, -1);
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
         }
 
