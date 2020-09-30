@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * Main class of enactment engine which specifies the input file and starts the
+ * Main class of enactment engine which specifies the workflowInput file and starts the
  * workflow on the machine on which it gets started.
  * <p>
  * based on @author markusmoosbrugger, jakobnoeckl
@@ -24,96 +24,101 @@ import java.util.*;
  */
 class Executor {
 
+    /**
+     * Logger for executor.
+     */
     private static final Logger LOGGER = LoggerFactory.getLogger(Executor.class);
-    private Map<String, Object> input;
 
-    public Executor(){
-        input = new HashMap<>();
+    /**
+     * Input of the workflow.
+     */
+    private Map<String, Object> workflowInput;
+
+    /**
+     * Default constructor for executor.
+     */
+    public Executor() {
+        workflowInput = new HashMap<>();
     }
 
+    /**
+     * workflowResult
+     *
+     * @param workflow      path to workflow yaml file which should be executed.
+     * @param workflowInput path to input json file which should be used as workflow input.
+     * @param executionId   the unique identifier for each execution.
+     * @return the result of the workflow.
+     */
     Map<String, Object> executeWorkflow(String workflow, String workflowInput, int executionId) {
+        Map<String, Object> workflowResult = null;
+
         try {
-            return executeWorkflow(
+            /* Convert file content to byte[] and execute the workflow */
+            workflowResult = executeWorkflow(
                     workflow == null ? null : FileUtils.readFileToByteArray(new File(workflow)),
                     workflowInput == null ? null : FileUtils.readFileToByteArray(new File(workflowInput)),
                     executionId);
         } catch (IOException e) {
             LOGGER.error(e.getMessage(), e);
-            return null;
         }
+
+        return workflowResult;
     }
 
+    /**
+     * Execute the given workflow.
+     *
+     * @param workflow      byte[] of the workflow yaml file which should be executed.
+     * @param workflowInput byte[] of the input json file which should be used as workflow input.
+     * @param executionId   the unique identifier for each execution.
+     * @return the result of the workflow.
+     */
     Map<String, Object> executeWorkflow(byte[] workflow, byte[] workflowInput, int executionId) {
 
+        /* Measure start time of the workflow execution */
         long start = System.currentTimeMillis();
 
-        // Disable hostname verification (enable OpenWhisk connections)
+        /* Disable hostname verification (enable OpenWhisk connections) */
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
 
-        // Get the input file as argument or default string
+        /* Get the workflowInput file as argument or default string */
         if (workflow == null) {
             LOGGER.error("Please specify a workflow file");
+            return null;
         }
 
-        // Create an executable workflow
-        YAMLParser yamlParser = new YAMLParser();
-        ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(workflow, Language.YAML, executionId);
+        /* Create an executable workflow */
+        ExecutableWorkflow ex = new YAMLParser().parseExecutableWorkflow(workflow, Language.YAML, executionId);
 
-        Map<String, Object> output = null;
+        /* Create variable to store workflow output */
+        Map<String, Object> workflowOutput = null;
+
+        /* Check if conversion to executable workflow was successful */
         if (ex != null) {
 
-            if(workflowInput != null){
+            /* Check of there is a workflow input */
+            if (workflowInput != null) {
+
+                /* Decode json workflow input */
                 String decodedJsonInput = new String(workflowInput, StandardCharsets.UTF_8);
-                input = new Gson().fromJson(decodedJsonInput, new TypeToken<HashMap<String, Object>>() {}.getType());
+                this.workflowInput = new Gson().fromJson(decodedJsonInput, new TypeToken<HashMap<String, Object>>() {
+                }.getType());
             }
 
-            // --> REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
-            // Set some example workflow input
-            input.put("some source", "34477227772222299999");// for ref gate
-            JsonArray arr = new JsonArray();
-            JsonArray arr2 = new JsonArray();
-            JsonArray arr3 = new JsonArray();
-            JsonArray arr4 = new JsonArray();
-            int arr1Size = 2000;
-            int arr2Size = 0;
-            int arr3Size = 0;
-            int arr4Size = 0;
-            int total = arr1Size + arr2Size + arr3Size + arr4Size; // each
-            for (int i = 0; i < arr1Size; i++) {
-                arr.add(1);
-            }
-            for (int i = 0; i < arr2Size; i++) {
-                arr2.add(1);
-            }
-            for (int i = 0; i < arr3Size; i++) {
-                arr3.add(1);
-            }
-            for (int i = 0; i < arr4Size; i++) {
-                arr4.add(1);
-            }
-            input.put("each", 1);
-            input.put("total", total);
-            input.put("array", arr);
-            input.put("array2", arr2);
-            input.put("array3", arr3);
-            input.put("array4", arr4);
-            // input.put("some source", "4");// for anomaly
-            // input.put("some source", 50);// for parallel and basic files
-            input.put("some camera source", "0");
-            input.put("some sensor source", "0");
-            // <-- REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
-
-            // Execute the workflow
+            /* Execute the workflow */
             try {
-                output = ex.executeWorkflow(input);
+                workflowOutput = ex.executeWorkflow(this.workflowInput);
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
+                return null;
             }
 
+            /* Measure end time of the workflow execution */
             long end = System.currentTimeMillis();
             LOGGER.info("Execution took {}ms.", (end - start));
         }
-        return output;
+
+        return workflowOutput;
     }
 }
