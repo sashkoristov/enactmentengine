@@ -242,7 +242,7 @@ public class AlternativePlanScheduler {
                 LinkedList<Function> alternativePlan = new LinkedList<>();
                 StringBuilder stringForOneAlternative = new StringBuilder();
                 for (int c = 0; c < i; c++) {
-                    Function fun = functionAlternativeList.get(c);
+                    Function fun = functionAlternativeList.get(0);
                     alternativePlan.add(fun);
                     stringForOneAlternative.append(fun.getUrl());
                     stringForOneAlternative.append(";");
