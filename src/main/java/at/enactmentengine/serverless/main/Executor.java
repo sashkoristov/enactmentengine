@@ -5,16 +5,13 @@ import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ptolemy.util.FileUtilities;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -63,7 +60,6 @@ class Executor {
         YAMLParser yamlParser = new YAMLParser();
         ExecutableWorkflow ex = yamlParser.parseExecutableWorkflow(workflow, Language.YAML, executionId);
 
-        //JsonObject jsonObject = new JsonObject(new String(workflowInput));
         Map<String, Object> output = null;
         if (ex != null) {
 
@@ -72,7 +68,7 @@ class Executor {
                 input = new Gson().fromJson(decodedJsonInput, new TypeToken<HashMap<String, Object>>() {}.getType());
             }
 
-            // --> TODO REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
+            // --> REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
             // Set some example workflow input
             input.put("some source", "34477227772222299999");// for ref gate
             JsonArray arr = new JsonArray();
@@ -106,7 +102,7 @@ class Executor {
             // input.put("some source", 50);// for parallel and basic files
             input.put("some camera source", "0");
             input.put("some sensor source", "0");
-            // <-- TODO REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
+            // <-- REMOVE THESE TMP INPUT DATA IF NO LONGER NEEDED
 
             // Execute the workflow
             try {

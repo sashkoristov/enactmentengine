@@ -38,7 +38,7 @@ public class ParallelStartNode extends Node {
         if (definedInput != null) {
             for (DataIns data : definedInput) {
                 if (!dataValues.containsKey(data.getSource())) {
-                    throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
+                    throw new MissingInputDataException(ParallelStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
                 } else {
                     outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));

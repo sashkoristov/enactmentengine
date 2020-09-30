@@ -70,22 +70,26 @@ public class ParallelForEndNode extends Node {
             if (output != null) {
                 for (DataOuts data : output) {
                     if (input.containsKey(data.getSource())) {
-                        if ("collection".equals(data.getType())) {
-                            if (parallelResult.containsKey(data.getSource())) {
-                                JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
-                                resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
-                                parallelResult.put(data.getSource(), resultArray);
-                            } else {
-                                JsonArray resultArray = new JsonArray();
-                                resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
-                                parallelResult.put(data.getSource(), resultArray);
-                            }
-                        } else {
-                            parallelResult.put(data.getSource(), input.get(data.getSource()));
-                        }
+                        handlePassResults(data, input);
                     }
                 }
             }
+        }
+    }
+
+    private void handlePassResults(DataOuts data, Map<String, Object> input) {
+        if ("collection".equals(data.getType())) {
+            if (parallelResult.containsKey(data.getSource())) {
+                JsonArray resultArray = (JsonArray) parallelResult.get(data.getSource());
+                resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
+                parallelResult.put(data.getSource(), resultArray);
+            } else {
+                JsonArray resultArray = new JsonArray();
+                resultArray.add(new Gson().toJsonTree(input.get(data.getSource())));
+                parallelResult.put(data.getSource(), resultArray);
+            }
+        } else {
+            parallelResult.put(data.getSource(), input.get(data.getSource()));
         }
     }
 

@@ -14,6 +14,10 @@ import at.uibk.dps.communication.InvocationLogManagerRequest;
 import at.uibk.dps.communication.InvocationLogManagerRequestFactory;
 import at.uibk.dps.communication.entity.Invocation;
 import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.exception.InvokationFailureException;
+import at.uibk.dps.exception.LatestFinishingTimeException;
+import at.uibk.dps.exception.LatestStartingTimeException;
+import at.uibk.dps.exception.MaxRunningTimeException;
 import at.uibk.dps.function.AlternativeStrategy;
 import at.uibk.dps.function.ConstraintSettings;
 import at.uibk.dps.function.FaultToleranceSettings;
@@ -105,25 +109,77 @@ public class FunctionNode extends Node {
         //Simulate Availability
         SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
         double simAvail = db.getSimulatedAvail(resourceLink);
+        functionInputs = checkFunctionSimAvail(simAvail, functionInputs);
+
+
+        logFunctionInput(functionInputs, id);
+
+        Function functionToInvoke = parseNodeFunction(resourceLink, functionInputs);
+
+        long start = System.currentTimeMillis();
+        String resultString = invokeFunction(functionToInvoke, resourceLink, functionInputs);
+        long end = System.currentTimeMillis();
+
+        logFunctionOutput(start, end, resultString, id);
+
+        getValuesParsed(resultString, outVals);
+        for (Node node : children) {
+            node.passResult(outVals);
+            node.call();
+        }
+        result = outVals;
+
+        String[] providerRegion = getProviderAndRegion(resourceLink);
+
+        String status = checkResultSuccess(resultString);
+
+        Invocation functionInvocation = new Invocation(
+                resourceLink,
+                providerRegion[0],
+                providerRegion[1],
+                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                (end - start),
+                status,
+                null,
+                executionId
+        );
+        logFunctionInvocation(functionInvocation);
+
+        return true;
+    }
+
+    private Map<String, Object> checkFunctionSimAvail(double simAvail, Map<String, Object> functionInputs) {
         if (simAvail != 1) { //if this functions avail should be simulated
             functionInputs.put("availability", simAvail);
         }
+        return functionInputs;
+    }
 
-        if (functionInputs.size() > 20) {
-            logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
-        } else {
-            logger.info("Input for function {} : {} [{}ms], id={}", name, functionInputs, System.currentTimeMillis(), id);
-        }
+    private String checkResultSuccess(String resultString) {
+        return resultString.contains("error:") ? "ERROR" : "OK";
+    }
 
+    private Function parseNodeFunction(String resourceLink, Map<String, Object> functionInputs) {
         Function functionToInvoke = null;
         try {
             functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
         }
+        return functionToInvoke;
+    }
 
+    private void logFunctionOutput(long start, long end, String resultString, int id) {
+        if (resultString.length() > 100000) {
+            logger.info("Function took: {} ms. Result: too large [{}ms], id={}", (end - start), System.currentTimeMillis(), id);
+        } else {
+            logger.info("Function took: {} ms. Result: {} : {} [{}ms], id={}", (end - start), name, resultString, System.currentTimeMillis(), id);
+        }
+    }
+
+    private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs) throws IOException, MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException, InvokationFailureException {
         String resultString = null;
-        long start = System.currentTimeMillis();
         if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) { // Invoke with Fault Tolerance Module
             FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
             try {
@@ -136,38 +192,15 @@ public class FunctionNode extends Node {
         } else {
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
         }
-        long end = System.currentTimeMillis();
+        return resultString;
+    }
 
-        if (resultString.length() > 100000) {
-            logger.info("Function took: {} ms. Result: too large [{}ms], id={}", (end - start), System.currentTimeMillis(), id);
+    private void logFunctionInput(Map<String, Object> functionInputs, int id) {
+        if (functionInputs.size() > 20) {
+            logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
         } else {
-            logger.info("Function took: {} ms. Result: {} : {} [{}ms], id={}", (end - start), name, resultString, System.currentTimeMillis(), id);
+            logger.info("Input for function {} : {} [{}ms], id={}", name, functionInputs, System.currentTimeMillis(), id);
         }
-
-        getValuesParsed(resultString, outVals);
-        for (Node node : children) {
-            node.passResult(outVals);
-            node.call();
-        }
-        result = outVals;
-
-        String[] providerRegion = getProviderAndRegion(resourceLink);
-        Invocation functionInvocation = new Invocation(
-                resourceLink,
-                providerRegion[0],
-                providerRegion[1],
-                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                (end - start),
-
-                // TODO check if this is correct? How are errors reported?
-                resultString.contains("error:") ? "ERROR" : "OK",
-                null,
-                executionId
-        );
-        logFunctionInvocation(functionInvocation);
-
-        return true;
     }
 
     private void logFunctionInvocation(Invocation functionInvocation){
@@ -354,6 +387,15 @@ public class FunctionNode extends Node {
         }
 
         // FT Parsing
+        FaultToleranceSettings ftSettings = getFaultToleranceSettings(ftList, functionInputs);
+
+        // ConstraintParsing
+        ConstraintSettings cSettings = getConstraintSettings(cList);
+
+        return getFinalFunction(ftSettings, cSettings, resourceLink, functionInputs);
+    }
+
+    private FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList, Map<String, Object> functionInputs) {
         FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
         List<List<Function>> altStrat = new LinkedList<>();
         for (PropertyConstraint ftConstraint : ftList) {
@@ -375,8 +417,10 @@ public class FunctionNode extends Node {
             AlternativeStrategy altStrategy = new AlternativeStrategy(altStrat);
             ftSettings.setAltStrategy(altStrategy);
         }
+        return ftSettings;
+    }
 
-        // ConstraintParsing
+    private ConstraintSettings getConstraintSettings(List<PropertyConstraint> cList) {
         ConstraintSettings cSettings = new ConstraintSettings(null, null, 0);
         for (PropertyConstraint cConstraint : cList) {
             if (cConstraint.getName().compareTo("C-latestStartingTime") == 0) {
@@ -387,6 +431,10 @@ public class FunctionNode extends Node {
                 cSettings.setMaxRunningTime(Integer.valueOf(cConstraint.getValue()));
             }
         }
+        return cSettings;
+    }
+
+    private Function getFinalFunction(FaultToleranceSettings ftSettings, ConstraintSettings cSettings, String resourceLink, Map<String, Object> functionInputs) {
         Function finalFunc = null;
         if (!ftSettings.isEmpty() && !cSettings.isEmpty()) { // Both
             finalFunc = new Function(resourceLink, this.type, functionInputs, ftSettings, cSettings);

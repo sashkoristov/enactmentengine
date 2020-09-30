@@ -24,10 +24,9 @@ public class FunctionInvocation {
      * @param returnTime of the function.
      * @param executionTime of the function.
      * @param status of the function (OK or ERROR).
-     * @param errorMessage of if failure.
      */
     public FunctionInvocation(String functionLink, String provider, String region, String invokeTime, String returnTime,
-                              long executionTime, String status, String errorMessage){
+                              long executionTime, String status){
         this.functionLink = functionLink;
         this.provider = provider;
         this.region = region;
@@ -35,7 +34,6 @@ public class FunctionInvocation {
         this.returnTime = returnTime;
         this.executionTime = executionTime;
         this.status = status;
-        this.errorMessage = errorMessage;
     }
 
 

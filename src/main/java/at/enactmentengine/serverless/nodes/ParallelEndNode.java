@@ -39,33 +39,7 @@ public class ParallelEndNode extends Node {
             }
         }
 
-        Map<String, Object> outputValues = new HashMap<>();
-        if (output != null) {
-            for (DataOuts data : output) {
-                String key = name + "/" + data.getName();
-                if (parallelResult.containsKey(data.getSource())) {
-                    outputValues.put(key, parallelResult.get(data.getSource()));
-                    continue;
-                }
-                for (Entry<String, Object> inputElement : parallelResult.entrySet()) {
-                    if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
-                        if ("collection".equals(data.getType())) {
-                            // Default behaviour for collections is to pass the results
-                            // from the executed branches as key-value pairs
-                            Object valueToPass = parallelResult;
-                            if (data.getConstraints() != null) {
-                                valueToPass = fulfillCollectionOutputConstraints(data.getConstraints(), parallelResult);
-                            }
-                            outputValues.put(key, valueToPass);
-                            break;
-                        }
-                        outputValues.put(key, inputElement.getValue());
-                    }
-                }
-            }
-            logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues);
-
-        }
+        Map<String, Object> outputValues = getOutputValues();
 
         for (Node node : children) {
             node.passResult(outputValues);
@@ -74,6 +48,44 @@ public class ParallelEndNode extends Node {
         }
         return true;
     }
+
+    private Map<String, Object> getOutputValues() {
+        Map<String, Object> outputValues = new HashMap<>();
+        if (output != null) {
+            for (DataOuts data : output) {
+                String key = name + "/" + data.getName();
+                if (parallelResult.containsKey(data.getSource())) {
+                    outputValues.put(key, parallelResult.get(data.getSource()));
+                    continue;
+                }
+                outputValues.putAll(checkCollection(data, key));
+            }
+            logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues);
+
+        }
+        return outputValues;
+    }
+
+    private Map<String, Object> checkCollection(DataOuts data, String key) {
+        Map<String, Object> outputValues = new HashMap<>();
+        for (Entry<String, Object> inputElement : parallelResult.entrySet()) {
+            if (data.getSource() != null && data.getSource().contains(inputElement.getKey())) {
+                if ("collection".equals(data.getType())) {
+                    // Default behaviour for collections is to pass the results
+                    // from the executed branches as key-value pairs
+                    Object valueToPass = parallelResult;
+                    if (data.getConstraints() != null) {
+                        valueToPass = fulfillCollectionOutputConstraints(data.getConstraints(), parallelResult);
+                    }
+                    outputValues.put(key, valueToPass);
+                    break;
+                }
+                outputValues.put(key, inputElement.getValue());
+            }
+        }
+        return outputValues;
+    }
+
 
     /**
      * Retrieves the results from the different parents and set them as result.

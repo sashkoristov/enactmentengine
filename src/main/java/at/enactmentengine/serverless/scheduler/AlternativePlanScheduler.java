@@ -1,10 +1,7 @@
 package at.enactmentengine.serverless.scheduler;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.util.*;
 
 import at.uibk.dps.afcl.Workflow;
 import at.uibk.dps.afcl.functions.AtomicFunction;
@@ -20,12 +17,17 @@ import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.afcl.functions.objects.Section;
 import at.uibk.dps.database.SQLLiteDatabase;
 import at.uibk.dps.function.Function;
+import jdk.jshell.spi.ExecutionControl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Part of Future scheduler
  * Proposes Alternative Strategy and Changes AFCL before it will be run by EE
  */
 public class AlternativePlanScheduler {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AlternativePlanScheduler.class);
     private SQLLiteDatabase database = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.database");
 
 
@@ -36,7 +38,7 @@ public class AlternativePlanScheduler {
      *
      * @throws Exception
      */
-    public void addAlternativePlansToYAML(String yamlFile, String outputFile) throws Exception {
+    public void addAlternativePlansToYAML(String yamlFile, String outputFile) throws ExecutionControl.NotImplementedException, IOException {
         Map<String, Object> functionInputs = new HashMap<>(); //needed to create temp dummy Func
         functionInputs.put("null", "null");
         Workflow workflow = at.uibk.dps.afcl.utils.Utils.readYAMLNoValidation(yamlFile);
@@ -44,29 +46,36 @@ public class AlternativePlanScheduler {
         allFunctionsInWorkflowNew = getAllFunctionsInWorkflow(workflow);
         for (AtomicFunction each : allFunctionsInWorkflowNew) {
             List<PropertyConstraint> tmpList = new LinkedList<>();
-            AtomicFunction casted = (AtomicFunction) each;
+            AtomicFunction casted = each;
             for (PropertyConstraint constraint : casted.getConstraints()) {
                 if ("FT-AltStrat-requiredAvailability".equals(constraint.getName())) { // Has Availability for AltStrat Set
-                    double requiredAvailability = Double.parseDouble(constraint.getValue());
-                    for (PropertyConstraint property : casted.getProperties()) {
-                        if ("resource".equals(property.getName())) { // Found a Function URL
-                            Function tempFunc = new Function(property.getValue(), casted.getType(), functionInputs);
-                            List<String> tempList = proposeAlternativeStrategy(tempFunc, requiredAvailability);
-                            if (tempList != null) {
-                                int i = 0;
-                                for (String altPlanString : tempList) {
-                                    PropertyConstraint tmpConstraint = new PropertyConstraint("FT-AltPlan-" + i, altPlanString);
-                                    tmpList.add(tmpConstraint);
-                                    i++;
-                                }
-                            }
-                        }
-                    }
+                    tmpList.addAll(manageAvailability(casted, constraint, functionInputs));
+
                 }
             }
             each.setConstraints(tmpList);
         }
         at.uibk.dps.afcl.utils.Utils.writeYamlNoValidation(workflow, outputFile);
+    }
+
+    private List<PropertyConstraint> manageAvailability(AtomicFunction casted, PropertyConstraint constraint, Map<String, Object> functionInputs) throws ExecutionControl.NotImplementedException {
+        List<PropertyConstraint> tmpList = new LinkedList<>();
+        double requiredAvailability = Double.parseDouble(constraint.getValue());
+        for (PropertyConstraint property : casted.getProperties()) {
+            if ("resource".equals(property.getName())) { // Found a Function URL
+                Function tempFunc = new Function(property.getValue(), casted.getType(), functionInputs);
+                List<String> tempList = proposeAlternativeStrategy(tempFunc, requiredAvailability);
+                if (tempList != null) {
+                    int i = 0;
+                    for (String altPlanString : tempList) {
+                        PropertyConstraint tmpConstraint = new PropertyConstraint("FT-AltPlan-" + i, altPlanString);
+                        tmpList.add(tmpConstraint);
+                        i++;
+                    }
+                }
+            }
+        }
+        return tmpList;
     }
 
 
@@ -95,82 +104,115 @@ public class AlternativePlanScheduler {
     private void recursiveSolver(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
         switch (function.getClass().getSimpleName()) {
             case "AtomicFunction":
-                AtomicFunction castedToAtomicFunction = (AtomicFunction) function;
-                List<PropertyConstraint> properties = castedToAtomicFunction.getProperties();
-                if (properties != null) {
-                    for (PropertyConstraint property : properties) {
-                        if ("resource".equals(property.getName())) { // Found a Function
-                            // URL
-                            System.out.println("Function Name: " + castedToAtomicFunction.getName() + " Type: "
-                                    + castedToAtomicFunction.getType() + " URL: " + property.getValue());
-                            listToSaveTo.add(castedToAtomicFunction);
-                        }
-                    }
-                }
+                solveAtmomicFunction(function, listToSaveTo);
                 break;
             case "Switch":
-                Switch castedSwitch = (Switch) function;
-                List<at.uibk.dps.afcl.Function> switchDefault = castedSwitch.getDefault();
-                if (switchDefault != null) {
-                    for (at.uibk.dps.afcl.Function funcs : castedSwitch.getDefault()) {
-                        recursiveSolver(funcs, listToSaveTo);
-                    }
-                }
-                List<Case> cases = castedSwitch.getCases();
-                if (cases != null) {
-                    for (Case cases1 : cases) {
-                        for (at.uibk.dps.afcl.Function functionsInCase : cases1.getFunctions()) {
-                            recursiveSolver(functionsInCase, listToSaveTo);
-                        }
-                    }
-                }
+                solveSwitch(function, listToSaveTo);
                 break;
             case "SequentialWhile":
-                SequentialWhile castedSW = (SequentialWhile) function;
-                List<at.uibk.dps.afcl.Function> loopBodySW = castedSW.getLoopBody();
-                for (at.uibk.dps.afcl.Function each : loopBodySW) {
-                    recursiveSolver(each, listToSaveTo);
-                }
+                solveSequentialWhile(function, listToSaveTo);
                 break;
             case "SequentialFor":
-                SequentialFor castedSF = (SequentialFor) function;
-                List<at.uibk.dps.afcl.Function> loopBodySF = castedSF.getLoopBody();
-                for (at.uibk.dps.afcl.Function each : loopBodySF) {
-                    recursiveSolver(each, listToSaveTo);
-                }
+                solveSequentialFor(function, listToSaveTo);
                 break;
             case "Sequence":
-                Sequence castedSequence = (Sequence) function;
-                List<at.uibk.dps.afcl.Function> sequenceBody = castedSequence.getSequenceBody();
-                for (at.uibk.dps.afcl.Function each : sequenceBody) {
-                    recursiveSolver(each, listToSaveTo);
-                }
+                solveSequence(function, listToSaveTo);
                 break;
             case "ParallelFor":
-                ParallelFor castedParallelFor = (ParallelFor) function;
-                List<at.uibk.dps.afcl.Function> loopBody = castedParallelFor.getLoopBody();
-                for (at.uibk.dps.afcl.Function each : loopBody) {
-                    recursiveSolver(each, listToSaveTo);
-                }
+                solveParallelFor(function, listToSaveTo);
                 break;
             case "Parallel":
-                Parallel castedParallel = (Parallel) function;
-                List<Section> sectionList = castedParallel.getParallelBody();
-                for (Section section : sectionList) {
-                    for (at.uibk.dps.afcl.Function functionInSection : section.getSection()) {
-                        recursiveSolver(functionInSection, listToSaveTo);
-                    }
-                }
+                solveParallel(function, listToSaveTo);
                 break;
             case "IfThenElse":
-                IfThenElse castedIfThenElse = (IfThenElse) function;
-                for (at.uibk.dps.afcl.Function funcs : castedIfThenElse.getThen()) {
-                    recursiveSolver(funcs, listToSaveTo);
-                }
-                for (at.uibk.dps.afcl.Function funcs : castedIfThenElse.getElse()) {
-                    recursiveSolver(funcs, listToSaveTo);
-                }
+                solveIfThenElse(function, listToSaveTo);
                 break;
+            default:
+                LOGGER.warn("Could not find construct {}", function.getClass().getSimpleName());
+        }
+    }
+
+    private void solveIfThenElse(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        IfThenElse castedIfThenElse = (IfThenElse) function;
+        for (at.uibk.dps.afcl.Function funcs : castedIfThenElse.getThen()) {
+            recursiveSolver(funcs, listToSaveTo);
+        }
+        for (at.uibk.dps.afcl.Function funcs : castedIfThenElse.getElse()) {
+            recursiveSolver(funcs, listToSaveTo);
+        }
+    }
+
+    private void solveParallel(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        Parallel castedParallel = (Parallel) function;
+        List<Section> sectionList = castedParallel.getParallelBody();
+        for (Section section : sectionList) {
+            for (at.uibk.dps.afcl.Function functionInSection : section.getSection()) {
+                recursiveSolver(functionInSection, listToSaveTo);
+            }
+        }
+    }
+
+    private void solveParallelFor(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        ParallelFor castedParallelFor = (ParallelFor) function;
+        List<at.uibk.dps.afcl.Function> loopBody = castedParallelFor.getLoopBody();
+        for (at.uibk.dps.afcl.Function each : loopBody) {
+            recursiveSolver(each, listToSaveTo);
+        }
+    }
+
+    private void solveSequence(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        Sequence castedSequence = (Sequence) function;
+        List<at.uibk.dps.afcl.Function> sequenceBody = castedSequence.getSequenceBody();
+        for (at.uibk.dps.afcl.Function each : sequenceBody) {
+            recursiveSolver(each, listToSaveTo);
+        }
+    }
+
+    private void solveSequentialFor(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        SequentialFor castedSF = (SequentialFor) function;
+        List<at.uibk.dps.afcl.Function> loopBodySF = castedSF.getLoopBody();
+        for (at.uibk.dps.afcl.Function each : loopBodySF) {
+            recursiveSolver(each, listToSaveTo);
+        }
+    }
+
+    private void solveSequentialWhile(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        SequentialWhile castedSW = (SequentialWhile) function;
+        List<at.uibk.dps.afcl.Function> loopBodySW = castedSW.getLoopBody();
+        for (at.uibk.dps.afcl.Function each : loopBodySW) {
+            recursiveSolver(each, listToSaveTo);
+        }
+    }
+
+    private void solveSwitch(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        Switch castedSwitch = (Switch) function;
+        List<at.uibk.dps.afcl.Function> switchDefault = castedSwitch.getDefault();
+        if (switchDefault != null) {
+            for (at.uibk.dps.afcl.Function funcs : castedSwitch.getDefault()) {
+                recursiveSolver(funcs, listToSaveTo);
+            }
+        }
+        List<Case> cases = castedSwitch.getCases();
+        if (cases != null) {
+            for (Case cases1 : cases) {
+                for (at.uibk.dps.afcl.Function functionsInCase : cases1.getFunctions()) {
+                    recursiveSolver(functionsInCase, listToSaveTo);
+                }
+            }
+        }
+    }
+
+    private void solveAtmomicFunction(at.uibk.dps.afcl.Function function, List<AtomicFunction> listToSaveTo) {
+        AtomicFunction castedToAtomicFunction = (AtomicFunction) function;
+        List<PropertyConstraint> properties = castedToAtomicFunction.getProperties();
+        if (properties != null) {
+            for (PropertyConstraint property : properties) {
+                if ("resource".equals(property.getName())) { // Found a Function
+                    // URL
+                    LOGGER.warn("Function Name:  {} Type: {}  URL: {}", castedToAtomicFunction.getName(), castedToAtomicFunction.getType(), property.getValue());
+                    listToSaveTo.add(castedToAtomicFunction);
+                }
+            }
         }
     }
 
@@ -179,44 +221,42 @@ public class AlternativePlanScheduler {
      */
     public List<AtomicFunction> getAllFunctionsInWorkflow(Workflow workflow) {
         List<at.uibk.dps.afcl.Function> workflowFunctionObjectList = workflow.getWorkflowBody();
-        List<AtomicFunction> returnList = new LinkedList<AtomicFunction>();
+        List<AtomicFunction> returnList = new LinkedList<>();
         for (at.uibk.dps.afcl.Function function : workflowFunctionObjectList) {
             recursiveSolver(function, returnList);
         }
         return returnList;
     }
 
-    ;
-
     /**
      * Returns a List of Strings that each represent an Alternative Possibility that reaches the required availability
      *
-     * @throws Exception
+     * @throws ExecutionControl.NotImplementedException on unsupported call
      */
-    public List<String> proposeAlternativeStrategy(Function function, double wantedAvailability) throws Exception {
-        List<String> proposedAltStrategy = new ArrayList<String>();
+    public List<String> proposeAlternativeStrategy(Function function, double wantedAvailability) throws ExecutionControl.NotImplementedException {
+        List<String> proposedAltStrategy = new ArrayList<>();
         List<Function> functionAlternativeList = database.getFunctionAlternatives(function);
         int i = 1;
         while (i <= functionAlternativeList.size()) {
             if (getSuccessRateOfFirstXFuncs(functionAlternativeList, i) > wantedAvailability) {
-                LinkedList<Function> alternativePlan = new LinkedList<Function>();
-                StringBuilder stringForOneAlternative = new StringBuilder("");
+                LinkedList<Function> alternativePlan = new LinkedList<>();
+                StringBuilder stringForOneAlternative = new StringBuilder();
                 for (int c = 0; c < i; c++) {
-                    alternativePlan.add(functionAlternativeList.get(0));
-                    stringForOneAlternative.append(functionAlternativeList.get(0).getUrl());
+                    Function fun = functionAlternativeList.get(c);
+                    alternativePlan.add(fun);
+                    stringForOneAlternative.append(fun.getUrl());
                     stringForOneAlternative.append(";");
-                    functionAlternativeList.remove(0);
+                    functionAlternativeList.remove(fun);
                 }
                 stringForOneAlternative.insert(0,
                         getSuccessRateOfFirstXFuncs(alternativePlan, alternativePlan.size()) + ";");
-                // System.out.println(getSuccessRateOfFirstXFuncs(alternativePlan,alternativePlan.size()));
                 proposedAltStrategy.add(stringForOneAlternative.toString());
             } else {
                 i++;
             }
         }
-        if (proposedAltStrategy.size() == 0) {
-            throw new Exception("No Alternative Strategy Could Be Found");
+        if (proposedAltStrategy.isEmpty()) {
+            throw new ExecutionControl.NotImplementedException("No Alternative Strategy Could Be Found");
         } else {
             return proposedAltStrategy;
         }

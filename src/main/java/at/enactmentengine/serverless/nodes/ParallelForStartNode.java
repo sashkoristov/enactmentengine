@@ -124,7 +124,7 @@ public class ParallelForStartNode extends Node {
 
         for (int i = 0; i < children.size(); i++) {
             Node node = children.get(i);
-            if (outValsForChilds != null && i < outValsForChilds.size()) {
+            if (i < outValsForChilds.size()) {
                 node.passResult(outValsForChilds.get(i));
             }
             futures.add(exec.submit(node));
@@ -214,44 +214,53 @@ public class ParallelForStartNode extends Node {
                     JsonArray dataElements = (JsonArray) dataValues.get(data.getSource());
                     List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
 
-                    for (int i = 0; i < distributedElements.size(); i++) {
-                        Object block = distributedElements.get(i);
-                        if (distributedElements.get(i).size() == 1) {
-                            // Extract single value
-                            JsonArray arr = distributedElements.get(i);
-                            block = data.getType().equals("number") ? arr.get(0).getAsInt() : arr.get(0);
-                        }
+                    checkDistributedElements(distributedElements, data, values);
 
-                        String key = name + "/" + data.getName();
-                        if (values.size() > i) {
-                            // Use the child map we already created for another DataIns port
-                            values.get(i).put(key, block);
-                        } else {
-                            Map<String, Object> map = new HashMap<>();
-                            map.put(key, block);
-                            values.add(i, map);
-                        }
-                    }
                 } else {
                     if (data.getPassing() != null && data.getPassing()) {
-                        if (outVals.containsKey(this.name + "/" + data.getName())) {
-                            for (int i = 0; i < childs; i++) {
-                                if (values.size() > i) {
-                                    values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
-                                } else {
-                                    Map<String, Object> tmp = new HashMap<>();
-                                    tmp.put(data.getName(), outVals.get(this.name + "/" + data.getName()));
-                                    values.add(i, tmp);
-                                }
-                            }
-                        } else {
-                            logger.error("Cannot Pass data {}. No such matching value could be found", data.getName());
-                        }
+                        checkDataPassing(outVals, data, childs, values);
                     }
                 }
             }
         }
         return values;
+    }
+
+    private void checkDataPassing(Map<String, Object> outVals, DataIns data, int childs, ArrayList<Map<String, Object>> values) {
+        if (outVals.containsKey(this.name + "/" + data.getName())) {
+            for (int i = 0; i < childs; i++) {
+                if (values.size() > i) {
+                    values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                } else {
+                    Map<String, Object> tmp = new HashMap<>();
+                    tmp.put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                    values.add(i, tmp);
+                }
+            }
+        } else {
+            logger.error("Cannot Pass data {}. No such matching value could be found", data.getName());
+        }
+    }
+
+    private void checkDistributedElements(List<JsonArray> distributedElements, DataIns data, ArrayList<Map<String, Object>> values) {
+        for (int i = 0; i < distributedElements.size(); i++) {
+            Object block = distributedElements.get(i);
+            if (distributedElements.get(i).size() == 1) {
+                // Extract single value
+                JsonArray arr = distributedElements.get(i);
+                block = data.getType().equals("number") ? arr.get(0).getAsInt() : arr.get(0);
+            }
+
+            String key = name + "/" + data.getName();
+            if (values.size() > i) {
+                // Use the child map we already created for another DataIns port
+                values.get(i).put(key, block);
+            } else {
+                Map<String, Object> map = new HashMap<>();
+                map.put(key, block);
+                values.add(i, map);
+            }
+        }
     }
 
     /**
