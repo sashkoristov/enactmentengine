@@ -21,67 +21,114 @@ import java.util.concurrent.Future;
  */
 public class ExecutableWorkflow {
 
+    /**
+     * Logger for executable workflow.
+     */
     private static final Logger logger = LoggerFactory.getLogger(ExecutableWorkflow.class);
-    private Node startNode;
-    private Node endNode;
-    private String workflowName;
-    private List<DataIns> definedInput;
-    private ExecutorService exec;
 
     /**
-     * Default constructor to create an executable workflow
+     * Start node of the executable workflow.
+     */
+    private Node startNode;
+
+    /**
+     * End node of the executable workflow.
+     */
+    private Node endNode;
+
+    /**
+     * The name of the workflow.
+     */
+    private String workflowName;
+
+    /**
+     * The expected workflow input (written in the .yaml file).
+     */
+    private List<DataIns> definedInput;
+
+    /**
+     * Executor service to run the workflow.
+     */
+    private ExecutorService executorService;
+
+    /**
+     * Default constructor to create an executable workflow.
      *
-     * @param workflowName name of the workflow
-     * @param workflow     list pair of workflow elements
-     * @param definedInput inputs
+     * @param workflowName name of the workflow.
+     * @param workflow     node list pair of workflow elements.
+     * @param definedInput expected workflow inputs.
      */
     public ExecutableWorkflow(String workflowName, ListPair<Node, Node> workflow, List<DataIns> definedInput) {
         this.startNode = workflow.getStart();
         this.endNode = workflow.getEnd();
         this.workflowName = workflowName;
         this.definedInput = definedInput;
-        this.exec = Executors.newSingleThreadExecutor();
+        this.executorService = Executors.newSingleThreadExecutor();
     }
 
     /**
      * Starts the execution of the workflow.
      *
-     * @param inputs The input values for the first workflow element.
-     * @throws Exception
+     * @param input values for the first workflow element (actual values).
+     *
+     * @return result of the workflow.
+     *
+     * @throws MissingInputDataException on missing input data.
+     * @throws ExecutionException on execution failure.
+     * @throws InterruptedException on interruption.
      */
-    public Map<String, Object> executeWorkflow(Map<String, Object> inputs) throws MissingInputDataException, ExecutionException, InterruptedException {
+    public Map<String, Object> executeWorkflow(Map<String, Object> input) throws MissingInputDataException, ExecutionException, InterruptedException {
 
-        final Map<String, Object> outVals = new HashMap<>();
-        if (definedInput != null) {
-            for (DataIns data : definedInput) {
-                if (!inputs.containsKey(data.getSource())) {
-                    throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
-                } else {
-                    outVals.put(workflowName + "/" + data.getName(), inputs.get(data.getSource()));
-                }
+        /* Create a variable to handle the present input */
+        final Map<String, Object> presentInput = new HashMap<>();
+
+        /* Iterate over all expected inputs */
+        for (DataIns data : definedInput) {
+
+            /* Check if the actual input contains the expected input */
+            if (input != null && input.containsKey(data.getSource())) {
+
+                /* Add the actual input to the list of actually present inputs */
+                presentInput.put(workflowName + "/" + data.getName(), input.get(data.getSource()));
+            } else {
+                /* The expected input is not present */
+                throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
             }
         }
 
-        // Start workflow execution
+        /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
-        startNode.passResult(outVals);
-        Future<Boolean> future = exec.submit(startNode);
+
+        /* Pass the present inputs to the start node */
+        startNode.passResult(presentInput);
+
+        /* Run the start node */
+        Future<Boolean> future = executorService.submit(startNode);
+
         try {
+
+            /* Wait if needed for the node */
             if (Boolean.TRUE.equals(future.get())) {
-                if (endNode.getResult() == null) {
-                    logger.error("Workflow Failed! End result is Null");
-                } else {
+
+                /* Check if the result is valid */
+                if (endNode.getResult() != null) {
                     logger.info("Workflow completed: {}", endNode.getResult());
+                } else {
+                    logger.error("Workflow Failed! End result is Null");
                 }
             }
         } catch (InterruptedException | ExecutionException e) {
+
+            /* Cancel task and shut down executor on failure */
             future.cancel(true);
-            exec.shutdownNow();
+            executorService.shutdownNow();
             throw e;
         }
-        exec.shutdown();
+
+        /* Terminate executor */
+        executorService.shutdown();
+
+        /* Return result of the last node in the workflow (workflow result) */
         return endNode.getResult();
     }
-
-
 }

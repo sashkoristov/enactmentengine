@@ -3,10 +3,7 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
-import at.uibk.dps.AWSAccount;
-import at.uibk.dps.FaultToleranceEngine;
-import at.uibk.dps.IBMAccount;
-import at.uibk.dps.SocketUtils;
+import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
@@ -206,7 +203,7 @@ public class FunctionNode extends Node {
     private void logFunctionInvocation(Invocation functionInvocation){
 
         logger.info("Connecting to logger service...");
-        try (Socket loggerService = new Socket("logger-service", 9005)) {
+        try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST, ConstantsNetwork.LOGGER_SERVICE_PORT)) {
 
             InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getInsertFunctionInvocationRequest(functionInvocation, executionId);
             logger.info("Sending request to logger-service...");

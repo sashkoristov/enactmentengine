@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.main;
 
+import at.uibk.dps.ConstantsNetwork;
 import at.uibk.dps.SocketUtils;
 import at.uibk.dps.communication.*;
 import at.uibk.dps.communication.entity.Statistics;
@@ -96,7 +97,7 @@ public class Handler implements Runnable {
         /* Connect to logger service */
         LOGGER.info("Connecting to logger service...");
 
-        try (Socket loggerService = new Socket("logger-service", 9005)) {
+        try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST, ConstantsNetwork.LOGGER_SERVICE_PORT)) {
 
             /* Prepare and send request */
             InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getCreateExecutionIdRequest();
