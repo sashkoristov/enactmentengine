@@ -131,4 +131,38 @@ public class ExecutableWorkflow {
         /* Return result of the last node in the workflow (workflow result) */
         return endNode.getResult();
     }
+
+    /** Getter ans Setter */
+
+    public Node getStartNode() {
+        return startNode;
+    }
+
+    public void setStartNode(Node startNode) {
+        this.startNode = startNode;
+    }
+
+    public Node getEndNode() {
+        return endNode;
+    }
+
+    public void setEndNode(Node endNode) {
+        this.endNode = endNode;
+    }
+
+    public String getWorkflowName() {
+        return workflowName;
+    }
+
+    public void setWorkflowName(String workflowName) {
+        this.workflowName = workflowName;
+    }
+
+    public List<DataIns> getDefinedInput() {
+        return definedInput;
+    }
+
+    public void setDefinedInput(List<DataIns> definedInput) {
+        this.definedInput = definedInput;
+    }
 }
