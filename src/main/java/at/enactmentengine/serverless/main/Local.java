@@ -20,13 +20,13 @@ public class Local {
     public static void main(String[] args) {
         Executor executor = new Executor();
 
-        Map<String, Object> result;
+        Map<String, Object> result = null;
         if (args.length > 1) {
             result = executor.executeWorkflow(args[0], args[1],  -1);
         } else if (args.length > 0) {
             result = executor.executeWorkflow(args[0], null,  -1);
         } else {
-            result = executor.executeWorkflow("src/main/resources/new_files/emptyFunction.yaml",null, -1);
+            logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json]");
         }
 
         logger.info("Result: {}", result);
