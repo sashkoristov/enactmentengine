@@ -5,6 +5,7 @@ import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.LoopCounter;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -140,7 +141,7 @@ public class ParallelForStartNode extends Node {
      * Adds a specific number of children depending on the values counterStart,
      * counterEnd and counterStepSize.
      *
-     * @throws MissingInputDataException on missing input
+     * @throws MissingInputDataException  on missing input
      * @throws CloneNotSupportedException on unsupported clone
      */
     private void addChildren() throws MissingInputDataException, CloneNotSupportedException {
@@ -211,10 +212,23 @@ public class ParallelForStartNode extends Node {
         if (definedInput != null) {
             for (DataIns data : definedInput) {
                 if (data.getConstraints() != null) {
-                    JsonArray dataElements = (JsonArray) dataValues.get(data.getSource());
-                    List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+                    if (dataValues.get(data.getSource()) instanceof ArrayList) {
+                        JsonArray dataElements = new Gson().toJsonTree(dataValues.get(data.getSource())).getAsJsonArray();
+                        List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
 
-                    checkDistributedElements(distributedElements, data, values);
+                        checkDistributedElements(distributedElements, data, values);
+                    } else {
+                        if (dataValues.get(data.getSource()) instanceof Double) {
+                            JsonArray dataElements = new JsonArray();
+                            dataElements.add((Double) dataValues.get(data.getSource()));
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+
+                            checkDistributedElements(distributedElements, data, values);
+                        } else {
+                            throw new NotImplementedException("Not implemented");
+                        }
+                    }
+
 
                 } else {
                     if (data.getPassing() != null && data.getPassing()) {
@@ -324,6 +338,17 @@ public class ParallelForStartNode extends Node {
             if (distributionConstraint.getValue().contains("BLOCK")) {
                 int blockSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
                 distributedElements = distributeOutValsBlock(dataElements, blockSize);
+            } else if (distributionConstraint.getValue().contains("REPLICATE")) {
+                int replicaSize;
+                if (distributionConstraint.getValue().contains("REPLICATE(*)")) {
+                    replicaSize = children;
+                } else {
+                    replicaSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
+                }
+                distributedElements = new ArrayList<>();
+                for (int i = 0; i < replicaSize; i++) {
+                    distributedElements.add(dataElements);
+                }
             } else {
                 throw new NotImplementedException("Distribution type for " + distributionConstraint.getValue()
                         + " not implemented.");
