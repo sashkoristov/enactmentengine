@@ -3,6 +3,7 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
+import at.enactmentengine.serverless.main.Local;
 import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
@@ -39,6 +40,8 @@ import java.util.*;
  * adapted by @author stefanpedratscher
  */
 public class FunctionNode extends Node {
+
+    public static boolean logResults = true;
 
     private static final Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
@@ -130,19 +133,20 @@ public class FunctionNode extends Node {
 
         String status = checkResultSuccess(resultString);
 
-        Invocation functionInvocation = new Invocation(
-                resourceLink,
-                providerRegion[0],
-                providerRegion[1],
-                new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                (end - start),
-                status,
-                null,
-                executionId
-        );
-        logFunctionInvocation(functionInvocation);
-
+        if(logResults) {
+            Invocation functionInvocation = new Invocation(
+                    resourceLink,
+                    providerRegion[0],
+                    providerRegion[1],
+                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                    (end - start),
+                    status,
+                    null,
+                    executionId
+            );
+            logFunctionInvocation(functionInvocation);
+        }
         return true;
     }
 
@@ -262,11 +266,11 @@ public class FunctionNode extends Node {
                 }
                 switch (data.getType()) {
                     case "number":
-                        Object number = jso.get(data.getName()).getAsInt();
+                        Object number = jso.get(data.getName()).getAsDouble();
                         out.put(name + "/" + data.getName(), number);
                         break;
                     case "string":
-                        out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsString());
+                        out.put(name + "/" + data.getName(), jso.get(data.getName()).toString());
                         break;
                     case "collection":
                         // array stays array to later decide which type
@@ -410,10 +414,8 @@ public class FunctionNode extends Node {
                 altStrat.add(altPlan);
             }
         }
-        if (altStrat.isEmpty()) {
-            AlternativeStrategy altStrategy = new AlternativeStrategy(altStrat);
-            ftSettings.setAltStrategy(altStrategy);
-        }
+        AlternativeStrategy altStrategy = new AlternativeStrategy(altStrat);
+        ftSettings.setAltStrategy(altStrategy);
         return ftSettings;
     }
 
@@ -463,7 +465,7 @@ public class FunctionNode extends Node {
         String ibmKey = null;
         try {
             Properties propertiesFile = new Properties();
-            propertiesFile.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+            propertiesFile.load(Local.class.getResourceAsStream("/credentials.properties"));
             ibmKey = propertiesFile.getProperty("ibm_api_key");
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
