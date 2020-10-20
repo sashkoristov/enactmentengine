@@ -35,19 +35,25 @@ public class SwitchEndNode extends Node {
 
         Map<String, Object> outputValues = new HashMap<>();
 
-        for (DataOuts data : dataOuts) {
-            for (Entry<String, Object> inputElement : switchResult.entrySet()) {
-                outputValues.put(name + "/" + data.getName(), inputElement.getValue());
-            }
-
-        }
-        if (outputValues.size() == 0) {
+        if(dataOuts != null){
             for (DataOuts data : dataOuts) {
-                if (data.getSource().contains("NULL")) {
-                    outputValues.put(name + "/" + data.getName(), "NULL");
+                for (Entry<String, Object> inputElement : switchResult.entrySet()) {
+                    outputValues.put(name + "/" + data.getName(), inputElement.getValue());
                 }
 
             }
+        }
+
+        if (outputValues.size() == 0) {
+            if(dataOuts != null) {
+                for (DataOuts data : dataOuts) {
+                    if (data.getSource().contains("NULL")) {
+                        outputValues.put(name + "/" + data.getName(), "NULL");
+                    }
+
+                }
+            }
+
         }
         for (Node node : children) {
             node.passResult(outputValues);
@@ -62,13 +68,16 @@ public class SwitchEndNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
-            for (DataOuts data : dataOuts) {
-                for (Entry<String, Object> inputElement : input.entrySet()) {
-                    if (data.getSource().contains(inputElement.getKey())) {
-                        switchResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
+            if(dataOuts != null){
+                for (DataOuts data : dataOuts) {
+                    for (Entry<String, Object> inputElement : input.entrySet()) {
+                        if (data.getSource().contains(inputElement.getKey())) {
+                            switchResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
+                        }
                     }
                 }
             }
+
         }
 
     }
