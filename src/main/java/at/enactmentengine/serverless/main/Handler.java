@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.nodes.FunctionNode;
 import at.uibk.dps.ConstantsNetwork;
 import at.uibk.dps.SocketUtils;
 import at.uibk.dps.communication.*;
@@ -53,8 +54,12 @@ public class Handler implements Runnable {
             /* Start measuring time for workflow execution */
             long start = System.currentTimeMillis();
 
-            /* Get the execution id of the workflow execution */
-            int executionId = getExecutionId();
+            int executionId = -1;
+            if(enactmentEngineRequest.isLogResults()){
+                /* Get the execution id of the workflow execution */
+                executionId = getExecutionId();
+            }
+            FunctionNode.logResults = enactmentEngineRequest.isLogResults();
 
             /* Execute the workflow */
             Executor executor = new Executor();
