@@ -1,0 +1,3 @@
+/Stefan.Pedratscher/socketUtils.git socketUtils
+/Stefan.Pedratscher/AFCLCore.git AFCLCore
+/sashkoristov/jFaaS.git jFaaS
