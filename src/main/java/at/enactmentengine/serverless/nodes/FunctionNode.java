@@ -107,10 +107,11 @@ public class FunctionNode extends Node {
         }
 
         //Simulate Availability
-        SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
-        double simAvail = db.getSimulatedAvail(resourceLink);
-        functionInputs = checkFunctionSimAvail(simAvail, functionInputs);
-
+        if(logResults){
+            SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+            double simAvail = db.getSimulatedAvail(resourceLink);
+            functionInputs = checkFunctionSimAvail(simAvail, functionInputs);
+        }
 
         logFunctionInput(functionInputs, id);
 

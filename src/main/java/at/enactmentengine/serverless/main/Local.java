@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.nodes.FunctionNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +21,13 @@ public class Local {
     public static void main(String[] args) {
         Executor executor = new Executor();
 
+        FunctionNode.logResults = false;
+
         Map<String, Object> result = null;
-        if (args.length > 1) {
+        if (args.length > 2) {
+            FunctionNode.logResults = Boolean.parseBoolean(args[2]);
+            result = executor.executeWorkflow(args[0], args[1],  -1);
+        }else if (args.length > 1) {
             result = executor.executeWorkflow(args[0], args[1],  -1);
         } else if (args.length > 0) {
             result = executor.executeWorkflow(args[0], null,  -1);
