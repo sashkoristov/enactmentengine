@@ -108,7 +108,8 @@ dockerRun {
 	name "ee-service"
 	image "ee-service"
 	clean true
-	arguments "--network=afclplatform"
+	//  arguments "--network=afclplatform" // the setting for the usage within the platform
+	arguments "--network=afclplatform", "-p", "9000:9000"
 }
 
 task dockerupdate {
