@@ -156,7 +156,7 @@ public class ParallelForStartNode extends Node {
             counterStart = Integer.parseInt((String) counterValues.get(counterVariableNames[0]));
         }
         if (counterVariableNames[1] != null) {
-            counterEnd = ((Integer) counterValues.get(counterVariableNames[1])).intValue();
+            counterEnd = ((int) Double.parseDouble(counterValues.get(counterVariableNames[1]).toString()));
         }
         if (counterVariableNames[2] != null) {
             counterStepSize = Integer.parseInt((String) counterValues.get(counterVariableNames[2]));
@@ -212,23 +212,28 @@ public class ParallelForStartNode extends Node {
         if (definedInput != null) {
             for (DataIns data : definedInput) {
                 if (data.getConstraints() != null) {
-                    if (dataValues.get(data.getSource()) instanceof ArrayList) {
+                    if(dataValues.get(data.getSource()) instanceof ArrayList || dataValues.get(data.getSource()) instanceof JsonArray){
                         JsonArray dataElements = new Gson().toJsonTree(dataValues.get(data.getSource())).getAsJsonArray();
                         List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
 
                         checkDistributedElements(distributedElements, data, values);
                     } else {
-                        if (dataValues.get(data.getSource()) instanceof Double) {
+                        if (dataValues.get(data.getSource()) instanceof Double){
                             JsonArray dataElements = new JsonArray();
                             dataElements.add((Double) dataValues.get(data.getSource()));
                             List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
 
                             checkDistributedElements(distributedElements, data, values);
-                        } else {
-                            throw new NotImplementedException("Not implemented");
+                        } else if (dataValues.get(data.getSource()) instanceof Integer){
+                            JsonArray dataElements = new JsonArray();
+                            dataElements.add((Integer) dataValues.get(data.getSource()));
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+
+                            checkDistributedElements(distributedElements, data, values);
+                        }else{
+                            throw new NotImplementedException("Not implemented: " + dataValues.get(data.getSource()).getClass());
                         }
                     }
-
 
                 } else {
                     if (data.getPassing() != null && data.getPassing()) {
