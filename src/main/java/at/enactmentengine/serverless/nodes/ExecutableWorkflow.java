@@ -83,16 +83,18 @@ public class ExecutableWorkflow {
         final Map<String, Object> presentInput = new HashMap<>();
 
         /* Iterate over all expected inputs */
-        for (DataIns data : definedInput) {
+        if( definedInput!= null ) {
+            for (DataIns data : definedInput) {
 
-            /* Check if the actual input contains the expected input */
-            if (input != null && input.containsKey(data.getSource())) {
+                /* Check if the actual input contains the expected input */
+                if (input != null && input.containsKey(data.getSource())) {
 
-                /* Add the actual input to the list of actually present inputs */
-                presentInput.put(workflowName + "/" + data.getName(), input.get(data.getSource()));
-            } else {
-                /* The expected input is not present */
-                throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
+                    /* Add the actual input to the list of actually present inputs */
+                    presentInput.put(workflowName + "/" + data.getName(), input.get(data.getSource()));
+                } else {
+                    /* The expected input is not present */
+                    throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
+                }
             }
         }
 
