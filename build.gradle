@@ -42,8 +42,8 @@ description = "enactment-engine"
 mainClassName = 'at.enactmentengine.serverless.main.Service'
 
 repositories {
-	 maven { url 'https://jitpack.io' }
-     maven { url "https://repo.maven.apache.org/maven2" }
+	maven { url "https://repo.maven.apache.org/maven2" }
+	maven { url 'https://jitpack.io' }
 }
 dependencies {
 	implementation 'com.github.FedorSmirnov89:AFCLCore:-SNAPSHOT'
