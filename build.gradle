@@ -11,7 +11,7 @@ plugins {
 	id "com.palantir.docker" version "0.25.0"
 	id "com.palantir.docker-run" version "0.25.0"
     id "org.sonarqube" version "2.7"
-    id 'jacoco'
+ //   id 'jacoco'
 }
 
 sonarqube {
@@ -31,9 +31,9 @@ apply plugin: 'eclipse'
 apply plugin: 'eclipse-wtp'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'jacoco'
-jacoco {
-    toolVersion = "0.8.5"
-}
+//jacoco {
+//    toolVersion = "0.8.5"
+//}
 
 group = 'at.enactmentengine.serverless'
 
@@ -71,12 +71,12 @@ dependencies {
     compile fileTree(dir: 'externalJars', include: ['*.jar'])
 }
 
-jacocoTestReport {
-    reports {
-        xml.enabled true
-        html.enabled true
-    }
-}
+//jacocoTestReport {
+//    reports {
+//        xml.enabled true
+//        html.enabled true
+//    }
+//}
 
 shadowJar {
     baseName = 'enactment-engine-all'

@@ -208,7 +208,7 @@ public class FunctionNode extends Node {
     private void logFunctionInvocation(Invocation functionInvocation){
 
         logger.info("Connecting to logger service...");
-        try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST, ConstantsNetwork.LOGGER_SERVICE_PORT)) {
+        try (Socket loggerService = new Socket(NetworkConstants.LOGGER_SERVICE_HOST, NetworkConstants.LOGGER_SERVICE_PORT)) {
 
             InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getInsertFunctionInvocationRequest(functionInvocation, executionId);
             logger.info("Sending request to logger-service...");
