@@ -41,8 +41,6 @@ import java.util.*;
  */
 public class FunctionNode extends Node {
 
-    public static boolean logResults = true;
-
     private static final Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
     private static int counter = 0;
@@ -107,7 +105,7 @@ public class FunctionNode extends Node {
         }
 
         //Simulate Availability
-        if(logResults){
+        if(executionId == -1){
             SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
             double simAvail = db.getSimulatedAvail(resourceLink);
             functionInputs = checkFunctionSimAvail(simAvail, functionInputs);
@@ -134,7 +132,7 @@ public class FunctionNode extends Node {
 
         String status = checkResultSuccess(resultString);
 
-        if(logResults) {
+        if(executionId == -1) {
             Invocation functionInvocation = new Invocation(
                     resourceLink,
                     providerRegion[0],
