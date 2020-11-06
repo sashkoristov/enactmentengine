@@ -105,7 +105,7 @@ public class FunctionNode extends Node {
         }
 
         //Simulate Availability
-        if(executionId == -1){
+        if(executionId != -1){
             SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
             double simAvail = db.getSimulatedAvail(resourceLink);
             functionInputs = checkFunctionSimAvail(simAvail, functionInputs);
@@ -132,7 +132,7 @@ public class FunctionNode extends Node {
 
         String status = checkResultSuccess(resultString);
 
-        if(executionId == -1) {
+        if(executionId != -1) {
             Invocation functionInvocation = new Invocation(
                     resourceLink,
                     providerRegion[0],
