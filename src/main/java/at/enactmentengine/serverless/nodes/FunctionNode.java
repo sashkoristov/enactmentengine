@@ -208,11 +208,11 @@ public class FunctionNode extends Node {
     private void logFunctionInvocation(Invocation functionInvocation){
 
         logger.info("Connecting to logger service...");
-        try (Socket loggerService = new Socket(NetworkConstants.LOGGER_SERVICE_HOST, NetworkConstants.LOGGER_SERVICE_PORT)) {
+        try (Socket loggerServiceSocket = new Socket(NetworkConstants.LOGGER_SERVICE_HOST, NetworkConstants.LOGGER_SERVICE_PORT)) {
 
             InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getInsertFunctionInvocationRequest(functionInvocation, executionId);
             logger.info("Sending request to logger-service...");
-            SocketUtils.sendJsonObject(loggerService, invocationLogManagerRequest);
+            SocketUtils.sendJsonObject(loggerServiceSocket.getOutputStream(), invocationLogManagerRequest);
 
             logger.info("Closing connection to logger service...");
         } catch (IOException e) {
