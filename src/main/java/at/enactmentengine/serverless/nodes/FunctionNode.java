@@ -4,6 +4,7 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
 import at.enactmentengine.serverless.main.Local;
+import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
@@ -65,24 +66,54 @@ public class FunctionNode extends Node {
      * The properties of the function node.
      */
     private List<PropertyConstraint> properties;
+
+    /**
+     * Output of the function node.
+     */
     private List<DataOutsAtomic> output;
+
+    /**
+     * Input to the function node.
+     */
     private List<DataIns> input;
-    private static Gateway gateway = new Gateway("credentials.properties");
+
+    /**
+     * The invoker for the cloud functions.
+     */
+    private static Gateway gateway = new Gateway(Utils.PATH_TO_CREDENTIALS);
+
+    /**
+     * The result of the function node.
+     */
     private Map<String, Object> result;
 
+    /**
+     * The protocol for the http requests.
+     */
     private static final String PROTOCOL = "https://";
 
+    /**
+     * Constructor for a function node.
+     *
+     * @param name of the base function.
+     * @param type of the base function (fType).
+     * @param properties of the base function.
+     * @param constraints of the base function.
+     * @param input to the base function.
+     * @param output of the base function.
+     * @param executionId for the logging of the execution.
+     */
     public FunctionNode(String name, String type, List<PropertyConstraint> properties,
                         List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
         super(name, type);
         this.output = output;
-        if (output == null) {
-            this.output = new ArrayList<>();
-        }
         this.properties = properties;
         this.constraints = constraints;
         this.input = input;
         this.executionId = executionId;
+        if (output == null) {
+            this.output = new ArrayList<>();
+        }
     }
 
     /**
@@ -91,59 +122,72 @@ public class FunctionNode extends Node {
     @Override
     public Boolean call() throws Exception {
 
+        /* The identifier for the current function */
         int id;
         synchronized (this) {
             id = counter++;
         }
 
-        Map<String, Object> outVals = new HashMap<>();
+        /* Read the resource link of the base function */
         String resourceLink = getResourceLink();
-        logger.info("Executing function "+name+" at resource: "+resourceLink+" ["+System.currentTimeMillis()+"ms], id="+id+"");
+        logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis() + "ms], id=" + id);
 
-        // Check if all input data is sent by last node and create an input map
-        Map<String, Object> functionInputs = new HashMap<>();
+        /* Actual values of the function input */
+        Map<String, Object> actualFunctionInputs = new HashMap<>();
+
+        /* Output values of the base function */
+        Map<String, Object> functionOutputs = new HashMap<>();
+
         try {
+            /* Check if an input is specified*/
             if (input != null) {
+
+                /* Iterate over all specified inputs */
                 for (DataIns data : input) {
-                    if (!dataValues.containsKey(data.getSource())) {
-                        throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
-                                + " needs " + data.getSource() + "!");
-                    } else {
+
+                    /* Check if actual data contains the specified source */
+                    if (dataValues.containsKey(data.getSource())) {
+
+                        /* Check if the element should be passed to the output */
                         if (data.getPassing() != null && data.getPassing()) {
-                            outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                            functionOutputs.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
                         } else {
-                            functionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                            actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
                         }
+                    } else {
+                        throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
+                                + " needs " + data.getSource() + " !");
                     }
                 }
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
+            return false;
         }
 
-        //Simulate Availability
-        if(executionId != -1){
+        /* Simulate Availability if specified */
+        if(Utils.SIMULATE_AVAILABILITY) {
             SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
             double simAvail = db.getSimulatedAvail(resourceLink);
-            functionInputs = checkFunctionSimAvail(simAvail, functionInputs);
+            actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
         }
 
-        logFunctionInput(functionInputs, id);
+        logFunctionInput(actualFunctionInputs, id);
 
-        Function functionToInvoke = parseNodeFunction(resourceLink, functionInputs);
+        Function functionToInvoke = parseNodeFunction(resourceLink, actualFunctionInputs);
 
         long start = System.currentTimeMillis();
-        String resultString = invokeFunction(functionToInvoke, resourceLink, functionInputs);
+        String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs);
         long end = System.currentTimeMillis();
 
         logFunctionOutput(start, end, resultString, id);
 
-        getValuesParsed(resultString, outVals);
+        getValuesParsed(resultString, functionOutputs);
         for (Node node : children) {
-            node.passResult(outVals);
+            node.passResult(functionOutputs);
             node.call();
         }
-        result = outVals;
+        result = functionOutputs;
 
         String[] providerRegion = getProviderAndRegion(resourceLink);
 

@@ -1,7 +1,7 @@
 package at.enactmentengine.serverless.object;
 
 import at.enactmentengine.serverless.exception.RegionDetectionException;
-import at.uibk.dps.function.Function;
+
 
 /**
  * Utility class for the enactment-engine.
@@ -9,6 +9,16 @@ import at.uibk.dps.function.Function;
  * @author stefanpedratscher
  */
 public class Utils {
+
+    /**
+     * Path to the credentials properties file
+     */
+    public static String PATH_TO_CREDENTIALS = "credentials.properties";
+
+    /**
+     * Determine if the availability should be simulated.
+     */
+    public static boolean SIMULATE_AVAILABILITY = false;
 
     /**
      * The protocol for the resource links.
