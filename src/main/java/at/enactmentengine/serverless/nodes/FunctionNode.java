@@ -41,12 +41,29 @@ import java.util.*;
  */
 public class FunctionNode extends Node {
 
+    /**
+     * Logger for the a function node.
+     */
     private static final Logger logger = LoggerFactory.getLogger(FunctionNode.class);
 
+    /**
+     * The number of executed functions.
+     */
     private static int counter = 0;
+
+    /**
+     * The execution id of the workflow (needed to log the execution).
+     */
     private int executionId;
 
+    /**
+     * The constraints for the function node.
+     */
     private List<PropertyConstraint> constraints;
+
+    /**
+     * The properties of the function node.
+     */
     private List<PropertyConstraint> properties;
     private List<DataOutsAtomic> output;
     private List<DataIns> input;
@@ -81,7 +98,7 @@ public class FunctionNode extends Node {
 
         Map<String, Object> outVals = new HashMap<>();
         String resourceLink = getResourceLink();
-        logger.info("Executing function {} at resource: {} [{}ms], id={}", name, resourceLink, System.currentTimeMillis(), id);
+        logger.info("Executing function "+name+" at resource: "+resourceLink+" ["+System.currentTimeMillis()+"ms], id="+id+"");
 
         // Check if all input data is sent by last node and create an input map
         Map<String, Object> functionInputs = new HashMap<>();
@@ -172,9 +189,9 @@ public class FunctionNode extends Node {
 
     private void logFunctionOutput(long start, long end, String resultString, int id) {
         if (resultString.length() > 100000) {
-            logger.info("Function took: {} ms. Result: too large [{}ms], id={}", (end - start), System.currentTimeMillis(), id);
+            logger.info("Function took: "+(end - start)+" ms. Result: too large ["+System.currentTimeMillis()+"ms], id="+id+"");
         } else {
-            logger.info("Function took: {} ms. Result: {} : {} [{}ms], id={}", (end - start), name, resultString, System.currentTimeMillis(), id);
+            logger.info("Function took: "+(end - start)+" ms. Result: "+name+" : "+resultString+" ["+System.currentTimeMillis()+"ms], id="+id+"");
         }
     }
 
@@ -199,7 +216,7 @@ public class FunctionNode extends Node {
         if (functionInputs.size() > 20) {
             logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
         } else {
-            logger.info("Input for function {} : {} [{}ms], id={}", name, functionInputs, System.currentTimeMillis(), id);
+            logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis() + "ms], id=" + id + "");
         }
     }
 
