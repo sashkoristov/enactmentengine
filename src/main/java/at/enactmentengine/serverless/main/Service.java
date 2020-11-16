@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.main;
 
+import at.uibk.dps.NetworkConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,16 +16,27 @@ import java.net.Socket;
  */
 public class Service {
 
-    private static int port = 9000;
+    /**
+     * Determines if the enactment-engine service is running.
+     */
     private static boolean running = true;
 
+    /**
+     * The logger fot the enactment-engine service class.
+     */
     static final Logger logger = LoggerFactory.getLogger(Service.class);
 
+    /**
+     * Starting point of the service.
+     *
+     * @param args input arguments for the service.
+     */
     public static void main(String[] args) {
 
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
+        /* Start the service */
+        try (ServerSocket serverSocket = new ServerSocket(NetworkConstants.EE_PORT)) {
 
-            logger.info("Server is up and running at {}:{}",InetAddress.getLocalHost().getHostAddress(), port);
+            logger.info("Server is up and running at {}:{}", InetAddress.getLocalHost().getHostAddress(), NetworkConstants.EE_PORT);
 
             Socket socket = null;
             while (running) {

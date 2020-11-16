@@ -14,16 +14,24 @@ import java.util.*;
  */
 public class Local {
 
-
+    /**
+     * Logger for the local execution.
+     */
     static final Logger logger = LoggerFactory.getLogger(Local.class);
 
+    /**
+     * Starting point of the local execution.
+     *
+     * @param args workflow.yaml [input.json]
+     */
     public static void main(String[] args) {
+
+        /* Workflow executor */
         Executor executor = new Executor();
 
+        /* Check for inputs and execute workflow */
         Map<String, Object> result = null;
-        if (args.length > 2) {
-            result = executor.executeWorkflow(args[0], args[1],  -1);
-        }else if (args.length > 1) {
+        if (args.length > 1) {
             result = executor.executeWorkflow(args[0], args[1],  -1);
         } else if (args.length > 0) {
             result = executor.executeWorkflow(args[0], null,  -1);
