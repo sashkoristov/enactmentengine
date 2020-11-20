@@ -15,25 +15,49 @@ import java.util.Map;
  * Control node which manages the tasks at the start of a if element.
  *
  * @author markusmoosbrugger, jakobnoeckl
+ * adapted by @author stefanpedratscher
  */
 public class IfStartNode extends Node {
-    private Condition condition;
-    private List<DataIns> dataIns;
+
+    /**
+     * Logger for the an if-start node.
+     */
     static final Logger logger = LoggerFactory.getLogger(IfStartNode.class);
 
+    /**
+     * Condition of the if node (if statement).
+     */
+    private Condition condition;
+
+    /**
+     * The input specified in the workflow file.
+     */
+    private List<DataIns> dataIns;
+
+    /**
+     * Constructor for a if-start node.
+     *
+     * @param name of the if construct.
+     * @param dataIns input specified in the workflow file.
+     * @param condition of the if node (if statement).
+     */
     public IfStartNode(String name, List<DataIns> dataIns, Condition condition) {
         super(name, "");
         this.condition = condition;
         this.dataIns = dataIns;
-
     }
 
     /**
      * Checks the dataValues and evaluates the condition. Depending on the
      * evaluation either the if or else branch is executed.
+     *
+     * @return boolean representing success of the node execution.
+     * @throws Exception on failure.
      */
     @Override
     public Boolean call() throws Exception {
+
+        /* Iterate over all specified inputs and check if they are present */
         final Map<String, Object> ifInputValues = new HashMap<>();
         for (DataIns data : dataIns) {
             if (!dataValues.containsKey(data.getSource())) {
@@ -43,22 +67,25 @@ public class IfStartNode extends Node {
                 ifInputValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
             }
         }
-        boolean evaluate = false;
 
+        /* Keeps track whether the condition of th if statement is valid */
+        boolean statementEvaluationValue = false;
+
+        /* Iterate over all part-conditions */
         for (ACondition conditionElement : condition.getConditions()) {
-            evaluate = evaluate(conditionElement, ifInputValues);
+            statementEvaluationValue = evaluate(conditionElement, ifInputValues);
             // if combined with is "or" and one condition element is true the whole
             // condition evaluates to true
             // if combined with is "and" and one condition element is false the whole
             // condition evaluates to false
-            if (("or".equals(condition.getCombinedWith()) && evaluate) ||
-                    ("and".equals(condition.getCombinedWith()) && !evaluate)) {
+            if (("or".equals(condition.getCombinedWith()) && statementEvaluationValue) ||
+                    ("and".equals(condition.getCombinedWith()) && !statementEvaluationValue)) {
                 break;
             }
         }
 
         Node node;
-        if (evaluate) {
+        if (statementEvaluationValue) {
             node = children.get(0);
             logger.info("Executing {} IfStartNodeOld in if branch.", name);
         } else {
@@ -83,6 +110,10 @@ public class IfStartNode extends Node {
      */
     private boolean evaluate(ACondition conditionElement, Map<String, Object> ifInputValues)
             throws MissingInputDataException {
+
+        // TODO maybe use Number datatype? Allows to caompare also int and double?!
+        //Number data1 = (Number) ifInputValues.get(conditionElement.getData1());
+
         int data1 = parseCondition(conditionElement.getData1(), ifInputValues);
         int data2 = parseCondition(conditionElement.getData2(), ifInputValues);
         switch (conditionElement.getOperator()) {
@@ -99,7 +130,7 @@ public class IfStartNode extends Node {
             case "!=":
                 return data1 != data2;
             default:
-                logger.info("No condition match for operator {}", conditionElement.getOperator());
+                logger.info("Operator {} not supported ", conditionElement.getOperator());
         }
         return false;
     }
