@@ -119,6 +119,9 @@ public class FunctionNode extends Node {
 
     /**
      * Checks the inputs, invokes function and passes results to children.
+     *
+     * @return boolean representing success of the node execution.
+     * @throws Exception on failure.
      */
     @Override
     public Boolean call() throws Exception {
@@ -480,7 +483,9 @@ public class FunctionNode extends Node {
     }
 
     /**
-     * Returns the result.
+     * Get the result of a function node.
+     *
+     * @return result of the base function.
      */
     @Override
     public Map<String, Object> getResult() {
