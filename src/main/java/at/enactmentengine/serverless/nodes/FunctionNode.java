@@ -4,6 +4,7 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.main.LambdaHandler;
 import at.enactmentengine.serverless.main.Local;
+import at.enactmentengine.serverless.object.Status;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
@@ -165,72 +166,98 @@ public class FunctionNode extends Node {
             return false;
         }
 
-        /* Simulate Availability if specified */
+        /* Simulate Availability if specified TODO is this really needed? */
         if(Utils.SIMULATE_AVAILABILITY) {
             SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
             double simAvail = db.getSimulatedAvail(resourceLink);
             actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
         }
 
+        /* Log the function input */
         logFunctionInput(actualFunctionInputs, id);
 
-        Function functionToInvoke = parseNodeFunction(resourceLink, actualFunctionInputs);
+        /* Parse function with optional constraints and properties */
+        Function functionToInvoke = parseFTConstraints(resourceLink, actualFunctionInputs);
 
+        /* Invoke function and measure duration */
         long start = System.currentTimeMillis();
         String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs);
         long end = System.currentTimeMillis();
 
+        /* Log the function output */
         logFunctionOutput(start, end, resultString, id);
 
-        getValuesParsed(resultString, functionOutputs);
+        /* Read the actual function outputs by their key and store them in functionOutputs */
+        // TODO check for success
+        boolean success = getValuesParsed(resultString, functionOutputs);
+
+        /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(functionOutputs);
             node.call();
         }
+
+        /* Set the result of the function node */
         result = functionOutputs;
 
-        String[] providerRegion = getProviderAndRegion(resourceLink);
-
-        String status = checkResultSuccess(resultString);
-
+        /* Check if the execution identifier is specified
+        (check if execution should be stored in the database) */
         if(executionId != -1) {
+
+            /* Create a function invocation object */
             Invocation functionInvocation = new Invocation(
                     resourceLink,
-                    providerRegion[0],
-                    providerRegion[1],
+                    Utils.detectProvider(resourceLink).toString(),
+                    Utils.detectRegion(resourceLink),
                     new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
                     new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
                     (end - start),
-                    status,
+                    checkResultSuccess(resultString).toString(),
                     null,
                     executionId
             );
-            logFunctionInvocation(functionInvocation);
+
+            /* Store the invocation in the database */
+            storeInDBFunctionInvocation(functionInvocation);
         }
         return true;
     }
 
+    /**
+     * Add availability value to the function input.
+     * TODO is this really needed?
+     *
+     * @param simAvail the simulated availability from the database.
+     * @param functionInputs the actual function input.
+     * @return the new function input.
+     */
     private Map<String, Object> checkFunctionSimAvail(double simAvail, Map<String, Object> functionInputs) {
-        if (simAvail != 1) { //if this functions avail should be simulated
+
+        /* Check if this functions avail should be simulated */
+        if (simAvail != 1) {
             functionInputs.put("availability", simAvail);
         }
         return functionInputs;
     }
 
-    private String checkResultSuccess(String resultString) {
-        return resultString.contains("error:") ? "ERROR" : "OK";
+    /**
+     * Check for error object in the json result of the cloud function.
+     *
+     * @param resultString json result of the base function.
+     * @return status og the execution.
+     */
+    private Status checkResultSuccess(String resultString) {
+        return resultString.contains("error:") ? Status.ERROR : Status.SUCCESS;
     }
 
-    private Function parseNodeFunction(String resourceLink, Map<String, Object> functionInputs) {
-        Function functionToInvoke = null;
-        try {
-            functionToInvoke = parseThisNodesFunction(resourceLink, functionInputs);
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-        return functionToInvoke;
-    }
-
+    /**
+     * Log the function output.
+     *
+     * @param start time of the base function.
+     * @param end time of the base function.
+     * @param resultString json result of the base function.
+     * @param id unique identifier of the base function.
+     */
     private void logFunctionOutput(long start, long end, String resultString, int id) {
         if (resultString.length() > 100000) {
             logger.info("Function took: "+(end - start)+" ms. Result: too large ["+System.currentTimeMillis()+"ms], id="+id+"");
@@ -239,9 +266,28 @@ public class FunctionNode extends Node {
         }
     }
 
-    private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs) throws IOException, MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException, InvokationFailureException {
-        String resultString = null;
-        if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) { // Invoke with Fault Tolerance Module
+    /**
+     * Invoke the base function.
+     *
+     * @param functionToInvoke tht base function which should be invoked.
+     * @param resourceLink the resource of the base function.
+     * @param functionInputs the input to the base function.
+     *
+     * @return the stringified json result of the base function invocation.
+     *
+     * @throws MaxRunningTimeException on maximum runtime exceeded.
+     * @throws LatestFinishingTimeException on latest finish time exceeded.
+     * @throws LatestStartingTimeException on latest start time exceeded.
+     * @throws InvokationFailureException on failed invocation.
+     * @throws IOException on input output exception.
+     */
+    private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs) throws MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException, InvokationFailureException, IOException {
+        String resultString;
+
+        /* Check if function should be invoked with fault tolerance settings */
+        if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
+
+            /* Invoke the function with fault tolerance */
             FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
             try {
                 logger.info("Invoking function with fault tolerance...");
@@ -251,11 +297,18 @@ public class FunctionNode extends Node {
                 throw e;
             }
         } else {
+            /* Invoke the function without fault tolerance */
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
         }
         return resultString;
     }
 
+    /**
+     * Log the function input.
+     *
+     * @param functionInputs the actual function input.
+     * @param id unique identifier of the base function.
+     */
     private void logFunctionInput(Map<String, Object> functionInputs, int id) {
         if (functionInputs.size() > 20) {
             logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
@@ -264,7 +317,13 @@ public class FunctionNode extends Node {
         }
     }
 
-    private void logFunctionInvocation(Invocation functionInvocation){
+    /**
+     * Send a request to store the function invocation
+     * in the logging database.
+     *
+     * @param functionInvocation to store in the database.
+     */
+    private void storeInDBFunctionInvocation(Invocation functionInvocation){
 
         logger.info("Connecting to logger service...");
         try (Socket loggerService = new Socket(NetworkConstants.LOGGER_SERVICE_HOST, NetworkConstants.LOGGER_SERVICE_PORT)) {
@@ -277,129 +336,133 @@ public class FunctionNode extends Node {
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
         }
-
-    }
-
-    private String[] getProviderAndRegion(String resourceLink){
-        String[] res = new String[2];
-        res[0] = "NOT_FOUND";
-        res[1] = "NOT_FOUND";
-        if(resourceLink.contains("functions.cloud.ibm")){
-            res[0] = "IBM";
-            res[1] = resourceLink.split(PROTOCOL)[1].split("\\.functions\\.cloud\\.ibm")[0];
-        } else if(resourceLink.contains("functions.appdomain.cloud")){
-            res[0] = "IBM";
-            res[1] = resourceLink.split(PROTOCOL)[1].split("\\.functions\\.appdomain\\.cloud")[0];
-        }else if(resourceLink.contains("arn")){
-            res[0] = "AWS";
-            res[1] = resourceLink.split("lambda:")[1].split(":")[0];
-        } else if(resourceLink.contains("cloudfunctions.net")){
-            res[0] = "GOOGLE";
-            res[1] = resourceLink.split(PROTOCOL)[1].split("\\.cloudfunctions\\.net")[0];
-        } else if(resourceLink.contains("azure")){
-            res[0] = "AZURE";
-        } else if(resourceLink.contains("fc.aliyuncs")){
-            res[0] = "ALIBABA";
-        }
-        return res;
     }
 
     /**
-     * Parses the result string into a map. Supported types for the result
-     * elements are number, string and collection.
+     * Parses the json result into a map as key-value pair.
      *
-     * @param resultString The result string from the FaaS function.
-     * @param out          The output map of this function.
-     * @return
+     * @param result The stringified json result from the base function.
+     * @param functionOutputs The output values / map of the base function.
+     *a
+     * @return success or failure of the value parsing.
      */
-    private boolean getValuesParsed(String resultString, Map<String, Object> out) {
-        if (resultString == null || "null".equals(resultString)){
-            return false;
+    private boolean getValuesParsed(String result, Map<String, Object> functionOutputs) {
+
+        /* Check if there is a function result and a specified output */
+        if (result == null || "null".equals(result)){
+            return output == null || output.isEmpty();
         }
+
         try {
+            /* Iterate over all specified outputs in the yaml file */
             for (DataOutsAtomic data : output) {
 
-                JsonObject jso = getReturnAsJson(resultString, data);
+                /* Convert the json result to a json object */
+                JsonObject jsonResult = generateJson(result, data);
 
-                if (out.containsKey(name + "/" + data.getName())) {
+                /* Check if the function output already contains the specified value */
+                if (functionOutputs.containsKey(name + "/" + data.getName())) {
                     continue;
                 }
+
+                // TODO why not do this?
+                //functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()));
+
+                /* Parse according data type */
                 switch (data.getType()) {
                     case "number":
-                        Object number = jso.get(data.getName()).getAsDouble();
-                        out.put(name + "/" + data.getName(), number);
+                        Object number = jsonResult.get(data.getName()).getAsDouble();
+                        functionOutputs.put(name + "/" + data.getName(), number);
                         break;
                     case "string":
-                        out.put(name + "/" + data.getName(), jso.get(data.getName()).toString());
+                        functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).toString());
                         break;
                     case "collection":
                         // array stays array to later decide which type
-                        out.put(name + "/" + data.getName(), jso.get(data.getName()).getAsJsonArray());
+                        functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsJsonArray());
                         break;
                     case "object":
-                        out.put(name + "/" + data.getName(), jso);
+                        functionOutputs.put(name + "/" + data.getName(), jsonResult);
                         break;
                     default:
-                        logger.info("Error while trying to parse key in function {}", name);
+                        logger.error("Error while trying to parse key in function {}", name);
                         break;
                 }
             }
             return true;
 
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
             logger.error("Error while trying to parse key in function {}", name);
             return false;
         }
     }
 
     /**
-     * Get the result as json object.
+     * Convert the stringified json to a json object
+     * representing the function output.
      *
-     * @return json result
+     * @param resultString stringified json.
+     * @param data outputs of the base function.
+     *
+     * @return json object representing the base function output.
      */
-    JsonObject getReturnAsJson(String resultString, DataOutsAtomic data){
+    JsonObject generateJson(String resultString, DataOutsAtomic data){
         JsonObject jso;
         try {
+
+            /* Parse the json string to a json object */
             jso = new Gson().fromJson(resultString, JsonObject.class);
         } catch (com.google.gson.JsonSyntaxException e) {
-            // If there is no JSON object as return value create one
+
+            /* If there is no JSON object as return value, create one */
             jso = new JsonObject();
             jso.addProperty(data.getName(), resultString);
         }
         return jso;
     }
 
-
     /**
-     * Sets the FaaSInvoker depending on the resource link. Currently AWS
-     * Lambda, OpenWhisk, IBM Cloud Functions and Docker are supported.
+     * Get the resource link of the base function.
      *
-     * @throws MissingResourceLinkException
+     * @return the resource link of the base function.
+     *
+     * @throws MissingResourceLinkException on missing resource link.
      */
     private String getResourceLink() throws MissingResourceLinkException {
-        String resourceLink = null;
 
+        /* Check if there are properties specified */
         if (properties == null) {
             throw new MissingResourceLinkException("No properties specified " + this.toString());
         }
+
+        String resourceLink = null;
+
+        /* Iterate over properties and search for the resource */
         for (PropertyConstraint p : properties) {
-            if (p.getName().equals("resource")) {
+            if ("resource".equals(p.getName())) {
                 resourceLink = p.getValue();
                 break;
             }
         }
+
+        /* Check if the resource link was not specified */
         if (resourceLink == null) {
             throw new MissingResourceLinkException("No resource link on function node " + this.toString());
         }
 
-        resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
+        if(!resourceLink.startsWith("http") && !resourceLink.startsWith("arn")){
+
+            /* Remove the programming language of the resource link */
+            resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
+        }
+
         return resourceLink;
     }
 
-
     /**
      * Sets the dataValues and passes the result to all children.
+     *
+     * @param input to the child functions.
      */
     @Override
     public void passResult(Map<String, Object> input) {
@@ -425,21 +488,28 @@ public class FunctionNode extends Node {
     }
 
     /**
-     * parses function Settings.
-     * returns FunctionInvocation Object with correct Constraint and FT Settings
+     * Parse the fault tolerance constraints.
+     *
+     * @param resourceLink the resource link of the base function.
+     * @param functionInputs inputs to the base function.
+     *
+     * @return function object with correctly set ft values.
      */
-    private Function parseThisNodesFunction(String resourceLink, Map<String, Object> functionInputs) {
-        List<PropertyConstraint> constraintList = this.constraints;
-        // Split Constraints and FT stuff
+    private Function parseFTConstraints(String resourceLink, Map<String, Object> functionInputs) {
 
+        /* Keeps track of all constraint settings */
         List<PropertyConstraint> cList = new LinkedList<>();
+
+        /* Keeps track of all fault tolerance settings */
         List<PropertyConstraint> ftList = new LinkedList<>();
 
-        // Constraints and Properties are optional, so check if some of them are set
-        if (constraintList == null) {
+        /* Check if there are constraints set */
+        if (this.constraints == null) {
             return null;
         }
-        for (PropertyConstraint constraint : constraintList) {
+
+        /* Iterate over constraints and look for according settings */
+        for (PropertyConstraint constraint : this.constraints) {
             if (constraint.getName().startsWith("FT-")) {
                 ftList.add(constraint);
             } else if (constraint.getName().startsWith("C-")) {
@@ -447,40 +517,69 @@ public class FunctionNode extends Node {
             }
         }
 
-        // FT Parsing
+        /* Parse fault tolerance settings */
         FaultToleranceSettings ftSettings = getFaultToleranceSettings(ftList, functionInputs);
 
-        // ConstraintParsing
+        /* Parse constraint settings */
         ConstraintSettings cSettings = getConstraintSettings(cList);
 
-        return getFinalFunction(ftSettings, cSettings, resourceLink, functionInputs);
+        return new Function(resourceLink, this.type, functionInputs,
+                ftSettings.isEmpty() ? null : ftSettings, cSettings.isEmpty() ? null : cSettings);
     }
 
+    /**
+     * Look for fault tolerance settings.
+     *
+     * @param ftList all fault tolerance settings.
+     * @param functionInputs the input of the base function.
+     *
+     * @return fault tolerance settings.
+     */
     private FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList, Map<String, Object> functionInputs) {
+
+        /* Set the default fault tolerance settings to zero retries */
         FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
-        List<List<Function>> altStrat = new LinkedList<>();
+
+        /* Create a lis for the alternative strategy */
+        List<List<Function>> alternativeStrategy = new LinkedList<>();
+
+        /* Iterate over all fault tolerance constraints and check for supported ones */
         for (PropertyConstraint ftConstraint : ftList) {
             if (ftConstraint.getName().compareTo("FT-Retries") == 0) {
+
+                /* Set the given number of retries a base function should be repeated if a failure happens */
                 ftSettings.setRetries(Integer.valueOf(ftConstraint.getValue()));
             } else if (ftConstraint.getName().startsWith("FT-AltPlan-")) {
-                List<Function> altPlan = new LinkedList<>();
-                String workingString = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
-                while (workingString.contains(";")) {
-                    String funcString = workingString.substring(0, workingString.indexOf(";"));
+
+                /* Pack all alternative function into an alternative plan */
+                List<Function> alternativePlan = new LinkedList<>();
+                String possibleResources = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
+                while (possibleResources.contains(";")) {
+                    String funcString = possibleResources.substring(0, possibleResources.indexOf(";"));
                     Function tmpFunc = new Function(funcString, this.type, functionInputs);
-                    workingString = workingString.substring(workingString.indexOf(";") + 1);
-                    altPlan.add(tmpFunc);
+                    possibleResources = possibleResources.substring(possibleResources.indexOf(";") + 1);
+                    alternativePlan.add(tmpFunc);
                 }
-                altStrat.add(altPlan);
+                alternativeStrategy.add(alternativePlan);
             }
         }
-        AlternativeStrategy altStrategy = new AlternativeStrategy(altStrat);
-        ftSettings.setAltStrategy(altStrategy);
+        ftSettings.setAltStrategy(new AlternativeStrategy(alternativeStrategy));
         return ftSettings;
     }
 
+    /**
+     * Look for constraint settings.
+     *
+     * @param cList all constraint settings.
+     *
+     * @return constraint settings.
+     */
     private ConstraintSettings getConstraintSettings(List<PropertyConstraint> cList) {
+
+        /* Set the default constraint settings */
         ConstraintSettings cSettings = new ConstraintSettings(null, null, 0);
+
+        /* Iterate over all constraint settings and check for supported ones */
         for (PropertyConstraint cConstraint : cList) {
             if (cConstraint.getName().compareTo("C-latestStartingTime") == 0) {
                 cSettings.setLatestStartingTime(Timestamp.valueOf(cConstraint.getValue()));
@@ -493,26 +592,18 @@ public class FunctionNode extends Node {
         return cSettings;
     }
 
-    private Function getFinalFunction(FaultToleranceSettings ftSettings, ConstraintSettings cSettings, String resourceLink, Map<String, Object> functionInputs) {
-        Function finalFunc = null;
-        if (!ftSettings.isEmpty() && !cSettings.isEmpty()) { // Both
-            finalFunc = new Function(resourceLink, this.type, functionInputs, ftSettings, cSettings);
-        } else if (!ftSettings.isEmpty() && cSettings.isEmpty()) { // Only FT
-            finalFunc = new Function(resourceLink, this.type, functionInputs, ftSettings);
-        } else if (ftSettings.isEmpty() && !cSettings.isEmpty()) { // only constraints
-            finalFunc = new Function(resourceLink, this.type, functionInputs, cSettings);
-        } else { // No Constraints or FT set
-            finalFunc = new Function(resourceLink, this.type, functionInputs);
-        }
-        return finalFunc;
-    }
-
+    /**
+     * Read the AWS credentials.
+     * TODO do we need this?
+     *
+     * @return aws account object.
+     */
     private AWSAccount getAWSAccount() {
         String awsAccessKey = null;
         String awsSecretKey = null;
         try {
             Properties propertiesFile = new Properties();
-            propertiesFile.load(LambdaHandler.class.getResourceAsStream("/credentials.properties"));
+            propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
             awsAccessKey = propertiesFile.getProperty("aws_access_key");
             awsSecretKey = propertiesFile.getProperty("aws_secret_key");
         } catch (Exception e) {
@@ -521,11 +612,17 @@ public class FunctionNode extends Node {
         return new AWSAccount(awsAccessKey, awsSecretKey);
     }
 
+    /**
+     * Read the IBM credentials.
+     * TODO do we need this?
+     *
+     * @return ibm account object.
+     */
     private IBMAccount getIBMAccount() {
         String ibmKey = null;
         try {
             Properties propertiesFile = new Properties();
-            propertiesFile.load(Local.class.getResourceAsStream("/credentials.properties"));
+            propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
             ibmKey = propertiesFile.getProperty("ibm_api_key");
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
