@@ -387,8 +387,11 @@ public class FunctionNode extends Node {
                     case "object":
                         functionOutputs.put(name + "/" + data.getName(), jsonResult);
                         break;
+                    case "bool":
+                        functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsBoolean());
+                        break;
                     default:
-                        logger.error("Error while trying to parse key in function {}", name);
+                        logger.error("Error while trying to parse key in function {}. Type: {}", name, data.getType());
                         break;
                 }
             }
