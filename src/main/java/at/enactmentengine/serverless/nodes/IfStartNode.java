@@ -144,9 +144,11 @@ public class IfStartNode extends Node {
             if (dataValues == null) {
                 dataValues = new HashMap<>();
             }
-            for (DataIns data : dataIns) {
-                if (input.containsKey(data.getSource())) {
-                    dataValues.put(data.getSource(), input.get(data.getSource()));
+            if(dataIns != null){
+                for (DataIns data : dataIns) {
+                    if (input.containsKey(data.getSource())) {
+                        dataValues.put(data.getSource(), input.get(data.getSource()));
+                    }
                 }
             }
         }
