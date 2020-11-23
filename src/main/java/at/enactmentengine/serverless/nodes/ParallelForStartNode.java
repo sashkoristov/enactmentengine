@@ -230,7 +230,13 @@ public class ParallelForStartNode extends Node {
                             List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
 
                             checkDistributedElements(distributedElements, data, values);
-                        }else{
+                        } else if (dataValues.get(data.getSource()) instanceof String){
+                            JsonArray dataElements = new JsonArray();
+                            dataElements.add((String) dataValues.get(data.getSource()));
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+
+                            checkDistributedElements(distributedElements, data, values);
+                        } else {
                             throw new NotImplementedException("Not implemented: " + dataValues.get(data.getSource()).getClass());
                         }
                     }
