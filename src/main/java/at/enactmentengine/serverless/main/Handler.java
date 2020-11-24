@@ -1,11 +1,17 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.nodes.FunctionNode;
-import at.uibk.dps.NetworkConstants;
-import at.uibk.dps.SocketUtils;
-import at.uibk.dps.communication.*;
-import at.uibk.dps.communication.entity.Statistics;
+import at.uibk.dps.socketutils.*;
+import at.uibk.dps.socketutils.enactmentengine.RequestEnactmentEngine;
+import at.uibk.dps.socketutils.enactmentengine.ResponseEnactmentEngine;
+import at.uibk.dps.socketutils.enactmentengine.UtilsSocketEnactmentEngine;
+import at.uibk.dps.socketutils.entity.Statistics;
+import at.uibk.dps.socketutils.logger.ResponseLogger;
+import at.uibk.dps.socketutils.logger.RequestLoggerExecutionId;
+import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
+
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import java.io.*;
 import java.net.Socket;
@@ -49,8 +55,8 @@ public class Handler implements Runnable {
 
 		try {
 			/* Wait for request */
-			EnactmentEngineRequest enactmentEngineRequest = SocketUtils.receiveJsonObject(socket.getInputStream(),
-					EnactmentEngineRequest.class);
+			RequestEnactmentEngine enactmentEngineRequest = UtilsSocket.receiveJsonObject(socket.getInputStream(),
+					RequestEnactmentEngine.class);
 
 			/* Start measuring time for workflow execution */
 			long start = System.currentTimeMillis();
@@ -65,23 +71,26 @@ public class Handler implements Runnable {
 			/* Execute the workflow */
 			Executor executor = new Executor();
 			Map<String, Object> executionResult = executor.executeWorkflow(
-					enactmentEngineRequest.getWorkflowFileContent(),
-					enactmentEngineRequest.getWorkflowInputFileContent(), executionId);
+					enactmentEngineRequest.getWorkflow(),
+					enactmentEngineRequest.getWorkflowInput(), executionId);
 
 			/* Stop measuring time for workflow execution */
 			long end = System.currentTimeMillis();
 
 			/* Prepare the execution result */
-			EnactmentEngineResponse response = new EnactmentEngineResponse(
-					new Gson().toJsonTree(executionResult).getAsJsonObject(), executionId,
-					new Statistics(new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-							new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start))));
+
+			final JsonObject wfResult = new Gson().toJsonTree(executionResult).getAsJsonObject();
+			final Statistics executionStats = new Statistics(
+					new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+					new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)));
+			ResponseEnactmentEngine response = UtilsSocketEnactmentEngine.generateResponse(wfResult, executionId,
+					executionStats);
 
 			/* Send back json string because other modules might not have GSON */
 			LOGGER.log(Level.INFO, "Sending back result");
 
 			/* Send response back to client */
-			SocketUtils.sendJsonObject(socket.getOutputStream(), response);
+			UtilsSocket.sendJsonObject(socket.getOutputStream(), response);
 
 			/* Close connection */
 			socket.close();
@@ -101,19 +110,18 @@ public class Handler implements Runnable {
 		/* Connect to logger service */
 		LOGGER.info("Connecting to logger service...");
 
-		try (Socket loggerServiceSocket = new Socket(NetworkConstants.LOGGER_SERVICE_HOST,
-				NetworkConstants.LOGGER_SERVICE_PORT)) {
+		try (Socket loggerServiceSocket = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST,
+				ConstantsNetwork.LOGGER_SERVICE_PORT)) {
 
 			/* Prepare and send request */
-			InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory
-					.getCreateExecutionIdRequest();
+			RequestLoggerExecutionId invocationLogManagerRequest = UtilsSocketLogger.generateExecutionIdRequest();
 			LOGGER.log(Level.INFO, "Sending request to logger service.");
-			SocketUtils.sendJsonObject(loggerServiceSocket.getOutputStream(), invocationLogManagerRequest);
+			UtilsSocket.sendJsonObject(loggerServiceSocket.getOutputStream(), invocationLogManagerRequest);
 
 			/* Wait for response (wait for filtered resources) */
 			LOGGER.info("Waiting for response from logger service...");
-			InvocationLogManagerResponse invocationLogManagerResponse = SocketUtils
-					.receiveJsonObject(loggerServiceSocket.getInputStream(), InvocationLogManagerResponse.class);
+			ResponseLogger invocationLogManagerResponse = UtilsSocket
+					.receiveJsonObject(loggerServiceSocket.getInputStream(), ResponseLogger.class);
 			int executionId = invocationLogManagerResponse.getExecutionId();
 
 			/* Close connection */
