@@ -59,25 +59,34 @@ public class IfStartNode extends Node {
 
         /* Iterate over all specified inputs and check if they are present */
         final Map<String, Object> ifInputValues = new HashMap<>();
-        for (DataIns data : dataIns) {
-            if (!dataValues.containsKey(data.getSource())) {
-                throw new MissingInputDataException(
-                        IfStartNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
-            } else {
-                ifInputValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+
+        /* Check if input data is specified */
+        if(dataIns != null){
+
+            /* Iterate over every input specified in the workflow file */
+            for (DataIns data : dataIns) {
+
+                /* Check if the actual input does not contains the specified input */
+                if (!dataValues.containsKey(data.getSource())) {
+                    throw new MissingInputDataException(
+                            IfStartNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
+                } else {
+                    ifInputValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                }
             }
         }
+
 
         /* Keeps track whether the condition of th if statement is valid */
         boolean statementEvaluationValue = false;
 
         /* Iterate over all part-conditions */
         for (ACondition conditionElement : condition.getConditions()) {
+
+            /* Evaluate if condition */
             statementEvaluationValue = evaluate(conditionElement, ifInputValues);
-            // if combined with is "or" and one condition element is true the whole
-            // condition evaluates to true
-            // if combined with is "and" and one condition element is false the whole
-            // condition evaluates to false
+
+            /* Check if we can stop checking the statement */
             if (("or".equals(condition.getCombinedWith()) && statementEvaluationValue) ||
                     ("and".equals(condition.getCombinedWith()) && !statementEvaluationValue)) {
                 break;
@@ -86,13 +95,20 @@ public class IfStartNode extends Node {
 
         Node node;
         if (statementEvaluationValue) {
+
+            /* Execute the if branch */
+            // TODO can this be hardcoded?
             node = children.get(0);
             logger.info("Executing {} IfStartNodeOld in if branch.", name);
         } else {
+
+            /* Execute the else branch */
+            // TODO can this be hardcoded?
             node = children.get(1);
             logger.info("Executing {} IfStartNodeOld in else branch.", name);
         }
 
+        /* Pass data to the according branch and execute */
         node.passResult(ifInputValues);
         node.call();
 
@@ -114,8 +130,11 @@ public class IfStartNode extends Node {
         // TODO maybe use Number datatype? Allows to caompare also int and double?!
         //Number data1 = (Number) ifInputValues.get(conditionElement.getData1());
 
+        /* Get the data which should be evaluated */
         int data1 = parseCondition(conditionElement.getData1(), ifInputValues);
         int data2 = parseCondition(conditionElement.getData2(), ifInputValues);
+
+        /* Evaluate the condition */
         switch (conditionElement.getOperator()) {
             case "==":
                 return data1 == data2;
@@ -141,11 +160,17 @@ public class IfStartNode extends Node {
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
+
+            /* Check if actual input data list is already created */
             if (dataValues == null) {
                 dataValues = new HashMap<>();
             }
+
+            /* Check if there is input specified in the workflow file */
             if(dataIns != null){
                 for (DataIns data : dataIns) {
+
+                    /* Add specified inputs to the actual inputs list */
                     if (input.containsKey(data.getSource())) {
                         dataValues.put(data.getSource(), input.get(data.getSource()));
                     }
@@ -165,6 +190,8 @@ public class IfStartNode extends Node {
      * @throws MissingInputDataException on missing input
      */
     private int parseCondition(String string, Map<String, Object> ifInputValues) throws MissingInputDataException {
+
+        // TODO do we really need this function?
         String conditionName = null;
         int conditionData = 0;
         try {
@@ -185,6 +212,11 @@ public class IfStartNode extends Node {
 
     }
 
+    /**
+     * Get the result of the if-start construct.
+     *
+     * @return null because the if-start does not generate a result.
+     */
     @Override
     public Map<String, Object> getResult() {
         return null;
