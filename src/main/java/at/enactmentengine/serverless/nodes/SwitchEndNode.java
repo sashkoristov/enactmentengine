@@ -44,16 +44,13 @@ public class SwitchEndNode extends Node {
             }
         }
 
-        if (outputValues.size() == 0) {
-            if(dataOuts != null) {
-                for (DataOuts data : dataOuts) {
-                    if (data.getSource().contains("NULL")) {
-                        outputValues.put(name + "/" + data.getName(), "NULL");
-                    }
-
+        if (outputValues.size() == 0 && dataOuts != null) {
+            for (DataOuts data : dataOuts) {
+                if (data.getSource().contains("NULL")) {
+                    outputValues.put(name + "/" + data.getName(), "NULL");
                 }
-            }
 
+            }
         }
         for (Node node : children) {
             node.passResult(outputValues);

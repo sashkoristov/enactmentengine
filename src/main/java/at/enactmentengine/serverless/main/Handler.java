@@ -9,7 +9,6 @@ import at.uibk.dps.socketutils.entity.Statistics;
 import at.uibk.dps.socketutils.logger.ResponseLogger;
 import at.uibk.dps.socketutils.logger.RequestLoggerExecutionId;
 import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 

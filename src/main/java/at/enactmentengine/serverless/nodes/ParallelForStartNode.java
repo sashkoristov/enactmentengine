@@ -161,8 +161,8 @@ public class ParallelForStartNode extends Node {
         if (counterVariableNames[2] != null) {
             counterStepSize = Integer.parseInt((String) counterValues.get(counterVariableNames[2]));
         }
-        logger.info("Counter values for {} : counterStart: {}, counterEnd: {}, stepSize: {}",
-                ParallelForStartNode.class.getCanonicalName(), counterStart, counterEnd, counterStepSize);
+        logger.info("Counter values for "+ParallelForStartNode.class.getCanonicalName()+" : " +
+                        "counterStart: "+counterStart+", counterEnd: "+counterEnd+", stepSize: "+counterStepSize+"");
 
         ParallelForEndNode endNode = findParallelForEndNode(children.get(0), 0);
 

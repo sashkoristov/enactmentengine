@@ -16,10 +16,10 @@ public class YAMLParserTest {
     @Test
     public void parseYAMLToExecutableWorkflow() throws IOException {
         ExecutableWorkflow executableWorkflow = new YAMLParser().parseExecutableWorkflow(
-                FileUtils.readFileToByteArray(new File("src/test/resources/simpleWorkflow.yaml")),
+                FileUtils.readFileToByteArray(new File("src/test/resources/allConstructs.yaml")),
                 Language.YAML, 0);
 
-        Assert.assertEquals("helloWF", executableWorkflow.getWorkflowName());
+        Assert.assertEquals("all_supported_constructs", executableWorkflow.getWorkflowName());
         //Assert.assertEquals(, executableWorkflow.getDefinedInput());
         //Assert.assertEquals(, executableWorkflow.getStartNode());
         //Assert.assertEquals(, executableWorkflow.getEndNode());

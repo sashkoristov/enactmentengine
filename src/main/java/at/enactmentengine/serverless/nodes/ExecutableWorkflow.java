@@ -134,7 +134,9 @@ public class ExecutableWorkflow {
         return endNode.getResult();
     }
 
-    /** Getter ans Setter */
+    /**
+     * Getter ans Setter
+     */
 
     public Node getStartNode() {
         return startNode;

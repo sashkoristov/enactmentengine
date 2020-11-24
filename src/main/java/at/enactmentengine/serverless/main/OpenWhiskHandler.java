@@ -1,20 +1,19 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 /**
  * OpenWhiskHandler to allow the execution of the Enactment Engine as OpenWhisk
@@ -25,77 +24,71 @@ import java.util.Properties;
  */
 public class OpenWhiskHandler {
 
+    /**
+     * Logger for the openWhisk handler.
+     */
     private static final Logger logger = LoggerFactory.getLogger(OpenWhiskHandler.class);
+
+    /**
+     * Key in json output where the output should be placed.
+     */
     private static final String RESULT_FIELD = "result";
+
+    /**
+     * The language of the workflow (json or yaml).
+     */
     private static final String LANGUAGE_FIELD = "language";
 
+    /**
+     * Default empty constructor.
+     */
     OpenWhiskHandler(){
     }
 
+    /**
+     * Starting point of the OpenWhisk action.
+     *
+     * @param args input of the openWhisk action (enactment-engine).
+     * @return the result of the workflow execution.
+     */
     public static JsonObject main(JsonObject args) {
-        long startTime = System.currentTimeMillis();
 
-        // Disable hostname verification (enable OpenWhisk connections)
+        /* Start measuring time for workflow execution */
+        long start = System.currentTimeMillis();
+
+        /* Disable hostname verification (enable OpenWhisk connections) */
         final Properties props = System.getProperties();
         props.setProperty("jdk.internal.httpclient.disableHostnameVerification", Boolean.TRUE.toString());
 
-        // Create result object
+        int executionId = -1;
         JsonObject response = new JsonObject();
-
-        ExecutableWorkflow ex = null;
-
-        // Set workflow language
         Language language = readLanguage(args);
 
-        // Get input filename and possible additional parameters
-        String filename = null;
-        if (args != null && args.has("workflow")) {
-            ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString(), language, -1);
-        }
-        if (args != null && args.has("filename")) {
-            filename = args.getAsJsonPrimitive("filename").getAsString();
-            try {
-                ex = new YAMLParser().parseExecutableWorkflow(FileUtils.readFileToByteArray(new File(filename)), language, -1);
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
+        if(args != null) {
+            if(args.has("workflow")){
+
+                /* Parse the workflow */
+                ExecutableWorkflow ex = new YAMLParser().parseExecutableWorkflowByStringContent(args.getAsJsonPrimitive("workflow").getAsString(), language, executionId);
+                try {
+                    /* Execute the workflow */
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    Map<String, Object> executionResult = ex.executeWorkflow(objectMapper.readValue(args.getAsJsonPrimitive("input").getAsString(), Map.class));
+                    response.addProperty(RESULT_FIELD, String.valueOf(executionResult));
+                } catch (MissingInputDataException | ExecutionException | InterruptedException | IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                response.addProperty(RESULT_FIELD, "Error: Could not run workflow. Request not valid.");
             }
-
-            // Check if filename is specified
-            if (filename == null) {
-                response.addProperty(RESULT_FIELD, "Error: No filename specified.");
-                return response;
-            }
-        }
-        HashMap<String, Object> jsonMap = new HashMap<>();
-        if (args != null && args.has("params")) {
-            jsonMap = new Gson().fromJson(args.get("params").toString(), HashMap.class);
+        } else {
+            response.addProperty(RESULT_FIELD, "Error: Could not run workflow. Request not specified.");
         }
 
-        // Parse and create executable workflow
-        if (ex != null) {
+        /* Stop measuring time for workflow execution */
+        long end = System.currentTimeMillis();
 
-            // Set the workflow input
-            Map<String, Object> input = new HashMap<>();
-            input.put("some source", "5");// for ref gate
-            input.put("some camera source", "0");
-            input.put("some sensor source", "0");
-
-            // Add params from EE call as input
-            input.putAll(jsonMap);
-
-            // Execute workflow
-
-            try {
-                ex.executeWorkflow(input);
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-                response.addProperty(RESULT_FIELD, "Error: Could not run workflow. See logs for more details.");
-                return response;
-            }
-        }
-
-        long endTime = System.currentTimeMillis();
-        response.addProperty(RESULT_FIELD, "Workflow ran without errors in " + (endTime - startTime) + "ms. Start: " + startTime + ", End: " + endTime);
+        response.addProperty(RESULT_FIELD, "Workflow ran without errors in " + (end - start) + "ms. Start: " + start + ", End: " + end  +
+                ". Result: " + response);
         return response;
     }
 
