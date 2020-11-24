@@ -24,7 +24,7 @@ public class ParallelEndNode extends Node {
     static final Logger logger = LoggerFactory.getLogger(ParallelEndNode.class);
 
     /**
-     * Determines the number of parents which are finished.
+     * Keeps track of the number of finished parents.
      */
     private int finishedParents = 0;
 
@@ -62,7 +62,7 @@ public class ParallelEndNode extends Node {
     @Override
     public Boolean call() throws Exception {
 
-        /* Check if all parents have finished */
+        /* Check if all functions in the parallel node are finished */
         synchronized (this) {
             if (++finishedParents != parents.size()) {
                 return false;

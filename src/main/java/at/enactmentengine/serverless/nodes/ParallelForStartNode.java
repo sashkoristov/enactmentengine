@@ -172,7 +172,7 @@ public class ParallelForStartNode extends Node {
 
         }
         assert endNode != null;
-        endNode.setNumberOfChildren(children.size());
+        endNode.setNumberOfParents(children.size());
     }
 
     /**
