@@ -1,10 +1,16 @@
 package at.enactmentengine.serverless.main;
 
-import at.uibk.dps.NetworkConstants;
-import at.uibk.dps.SocketUtils;
-import at.uibk.dps.communication.*;
-import at.uibk.dps.communication.entity.Statistics;
+import at.enactmentengine.serverless.nodes.FunctionNode;
+import at.uibk.dps.socketutils.*;
+import at.uibk.dps.socketutils.enactmentengine.RequestEnactmentEngine;
+import at.uibk.dps.socketutils.enactmentengine.ResponseEnactmentEngine;
+import at.uibk.dps.socketutils.enactmentengine.UtilsSocketEnactmentEngine;
+import at.uibk.dps.socketutils.entity.Statistics;
+import at.uibk.dps.socketutils.logger.ResponseLogger;
+import at.uibk.dps.socketutils.logger.RequestLoggerExecutionId;
+import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import java.io.*;
 import java.net.Socket;
@@ -21,114 +27,119 @@ import java.util.logging.Logger;
  */
 public class Handler implements Runnable {
 
-    /**
-     * Logger for request handler.
-     */
-    private static final Logger LOGGER = Logger.getLogger(Handler.class.getName());
+	/**
+	 * Logger for request handler.
+	 */
+	private static final Logger LOGGER = Logger.getLogger(Handler.class.getName());
 
-    /**
-     * Connected client sending the request.
-     */
-    private Socket socket;
+	/**
+	 * Connected client sending the request.
+	 */
+	private Socket socket;
 
-    /**
-     * Default constructor for handler.
-     *
-     * @param socket client connecting to service.
-     */
-    public Handler(Socket socket) {
-        this.socket = socket;
-    }
+	/**
+	 * Default constructor for handler.
+	 *
+	 * @param socket client connecting to service.
+	 */
+	public Handler(Socket socket) {
+		this.socket = socket;
+	}
 
-    /**
-     * Handle request.
-     */
-    @Override
-    public void run() {
+	/**
+	 * Handle request.
+	 */
+	@Override
+	public void run() {
 
-        try {
-            /* Wait for request */
-            EnactmentEngineRequest enactmentEngineRequest = SocketUtils.receiveJsonObject(socket, EnactmentEngineRequest.class);
+		try {
+			/* Wait for request */
+			RequestEnactmentEngine enactmentEngineRequest = UtilsSocket.receiveJsonObject(socket.getInputStream(),
+					RequestEnactmentEngine.class);
 
-            /* Start measuring time for workflow execution */
-            long start = System.currentTimeMillis();
+			/* Start measuring time for workflow execution */
+			long start = System.currentTimeMillis();
 
-            int executionId = -1;
-            if(enactmentEngineRequest.isLogResults()){
-                /* Get the execution id of the workflow execution */
-                executionId = getExecutionId();
-            }
+			int executionId = -1;
+			if (enactmentEngineRequest.isLogResults()) {
+				/* Get the execution id of the workflow execution */
+				executionId = getExecutionId();
+			}
+			FunctionNode.logResults = enactmentEngineRequest.isLogResults();
 
-            /* Execute the workflow */
-            Executor executor = new Executor();
-            Map<String, Object> executionResult = executor.executeWorkflow(
-                    enactmentEngineRequest.getWorkflowFileContent(),
-                    enactmentEngineRequest.getWorkflowInputFileContent(),
-                    executionId);
+			/* Execute the workflow */
+			Executor executor = new Executor();
+			Map<String, Object> executionResult = executor.executeWorkflow(
+					enactmentEngineRequest.getWorkflow(),
+					enactmentEngineRequest.getWorkflowInput(), executionId);
 
-            /* Stop measuring time for workflow execution */
-            long end = System.currentTimeMillis();
+			/* Stop measuring time for workflow execution */
+			long end = System.currentTimeMillis();
 
-            /* Prepare the execution result */
-            EnactmentEngineResponse response = new EnactmentEngineResponse(
-                    new Gson().toJsonTree(executionResult).getAsJsonObject(),
-                    executionId,
-                    new Statistics(new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)))
-            );
+			/* Prepare the execution result */
 
-            /* Send back json string because other modules might not have GSON */
-            LOGGER.log(Level.INFO, "Sending back result");
+			final JsonObject wfResult = new Gson().toJsonTree(executionResult).getAsJsonObject();
+			final Statistics executionStats = new Statistics(
+					new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+					new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)));
+			ResponseEnactmentEngine response = UtilsSocketEnactmentEngine.generateResponse(wfResult, executionId,
+					executionStats);
 
-            /* Send response back to client */
-            SocketUtils.sendJsonObject(socket, response);
+			/* Send back json string because other modules might not have GSON */
+			LOGGER.log(Level.INFO, "Sending back result");
 
-            /* Close connection */
-            socket.close();
+			/* Send response back to client */
+			UtilsSocket.sendJsonObject(socket.getOutputStream(), response);
 
-        } catch (IOException ex) {
-            LOGGER.severe(ex.getMessage());
-        }
-    }
+			/* Close connection */
+			socket.close();
 
-    /**
-     * Get the execution identifier from the logger service
-     *
-     * @return execution identifier
-     */
-    private int getExecutionId(){
+		} catch (IOException ex) {
+			LOGGER.severe(ex.getMessage());
+		}
+	}
 
-        /* Connect to logger service */
-        LOGGER.info("Connecting to logger service...");
+	/**
+	 * Get the execution identifier from the logger service
+	 *
+	 * @return execution identifier
+	 */
+	private int getExecutionId() {
 
-        try (Socket loggerService = new Socket(NetworkConstants.LOGGER_SERVICE_HOST, NetworkConstants.LOGGER_SERVICE_PORT)) {
+		/* Connect to logger service */
+		LOGGER.info("Connecting to logger service...");
 
-            /* Prepare and send request */
-            InvocationLogManagerRequest invocationLogManagerRequest = InvocationLogManagerRequestFactory.getCreateExecutionIdRequest();
-            LOGGER.log(Level.INFO, "Sending request to logger service.");
-            SocketUtils.sendJsonObject(loggerService, invocationLogManagerRequest);
+		try (Socket loggerServiceSocket = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST,
+				ConstantsNetwork.LOGGER_SERVICE_PORT)) {
 
-            /* Wait for response (wait for filtered resources) */
-            LOGGER.info("Waiting for response from logger service...");
-            InvocationLogManagerResponse invocationLogManagerResponse = SocketUtils.receiveJsonObject(loggerService, InvocationLogManagerResponse.class);
-            int executionId = invocationLogManagerResponse.getExecutionId();
+			/* Prepare and send request */
+			RequestLoggerExecutionId invocationLogManagerRequest = UtilsSocketLogger.generateExecutionIdRequest();
+			LOGGER.log(Level.INFO, "Sending request to logger service.");
+			UtilsSocket.sendJsonObject(loggerServiceSocket.getOutputStream(), invocationLogManagerRequest);
 
-            /* Close connection */
-            LOGGER.info("Closing connection to logger service...");
+			/* Wait for response (wait for filtered resources) */
+			LOGGER.info("Waiting for response from logger service...");
+			ResponseLogger invocationLogManagerResponse = UtilsSocket
+					.receiveJsonObject(loggerServiceSocket.getInputStream(), ResponseLogger.class);
+			int executionId = invocationLogManagerResponse.getExecutionId();
 
-            /* Check if logger service returned a valid execution identifier */
-            if(executionId == -1){
-                LOGGER.warning("Logger service returned an invalid executionId.");
-                return -1;
-            }
+			/* Close connection */
+			LOGGER.info("Closing connection to logger service...");
 
-            /* Return response */
-            LOGGER.log(Level.INFO, "Got response from logger service");
-            return executionId;
-        } catch (IOException e) {
+			/* Check if logger service returned a valid execution identifier */
+			if (executionId == -1) {
+				LOGGER.warning("Logger service returned an invalid executionId.");
+				return -1;
+			}
 
-            /* Log error on failure */
-            LOGGER.severe("Could not get execution Id: " + e.getLocalizedMessage());
-            return -1;
-        }
-    }
+			/* Return response */
+			LOGGER.log(Level.INFO, "Got response from logger service");
+			return executionId;
+		} catch (IOException e) {
+
+			/* Log error on failure */
+			LOGGER.severe("Could not get execution Id: " + e.getLocalizedMessage());
+			return -1;
+		}
+	}
 }

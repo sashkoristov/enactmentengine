@@ -10,9 +10,6 @@ import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
-import at.uibk.dps.communication.InvocationLogManagerRequest;
-import at.uibk.dps.communication.InvocationLogManagerRequestFactory;
-import at.uibk.dps.communication.entity.Invocation;
 import at.uibk.dps.database.SQLLiteDatabase;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
@@ -22,6 +19,12 @@ import at.uibk.dps.function.AlternativeStrategy;
 import at.uibk.dps.function.ConstraintSettings;
 import at.uibk.dps.function.FaultToleranceSettings;
 import at.uibk.dps.function.Function;
+import at.uibk.dps.socketutils.ConstantsNetwork;
+import at.uibk.dps.socketutils.UtilsSocket;
+import at.uibk.dps.socketutils.entity.Invocation;
+import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
+import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -39,7 +42,7 @@ import java.util.*;
  *
  * @author markusmoosbrugger, jakobnoeckl
  *
- * adapted by @author stefanpedratscher
+ *         adapted by @author stefanpedratscher
  */
 public class FunctionNode extends Node {
 

@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.main;
 
-import at.uibk.dps.NetworkConstants;
+import at.uibk.dps.socketutils.ConstantsNetwork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,9 +34,9 @@ public class Service {
     public static void main(String[] args) {
 
         /* Start the service */
-        try (ServerSocket serverSocket = new ServerSocket(NetworkConstants.EE_PORT)) {
+        try (ServerSocket serverSocket = new ServerSocket(ConstantsNetwork.EE_PORT)) {
 
-            logger.info("Server is up and running at {}:{}", InetAddress.getLocalHost().getHostAddress(), NetworkConstants.EE_PORT);
+            logger.info("Server is up and running at {}:{}", InetAddress.getLocalHost().getHostAddress(), ConstantsNetwork.EE_PORT);
 
             Socket socket = null;
             while (running) {
