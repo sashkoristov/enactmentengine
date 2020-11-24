@@ -1,4 +1,4 @@
-package at.enactmentengine.serverless.nodes;
+package at.enactmentengine.serverless.object;
 
 /**
  * Class which represents a ListPair with start and end.

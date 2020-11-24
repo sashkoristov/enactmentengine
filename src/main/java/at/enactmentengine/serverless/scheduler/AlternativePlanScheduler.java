@@ -24,6 +24,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Part of Future scheduler
  * Proposes Alternative Strategy and Changes AFCL before it will be run by EE
+ *
+ * TODO actually this should not be part of the EE?!
+ *
  */
 public class AlternativePlanScheduler {
 

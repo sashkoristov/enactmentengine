@@ -23,24 +23,63 @@ import java.util.concurrent.Future;
  * Control node which manages the tasks at the start of a parallel for loop.
  *
  * @author markusmoosbrugger, jakobnoeckl
+ * adapted by @author stefanpedratscher
  */
 public class ParallelForStartNode extends Node {
+
+    /**
+     * Logger for parallel-for-start node.
+     */
     static final Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
 
-    private List<DataIns> definedInput;
+    /**
+     * Input data defined in the workflow file.
+     */
+    private List<DataIns> dataIns;
+
+    /**
+     * The actual values of the counter variables.
+     */
     private Map<String, Object> counterValues;
+
+    /**
+     * The start value of the loop counter.
+     */
     private int counterStart;
+
+    /**
+     * The end value of the loop counter.
+     */
     private int counterEnd;
+
+    /**
+     * The step size for the loop counter.
+     */
     private int counterStepSize;
+
+    /**
+     * Contains all counter variable names.
+     */
     private String[] counterVariableNames;
+
+    /**
+     * The maximum number of concurrent function executions.
+     */
     public static final int MAX_NUMBER_THREADS = 1000;
 
-    public ParallelForStartNode(String name, String type, List<DataIns> definedInput, LoopCounter loopCounter) {
+    /**
+     * Default constructor for the parallel-for-start node.
+     *
+     * @param name of the parallel-for-start node.
+     * @param type of the parallel-for-start node.
+     * @param dataIns specified in the workflow file.
+     * @param loopCounter of the parallel-for-start node.
+     */
+    public ParallelForStartNode(String name, String type, List<DataIns> dataIns, LoopCounter loopCounter) {
         super(name, type);
-        this.definedInput = definedInput;
+        this.dataIns = dataIns;
         counterVariableNames = new String[3];
         parseLoopCounter(loopCounter);
-
     }
 
     /**
@@ -51,89 +90,127 @@ public class ParallelForStartNode extends Node {
      */
     private void parseLoopCounter(LoopCounter loopCounter) {
 
+        /* Try to parse the from value of the loop counter */
         try {
             counterStart = Integer.valueOf(loopCounter.getFrom());
         } catch (NumberFormatException e) {
             counterVariableNames[0] = loopCounter.getFrom();
         }
+
+        /* Try to parse the to value of the loop counter */
         try {
             counterEnd = Integer.valueOf(loopCounter.getTo());
         } catch (NumberFormatException e) {
             counterVariableNames[1] = loopCounter.getTo();
         }
 
-        counterStepSize = 1;
+        /* Try to parse the step value of the loop counter */
+        try {
+            counterStepSize = Integer.valueOf(loopCounter.getStep());
+        } catch (NumberFormatException e) {
 
+            // TODO should string be allowed for dynamic variables?
+            counterStepSize = 1;
+        }
     }
 
     /**
      * Saves the passed result as dataValues.
+     *
+     * @param input values to pass.
      */
     @Override
     public void passResult(Map<String, Object> input) {
         synchronized (this) {
+
+            /* Prepare data value holders, if not already done */
             if (dataValues == null) {
                 dataValues = new HashMap<>();
             }
             if (counterValues == null) {
                 counterValues = new HashMap<>();
             }
-            if (definedInput != null) {
-                for (DataIns data : definedInput) {
+
+            /* Check if there is an input specified */
+            if (dataIns != null) {
+
+                /* Iterate over inputs and add corresponding values to the data values */
+                for (DataIns data : dataIns) {
                     if (input.containsKey(data.getSource())) {
                         dataValues.put(data.getSource(), input.get(data.getSource()));
                     }
                 }
             }
+
+            /* Iterate over counter variables and check if the input contains the values */
             for (String counterValue : counterVariableNames) {
                 if (input.containsKey(counterValue)) {
                     counterValues.put(counterValue, input.get(counterValue));
                 }
             }
         }
-
     }
 
     /**
      * Checks the input values, adds specific number of children depending on the
      * input values and creates a thread pool for execution of the children.
+     *
+     * @return True on success, False otherwise
+     * @throws Exception on failure
      */
     @Override
     public Boolean call() throws Exception {
-        final Map<String, Object> outVals = new HashMap<>();
-        if (definedInput != null) {
-            for (DataIns data : definedInput) {
+
+        /* Prepare the output values */
+        final Map<String, Object> outValues = new HashMap<>();
+
+        /* Check if there is input defined in the workflow file */
+        if (dataIns != null) {
+
+            /* Iterate over the input data and handle input values */
+            for (DataIns data : dataIns) {
                 if (!dataValues.containsKey(data.getSource())) {
                     throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
                 } else {
-                    outVals.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                    outValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
                 }
             }
         }
 
-        // distribute value for next functions
-
         logger.info("Executing {} ParallelForStartNodeOld", name);
 
+        /* Create all children functions (all functions inside the parallel-for) */
         addChildren();
+
+        /* Create a fixed thread-pool managing the parallel executions */
         ExecutorService exec = Executors
                 .newFixedThreadPool(children.size() > MAX_NUMBER_THREADS ? MAX_NUMBER_THREADS : children.size());
         List<Future<Boolean>> futures = new ArrayList<>();
+        List<Map<String, Object>> outValuesForChildren = transferOutVals(children.size(), outValues);
 
-        List<Map<String, Object>> outValsForChilds = transferOutVals(children.size(), outVals);
-
+        /* Iterate over all children */
         for (int i = 0; i < children.size(); i++) {
+
             Node node = children.get(i);
-            if (i < outValsForChilds.size()) {
-                node.passResult(outValsForChilds.get(i));
+
+            /* Pass results to the children (if there is an output value left) */
+            if (i < outValuesForChildren.size()) {
+                node.passResult(outValuesForChildren.get(i));
             }
+
+            /* Execute the child node */
             futures.add(exec.submit(node));
         }
+
+        /* Wait for all children to finish */
         for (Future<Boolean> future : futures) {
             future.get();
         }
+
+        /* Terminate executor */
         exec.shutdown();
+
         return true;
     }
 
@@ -141,17 +218,22 @@ public class ParallelForStartNode extends Node {
      * Adds a specific number of children depending on the values counterStart,
      * counterEnd and counterStepSize.
      *
-     * @throws MissingInputDataException  on missing input
-     * @throws CloneNotSupportedException on unsupported clone
+     * @throws MissingInputDataException  on missing input.
+     * @throws CloneNotSupportedException on unsupported clone.
      */
     private void addChildren() throws MissingInputDataException, CloneNotSupportedException {
-        // add children depending on the counter value
+
+        /* Iterate over counter variables and check if there is the according value */
         for (String counterKeyName : counterVariableNames) {
             if (counterKeyName != null && !counterValues.containsKey(counterKeyName)) {
                 throw new MissingInputDataException(
                         ParallelForStartNode.class.getCanonicalName() + ": " + name + " needs " + counterKeyName + "!");
             }
         }
+
+        // TODO could counterStart, counterEnd and counterStepSize be of type NUMBER?
+
+        /* Parse actual value of the defined variables */
         if (counterVariableNames[0] != null) {
             counterStart = Integer.parseInt((String) counterValues.get(counterVariableNames[0]));
         }
@@ -161,37 +243,50 @@ public class ParallelForStartNode extends Node {
         if (counterVariableNames[2] != null) {
             counterStepSize = Integer.parseInt((String) counterValues.get(counterVariableNames[2]));
         }
+
         logger.info("Counter values for "+ParallelForStartNode.class.getCanonicalName()+" : " +
                         "counterStart: "+counterStart+", counterEnd: "+counterEnd+", stepSize: "+counterStepSize+"");
 
+        /* Search the end node of the parallel-for */
         ParallelForEndNode endNode = findParallelForEndNode(children.get(0), 0);
 
+        /* Add children to the list of children */
         for (int i = counterStart; i < counterEnd - 1; i += counterStepSize) {
             Node node = children.get(0).clone(endNode);
             children.add(node);
-
         }
+
         assert endNode != null;
-        endNode.setNumberOfChildren(children.size());
+
+        /* Set the number all children in the parallel-for */
+        endNode.setNumberOfParents(children.size());
     }
 
     /**
      * Finds the matching ParallelForEndNodeOld recursively.
      *
-     * @param currentNode
-     * @param depth
-     * @return
+     * @param currentNode node to start looking for.
+     * @param depth recursive depth to check which parallel-for node is checked.
+     *
+     * @return the end node of the parallel-for.
      */
     private ParallelForEndNode findParallelForEndNode(Node currentNode, int depth) {
+
+        /* Iterate over all children */
         for (Node child : currentNode.getChildren()) {
             if (child instanceof ParallelForEndNode) {
+
+                /* Check if we found the end node of the correct parallel-for node */
                 if (depth == 0) {
                     return (ParallelForEndNode) child;
                 } else {
+
+                    /* We found an end node of a nested parallel-for */
                     return findParallelForEndNode(child, depth - 1);
                 }
-
             } else if (child instanceof ParallelForStartNode) {
+
+                /* We found the start node of another parallel-for */
                 return findParallelForEndNode(child, depth + 1);
             } else {
                 return findParallelForEndNode(child, depth);
@@ -203,41 +298,63 @@ public class ParallelForStartNode extends Node {
     /**
      * Transfers the output values depending on the specified dataFlow type.
      *
-     * @param childs  The number of children.
-     * @param outVals The output values.
+     * @param children  The number of children.
+     * @param outValues The output values.
+     *
      * @return the transferred output values.
      */
-    private ArrayList<Map<String, Object>> transferOutVals(int childs, Map<String, Object> outVals) {
-        ArrayList<Map<String, Object>> values = new ArrayList<>();
-        if (definedInput != null) {
-            for (DataIns data : definedInput) {
-                if (data.getConstraints() != null) {
-                    if(dataValues.get(data.getSource()) instanceof ArrayList || dataValues.get(data.getSource()) instanceof JsonArray){
-                        JsonArray dataElements = new Gson().toJsonTree(dataValues.get(data.getSource())).getAsJsonArray();
-                        List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+    private ArrayList<Map<String, Object>> transferOutVals(int children, Map<String, Object> outValues) {
 
+        ArrayList<Map<String, Object>> values = new ArrayList<>();
+
+        /* Check if there is an input defined */
+        if (dataIns != null) {
+
+            /* Iterate over the input data defined in the workflow file */
+            for (DataIns data : dataIns) {
+
+                /* Check of there are constraints defined */
+                if (data.getConstraints() != null) {
+
+                    /* Check if the actual input is an array */
+                    if(dataValues.get(data.getSource()) instanceof ArrayList || dataValues.get(data.getSource()) instanceof JsonArray){
+
+                        /* Convert the data to an array */
+                        JsonArray dataElements = new Gson().toJsonTree(dataValues.get(data.getSource())).getAsJsonArray();
+
+                        /* Check if a distribution is specified */
+                        List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
                         checkDistributedElements(distributedElements, data, values);
                     } else {
+
+                        // TODO can the following be simplified and generalized e.g. also for bool etc.?
                         if (dataValues.get(data.getSource()) instanceof Double){
                             JsonArray dataElements = new JsonArray();
                             dataElements.add((Double) dataValues.get(data.getSource()));
-                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
 
                             checkDistributedElements(distributedElements, data, values);
                         } else if (dataValues.get(data.getSource()) instanceof Integer){
                             JsonArray dataElements = new JsonArray();
                             dataElements.add((Integer) dataValues.get(data.getSource()));
-                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), childs);
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
 
                             checkDistributedElements(distributedElements, data, values);
-                        }else{
+                        } else if (dataValues.get(data.getSource()) instanceof String){
+                            JsonArray dataElements = new JsonArray();
+                            dataElements.add((String) dataValues.get(data.getSource()));
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                            checkDistributedElements(distributedElements, data, values);
+                        } else {
                             throw new NotImplementedException("Not implemented: " + dataValues.get(data.getSource()).getClass());
                         }
                     }
-
                 } else {
+
+                    /* Check if data should be passed */
                     if (data.getPassing() != null && data.getPassing()) {
-                        checkDataPassing(outVals, data, childs, values);
+                        passData(outValues, data, children, values);
                     }
                 }
             }
@@ -245,14 +362,28 @@ public class ParallelForStartNode extends Node {
         return values;
     }
 
-    private void checkDataPassing(Map<String, Object> outVals, DataIns data, int childs, ArrayList<Map<String, Object>> values) {
-        if (outVals.containsKey(this.name + "/" + data.getName())) {
-            for (int i = 0; i < childs; i++) {
+    /**
+     * Pass the data.
+     *
+     * @param outValues
+     * @param data
+     * @param numChildren
+     * @param values
+     */
+    private void passData(Map<String, Object> outValues, DataIns data, int numChildren, ArrayList<Map<String, Object>> values) {
+
+        /* Check if the output contains the specified key */
+        if (outValues.containsKey(this.name + "/" + data.getName())) {
+
+            /* Iterate over all children */
+            for (int i = 0; i < numChildren; i++) {
+
+                /* Check if there is data for the specified child */
                 if (values.size() > i) {
-                    values.get(i).put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                    values.get(i).put(data.getName(), outValues.get(this.name + "/" + data.getName()));
                 } else {
                     Map<String, Object> tmp = new HashMap<>();
-                    tmp.put(data.getName(), outVals.get(this.name + "/" + data.getName()));
+                    tmp.put(data.getName(), outValues.get(this.name + "/" + data.getName()));
                     values.add(i, tmp);
                 }
             }
@@ -261,6 +392,13 @@ public class ParallelForStartNode extends Node {
         }
     }
 
+    /**
+     *
+     *
+     * @param distributedElements
+     * @param data
+     * @param values
+     */
     private void checkDistributedElements(List<JsonArray> distributedElements, DataIns data, ArrayList<Map<String, Object>> values) {
         for (int i = 0; i < distributedElements.size(); i++) {
             Object block = distributedElements.get(i);
@@ -385,16 +523,18 @@ public class ParallelForStartNode extends Node {
                 .orElse(null);
     }
 
+    /** Getter and Setter */
+
     @Override
     public Map<String, Object> getResult() {
         return null;
     }
 
-    public List<DataIns> getDefinedInput() {
-        return definedInput;
+    public List<DataIns> getDataIns() {
+        return dataIns;
     }
 
-    public void setDefinedInput(List<DataIns> definedInput) {
-        this.definedInput = definedInput;
+    public void setDataIns(List<DataIns> dataIns) {
+        this.dataIns = dataIns;
     }
 }

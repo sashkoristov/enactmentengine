@@ -20,7 +20,7 @@ public class YAMLParserTest {
                 Language.YAML, 0);
 
         Assert.assertEquals("all_supported_constructs", executableWorkflow.getWorkflowName());
-        //Assert.assertEquals(, executableWorkflow.getDefinedInput());
+        //Assert.assertEquals(, executableWorkflow.getDataIns());
         //Assert.assertEquals(, executableWorkflow.getStartNode());
         //Assert.assertEquals(, executableWorkflow.getEndNode());
         // TODO add test check
