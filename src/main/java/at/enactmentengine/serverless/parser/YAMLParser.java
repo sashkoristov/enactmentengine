@@ -1,7 +1,7 @@
 package at.enactmentengine.serverless.parser;
 
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
-import at.enactmentengine.serverless.nodes.ListPair;
+import at.enactmentengine.serverless.object.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
 import at.uibk.dps.afcl.utils.Utils;
 import org.apache.commons.lang3.NotImplementedException;
