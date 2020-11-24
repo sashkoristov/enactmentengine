@@ -194,9 +194,7 @@ public class ParallelForEndNode extends Node {
         return getResult();
     }
 
-    public void setParallelForResult(Map<String, Object> parallelForResult) {
-        this.parallelForResult = parallelForResult;
-    }
+    public void setParallelForResult(Map<String, Object> parallelForResult) { this.parallelForResult = parallelForResult; }
 
     public List<DataOuts> getOutput() {
         return output;

@@ -363,12 +363,12 @@ public class ParallelForStartNode extends Node {
     }
 
     /**
-     * Pass the data.
+     * Pass the data to the next successor.
      *
-     * @param outValues
-     * @param data
-     * @param numChildren
-     * @param values
+     * @param outValues output values.
+     * @param data input data specified in the workflow file.
+     * @param numChildren number of children.
+     * @param values where the data should be added.
      */
     private void passData(Map<String, Object> outValues, DataIns data, int numChildren, ArrayList<Map<String, Object>> values) {
 
@@ -393,28 +393,40 @@ public class ParallelForStartNode extends Node {
     }
 
     /**
+     * Check for the distribution of data elements.
      *
-     *
-     * @param distributedElements
-     * @param data
-     * @param values
+     * @param distributedElements input list of distributed elements.
+     * @param data the dataIns specified in the workflow file.
+     * @param values result which are transferred.
      */
     private void checkDistributedElements(List<JsonArray> distributedElements, DataIns data, ArrayList<Map<String, Object>> values) {
+
+        /* Iterate over all distributed elements */
         for (int i = 0; i < distributedElements.size(); i++) {
+
             Object block = distributedElements.get(i);
             if (distributedElements.get(i).size() == 1) {
-                // Extract single value
+
+                /* Extract a single value */
                 JsonArray arr = distributedElements.get(i);
-                block = data.getType().equals("number") ? arr.get(0).getAsInt() : arr.get(0);
+                block = "number".equals(data.getType()) ? arr.get(0).getAsInt() : arr.get(0);
             }
 
+            // TODO check if this should be dynamic
+            /* Define the key which should be used */
             String key = name + "/" + data.getName();
+
+            /* Check if there are enough values */
             if (values.size() > i) {
-                // Use the child map we already created for another DataIns port
+
+                /* Use the child map we already created for another DataIns port */
                 values.get(i).put(key, block);
             } else {
+
+                /* Create a new map if there are not enough elements */
                 Map<String, Object> map = new HashMap<>();
                 map.put(key, block);
+                // TODO check why i as key?
                 values.add(i, map);
             }
         }
@@ -432,9 +444,12 @@ public class ParallelForStartNode extends Node {
         List<JsonArray> blocks = new ArrayList<>();
         JsonArray currentBlock = new JsonArray();
 
+        /* Iterate over the whole array and distribute the elements to the blocks */
         for (int i = 0; i < elements.size(); i++) {
+
             currentBlock.add(elements.get(i));
-            // Complete the current block if it is full or we ran out of elements
+
+            /* Complete the current block if it is full or we ran out of elements */
             if (currentBlock.size() >= blockSize || i == (elements.size() - 1)) {
                 blocks.add(currentBlock);
                 currentBlock = new JsonArray();
@@ -454,18 +469,19 @@ public class ParallelForStartNode extends Node {
      */
     protected List<JsonArray> distributeElements(JsonArray dataElements, List<PropertyConstraint> constraints,
                                                  int children) {
-        // Check for unknown constraints
+        /* Check for unknown constraints */
         for (PropertyConstraint constraint : constraints) {
-            if (constraint.getName().equals("element-index") || constraint.getName().equals("distribution")) {
+            if ("element-index".equals(constraint.getName()) || "distribution".equals(constraint.getName())) {
                 continue;
             }
             throw new NotImplementedException("Constraint " + constraint.getName() + " not implemented.");
         }
 
-        // Element-index constraint has higher precedence than distribution constraint
+        /* Element-index constraint has higher precedence than distribution constraint */
         PropertyConstraint elementIndexConstraint = getPropertyConstraintByName(constraints, "element-index");
         if (elementIndexConstraint != null) {
-            // Create a subset of the collection using the indices specified in the element-index constraint
+
+            /* Create a subset of the collection using the indices specified in the element-index constraint */
             List<Integer> indices = ElementIndex.parseIndices(elementIndexConstraint.getValue());
             JsonArray subset = new JsonArray(indices.size());
             for (Integer i : indices) {
@@ -474,20 +490,30 @@ public class ParallelForStartNode extends Node {
             dataElements = subset;
         }
 
-        // Distribute
+        /* Check for the distribute constraint */
         List<JsonArray> distributedElements;
         PropertyConstraint distributionConstraint = getPropertyConstraintByName(constraints, "distribution");
         if (distributionConstraint != null) {
+
+            /* Check for a block distribution */
             if (distributionConstraint.getValue().contains("BLOCK")) {
+
+                /* Get the defined block size */
                 int blockSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
+
+                /* Distribute the elements */
                 distributedElements = distributeOutValsBlock(dataElements, blockSize);
             } else if (distributionConstraint.getValue().contains("REPLICATE")) {
+
+                /* Determine the number of times the data should be replicated */
                 int replicaSize;
                 if (distributionConstraint.getValue().contains("REPLICATE(*)")) {
                     replicaSize = children;
                 } else {
                     replicaSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
                 }
+
+                /* Create an array of that specific size */
                 distributedElements = new ArrayList<>();
                 for (int i = 0; i < replicaSize; i++) {
                     distributedElements.add(dataElements);
@@ -497,7 +523,8 @@ public class ParallelForStartNode extends Node {
                         + " not implemented.");
             }
         } else {
-            // Provide the same elements to each child if no distribution constraint is specified
+
+            /* Provide the same elements to each child if no distribution constraint is specified */
             distributedElements = new ArrayList<>();
             for (int i = 0; i < children; i++) {
                 distributedElements.add(dataElements);
