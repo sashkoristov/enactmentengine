@@ -13,12 +13,32 @@ import java.util.Map.Entry;
  * Control node which manages the tasks at the end of a switch element.
  *
  * @author markusmoosbrugger, jakobnoeckl
+ * adapted by @author stefanpedratscher
  */
 public class SwitchEndNode extends Node {
-    private List<DataOuts> dataOuts;
-    private Map<String, Object> switchResult = new HashMap<>();
+
+    /**
+     * Logger for a switch-end node.
+     */
     static final Logger logger = LoggerFactory.getLogger(SwitchEndNode.class);
 
+    /**
+     * Output defined in the workflow file.
+     */
+    private List<DataOuts> dataOuts;
+
+    /**
+     * Actual result of the switch construct.
+     */
+    private Map<String, Object> switchResult = new HashMap<>();
+
+
+    /**
+     * Default constructor of a switch-end node.
+     *
+     * @param name of the switch-end node.
+     * @param dataOuts output defined in the workflow file.
+     */
     public SwitchEndNode(String name, List<DataOuts> dataOuts) {
         super(name, "");
         this.dataOuts = dataOuts;
@@ -32,15 +52,16 @@ public class SwitchEndNode extends Node {
     public Boolean call() throws Exception {
 
         logger.info("Executing {} SwitchEndNodeOld", name);
-
         Map<String, Object> outputValues = new HashMap<>();
 
+        /* Check if there is an output defined */
         if(dataOuts != null){
+
+            /* Iterate over the possible outputs and look for defined ones */
             for (DataOuts data : dataOuts) {
                 for (Entry<String, Object> inputElement : switchResult.entrySet()) {
                     outputValues.put(name + "/" + data.getName(), inputElement.getValue());
                 }
-
             }
         }
 

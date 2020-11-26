@@ -17,6 +17,7 @@ import java.util.concurrent.Future;
  * Control node which manages the tasks at the start of a parallel loop.
  *
  * @author markusmoosbrugger, jakobnoeckl
+ * adapted by @author stefanpedratscher
  */
 public class ParallelStartNode extends Node {
 
