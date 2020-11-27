@@ -201,7 +201,7 @@ public class IfStartNode extends Node {
         }
         try {
             if (conditionName != null) {
-                conditionData = ((Integer) ifInputValues.get(conditionName)).intValue();
+                conditionData = ((Double) ifInputValues.get(conditionName)).intValue();
             }
         } catch (Exception e) {
             throw new MissingInputDataException(
