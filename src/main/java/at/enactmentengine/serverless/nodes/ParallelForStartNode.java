@@ -65,7 +65,17 @@ public class ParallelForStartNode extends Node {
     /**
      * The maximum number of concurrent function executions.
      */
-    public static final int MAX_NUMBER_THREADS = 1000;
+    private int maxNumberThreads = 1000;
+
+    /**
+     * The properties of a parallel-for-start node.
+     */
+    List<PropertyConstraint> properties;
+
+    /**
+     * The constraints of a parallel-for-start node.
+     */
+    List<PropertyConstraint> constraints;
 
     /**
      * Default constructor for the parallel-for-start node.
@@ -75,11 +85,40 @@ public class ParallelForStartNode extends Node {
      * @param dataIns specified in the workflow file.
      * @param loopCounter of the parallel-for-start node.
      */
-    public ParallelForStartNode(String name, String type, List<DataIns> dataIns, LoopCounter loopCounter) {
+    public ParallelForStartNode(String name, String type, List<DataIns> dataIns, LoopCounter loopCounter, List<PropertyConstraint> properties,
+                                List<PropertyConstraint> constraints) {
         super(name, type);
         this.dataIns = dataIns;
+        this.properties = properties;
+        this.constraints = constraints;
         counterVariableNames = new String[3];
         parseLoopCounter(loopCounter);
+
+        checkConstraints(this.constraints);
+    }
+
+    /**
+     * Check the constraints of the parallel-for-start node.
+     *
+     * @param constraints of the parallel-for-start node.
+     */
+    private void checkConstraints(List<PropertyConstraint> constraints) {
+
+        /* Check if there are constraints specified */
+        if(constraints != null) {
+            for(PropertyConstraint constraint : constraints) {
+
+                /* Check for concurrency constraint */
+                if("concurrency".equals(constraint.getName())) {
+                    try {
+                        maxNumberThreads = Integer.parseInt(constraint.getValue());
+                        logger.info("Detected new concurrency for " + this.name + ": " + maxNumberThreads);
+                    } catch (java.lang.NumberFormatException e) {
+                        logger.warn("Could not parse new concurrency. Default concurrency value is used: " + maxNumberThreads);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -185,7 +224,7 @@ public class ParallelForStartNode extends Node {
 
         /* Create a fixed thread-pool managing the parallel executions */
         ExecutorService exec = Executors
-                .newFixedThreadPool(children.size() > MAX_NUMBER_THREADS ? MAX_NUMBER_THREADS : children.size());
+                .newFixedThreadPool(children.size() > maxNumberThreads ? maxNumberThreads : children.size());
         List<Future<Boolean>> futures = new ArrayList<>();
         List<Map<String, Object>> outValuesForChildren = transferOutVals(children.size(), outValues);
 

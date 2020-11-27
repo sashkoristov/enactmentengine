@@ -118,7 +118,7 @@ class NodeListHelper {
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListParallelFor(ParallelFor function) {
-        ParallelForStartNode parallelForStartNode = new ParallelForStartNode(function.getName(), "type", function.getDataIns(), function.getLoopCounter());
+        ParallelForStartNode parallelForStartNode = new ParallelForStartNode(function.getName(), "type", function.getDataIns(), function.getLoopCounter(), function.getProperties(), function.getConstraints());
         ParallelForEndNode parallelForEndNode = new ParallelForEndNode(function.getName(), "", function.getDataOuts());
 
         // Create parallel compound NodeList
