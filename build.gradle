@@ -41,6 +41,8 @@ description = "enactment-engine"
 
 mainClassName = 'at.enactmentengine.serverless.main.Service'
 
+sourceCompatibility = '8'
+
 repositories {
 	mavenCentral()
 
