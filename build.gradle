@@ -86,6 +86,11 @@ shadowJar {
     version = null
 }
 
+task standalone {
+    mainClassName = 'at.enactmentengine.serverless.main.Local'
+    dependsOn 'shadowJar'
+}
+
 task copyJar(type: Copy) {
     dependsOn   'shadowJar'
     from        "build/libs/enactment-engine-all.jar"
