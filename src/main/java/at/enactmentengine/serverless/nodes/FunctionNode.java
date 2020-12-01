@@ -386,7 +386,7 @@ public class FunctionNode extends Node {
 					functionOutputs.put(name + "/" + data.getName(), number);
 					break;
 				case "string":
-					functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).toString());
+					functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsString());
 					break;
 				case "collection":
 					// array stays array to later decide which type
