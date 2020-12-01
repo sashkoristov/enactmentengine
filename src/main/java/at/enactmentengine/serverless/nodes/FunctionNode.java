@@ -28,7 +28,7 @@ import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import jFaaS.Gateway;
+import jFaas.Gateway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -620,15 +620,19 @@ public class FunctionNode extends Node {
 	private AWSAccount getAWSAccount() {
 		String awsAccessKey = null;
 		String awsSecretKey = null;
+		String awsSessionToken = null;
 		try {
 			Properties propertiesFile = new Properties();
 			propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
 			awsAccessKey = propertiesFile.getProperty("aws_access_key");
 			awsSecretKey = propertiesFile.getProperty("aws_secret_key");
+			if(propertiesFile.containsKey("aws_session_token")){
+				awsSessionToken = propertiesFile.getProperty("aws_session_token");
+			}
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		}
-		return new AWSAccount(awsAccessKey, awsSecretKey);
+		return new AWSAccount(awsAccessKey, awsSecretKey, awsSessionToken);
 	}
 
 	/**
