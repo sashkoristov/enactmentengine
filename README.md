@@ -21,22 +21,32 @@
 ## Deploy
 
 ### Local
-Configure the line mainClassName = 'at.enactmentengine.serverless.main.Local' instead of mainClassName = 'at.enactmentengine.serverless.main.Service' to build a jar for local execution.
+<!--- Configure the line mainClassName = 'at.enactmentengine.serverless.main.Local' instead of mainClassName = 'at.enactmentengine.serverless.main.Service' to build a jar for local execution. --->
 
 Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serverless/main/Local.java) and pass the workflow yaml file as parameter, as well as the input JSON file. 
-
-
+ 
+or 
+ 
+````
+gradle standalone
+````
 
 
 ### Service
 Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9000 for a `.yaml` file and return the result of the execution in json format.
 
+or
+
+````
+gradle shadowJar       
+````
+<!---
 ### Docker
 ````
 gradle updateDocker         // to start the service in a docker container with a gradle task.
 ````
 
-Alternatively, follow [/docker/README.md](docker/README.md) to run the container without gradle.
+Alternatively, follow [/docker/README.md](docker/README.md) to run the container without gradle. --->
 <!---
 NOT SUPPORTED RIGHT NOW:
 
