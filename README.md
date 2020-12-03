@@ -12,6 +12,7 @@
     ````
     aws_access_key=<your_aws_access_key>
     aws_secret_key=<your_aws_secret_key>
+    aws_session_token=<your_aws_session_token> (e.g., for AWS Educate)
     ibm_api_key=<your_ibm_api_key>
     ````
     
@@ -20,7 +21,12 @@
 ## Deploy
 
 ### Local
-Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serverless/main/Local.java) and pass the workflow yaml file as parameter.
+Configure the line mainClassName = 'at.enactmentengine.serverless.main.Local' instead of mainClassName = 'at.enactmentengine.serverless.main.Service' to build a jar for local execution.
+
+Simply run the [main method in Local.java](src/main/java/at/enactmentengine/serverless/main/Local.java) and pass the workflow yaml file as parameter, as well as the input JSON file. 
+
+
+
 
 ### Service
 Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9000 for a `.yaml` file and return the result of the execution in json format.
