@@ -3,6 +3,7 @@ target/
 out/
 enactment-engine.iml
 credentials.properties
+src/main/resources/credentials.properties
 .classpath
 .project
 .settings/
