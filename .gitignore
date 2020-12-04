@@ -1,6 +1,5 @@
 target/
 .idea
-credentials.properties
 out/
 enactment-engine.iml
 .classpath
