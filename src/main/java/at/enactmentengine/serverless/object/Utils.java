@@ -13,7 +13,7 @@ public class Utils {
     /**
      * Path to the credentials properties file
      */
-    public static String PATH_TO_CREDENTIALS = "credentials.properties";
+    public static String PATH_TO_CREDENTIALS = "/credentials.properties";
 
     /**
      * Determine if the availability should be simulated.
