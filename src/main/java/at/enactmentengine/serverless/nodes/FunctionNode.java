@@ -2,8 +2,8 @@ package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
-import at.enactmentengine.serverless.main.LambdaHandler;
-import at.enactmentengine.serverless.main.Local;
+//import at.enactmentengine.serverless.main.LambdaHandler;
+//import at.enactmentengine.serverless.main.Local;
 import at.enactmentengine.serverless.object.Status;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
@@ -28,10 +28,13 @@ import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import jFaas.Gateway;
+import jFaaS.Gateway;
+// import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.sql.Timestamp;
@@ -276,7 +279,7 @@ public class FunctionNode extends Node {
 	/**
 	 * Invoke the base function.
 	 *
-	 * @param functionToInvoke tht base function which should be invoked.
+	 * @param functionToInvoke the base function which should be invoked.
 	 * @param resourceLink     the resource of the base function.
 	 * @param functionInputs   the input to the base function.
 	 *
@@ -578,6 +581,7 @@ public class FunctionNode extends Node {
 					String funcString = possibleResources.substring(0, possibleResources.indexOf(";"));
 					Function tmpFunc = new Function(funcString, this.type, functionInputs);
 					possibleResources = possibleResources.substring(possibleResources.indexOf(";") + 1);
+
 					alternativePlan.add(tmpFunc);
 				}
 				alternativeStrategy.add(alternativePlan);
@@ -623,7 +627,15 @@ public class FunctionNode extends Node {
 		String awsSessionToken = null;
 		try {
 			Properties propertiesFile = new Properties();
-			propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+//			propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+
+
+
+
+			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+
+			//FileUtils.readFileToByteArray(new File(workflow))
+
 			awsAccessKey = propertiesFile.getProperty("aws_access_key");
 			awsSecretKey = propertiesFile.getProperty("aws_secret_key");
 			if(propertiesFile.containsKey("aws_session_token")){
@@ -644,7 +656,9 @@ public class FunctionNode extends Node {
 		String ibmKey = null;
 		try {
 			Properties propertiesFile = new Properties();
-			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+//			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+
 			ibmKey = propertiesFile.getProperty("ibm_api_key");
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
