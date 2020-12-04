@@ -2,6 +2,7 @@ target/
 .idea
 out/
 enactment-engine.iml
+credentials.properties
 .classpath
 .project
 .settings/
