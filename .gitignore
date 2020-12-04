@@ -1,6 +1,5 @@
 target/
 .idea
-src/main/resources/credentials.properties
 credentials.properties
 out/
 enactment-engine.iml
