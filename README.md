@@ -1,4 +1,21 @@
-# Enactment Engine (EE)
+# *xAFCL EE* - Portable and scalable enactment engine to run serverless workflows across multiple FaaS systems
+
+This project provides a portable and scalable middleware service *xAFCL Enactment Engine (xAFCL EE)* that can simultaneouusly execute individual functions of a serverless workflow application (Function Choreographies - *FCs*) across multiple FaaS systems (AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Alibaba Function Compute, and Microsoft Functions). 
+
+*xAFCL EE* is the core part of the overall [AFCL Environment](https://github.com/sashkoristov/AFCLEnvironment), a platform to develop, deploy, and fault tolerant execution of FCs developed in our Abstract Function Choreography Language ([AFCL](https://doi.org/10.1016/j.future.2020.08.012)).
+
+*xAFCL EE* integrates the component `FTjFaaS` for optional fault tolerant execution of FC functions (currently supported AWS Lambda and IBM Cloud Functions).
+
+
+## Versions
+
+The initial version of the *xAFCL EE* was developed as a part of a bachelor thesis at the University of Innsbruck, Computer Science Department (among top three bachelor theses in 2019):
+
+* Bachelor thesis: Multi-provider enactment engine (EE) for serverless workflow applications
+* students: Jakob Nöckl, Markus Moosbrugger
+* supervisor: Sashko Ristov
+* Final presentation: June, 2019
+
 
 ## File structure
 
@@ -103,11 +120,12 @@ NOT SUPPORTED RIGHT NOW:
 
 ## Fault Tolerance
 
-The enactment engine will automatically pass functions with fault tolerance and constraint settings to the fault tolerance module for execution.
+The *xAFCL EE* will automatically pass functions with fault tolerance and constraint settings to the fault tolerance module (`FTjFaaS`) for execution.
 
 ### Features
 
 This section will show the features of the Fault Tolerance engine with some very simple examples. All examples are based on the following simple workflow (only the constraints field of a function needs to be changed within the CFCL file):
+
 ````yaml
 name: "exampleWorkflow"
 workflowBody:
@@ -141,14 +159,15 @@ constraints:
   value: "0.9"
 ````
 
-The `FT-AltStrat-requiredAvailability` requires some additional steps to find the alternative plan which is understandable by the enactment engine. For simplicity you can use the `addAlternativePlansToYAML()` method from [AlternativePlanScheduler](src/main/java/at/enactmentengine/serverless/scheduler/AlternativePlanScheduler.java) to find alternative plan(s). Please note that this might be changed in future and this method will be ported to another module. 
+The `FT-AltStrat-requiredAvailability` requires some additional steps to find the alternative plan which is understandable by *xAFCL EE*. For simplicity you can use the `addAlternativePlansToYAML()` method from [AlternativePlanScheduler](src/main/java/at/enactmentengine/serverless/scheduler/AlternativePlanScheduler.java) to find alternative plan(s). 
+<!--- Please note that this might be changed in the future and this method will be ported to another module.-->
 
 In order for the [AlternativePlanScheduler](src/main/java/at/enactmentengine/serverless/scheduler/AlternativePlanScheduler.java) to work properly the following steps are required:
 
 1. A database with function invocations is required to retrieve old executions. Example: [FTDatabase.db](Database/FTDatabase.db). The database should contain the function which will be executed in the **Function** table.
 2. (To generate random invocations to fill the database [DataBaseFiller](src/main/java/at/enactmentengine/serverless/main/DataBaseFiller.java) can be used) 
 3. Now the `addAlternativePlansToYAML("path/to/file.yaml", "path/to/newly/created/optimizedFile.yaml")` can be used to generate the alternative strategy at runtime.
-4. The optimized file can now be executed by the enactment engine.
+4. The optimized file can now be executed by the *xAFCL EE*.
 
 Possible output from `addAlternativePlansToYAML()`:
 ````yaml
@@ -198,8 +217,14 @@ constraints:
   value: "1240"
 ````
 
-will stop waiting for a response of the cloud function after `1240` milliseconds. The enactment-engine will throw an `at.uibk.dps.exception.MaxRunningTimeException` exception if the specified runtime is exceeded.
+will stop waiting for a response of the cloud function after `1240` milliseconds. The *xAFCL EE* will throw an `at.uibk.dps.exception.MaxRunningTimeException` exception if the specified runtime is exceeded.
 
+
+
+
+# Support
+
+If you need any additional information, please do not hesitate to contact sashko@dps.uibk.ac.at.
 
 
   
