@@ -200,8 +200,10 @@ public class ParallelEndNode extends Node {
         }
 
         /* Clone the node */
-        Node node = (Node) super.clone();
+        ParallelEndNode node = (ParallelEndNode) super.clone();
         node.children = new ArrayList<>();
+        node.parallelResult = new HashMap<>();
+
         for (Node childrenNode : children) {
             node.children.add(childrenNode.clone(endNode));
         }
