@@ -4,6 +4,7 @@ import at.uibk.dps.afcl.functions.objects.DataOuts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,6 +108,24 @@ public class IfEndNode extends Node {
                 }
             }
         }
+    }
+
+    /**
+     * Clones this node and its children. Cloning is needed for ParallelFor
+     * branches.
+     *
+     * @param endNode end node.
+     * @return cloned node.
+     * @throws CloneNotSupportedException on failure.
+     */
+    @Override
+    public Node clone(Node endNode) throws CloneNotSupportedException {
+
+        /* Clone the node */
+        IfEndNode node = (IfEndNode) super.clone();
+        node.ifResult = new HashMap<>();
+
+        return node;
     }
 
     /**

@@ -101,6 +101,24 @@ public class SwitchEndNode extends Node {
     }
 
     /**
+     * Clones this node and its children. Cloning is needed for ParallelFor
+     * branches.
+     *
+     * @param endNode end node.
+     * @return cloned node.
+     * @throws CloneNotSupportedException on failure.
+     */
+    @Override
+    public Node clone(Node endNode) throws CloneNotSupportedException {
+
+        /* Clone the node */
+        SwitchEndNode node = (SwitchEndNode) super.clone();
+        node.switchResult = new HashMap<>();
+
+        return node;
+    }
+
+    /**
      * Returns the result.
      */
     @Override
