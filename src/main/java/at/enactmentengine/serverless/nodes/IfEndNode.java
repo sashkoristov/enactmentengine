@@ -110,6 +110,24 @@ public class IfEndNode extends Node {
     }
 
     /**
+     * Clones this node and its children. Cloning is needed for ParallelFor
+     * branches.
+     *
+     * @param endNode end node.
+     * @return cloned node.
+     * @throws CloneNotSupportedException on failure.
+     */
+    @Override
+    public Node clone(Node endNode) throws CloneNotSupportedException {
+
+        /* Clone the node */
+        IfEndNode node = (IfEndNode) super.clone();
+        node.ifResult = new HashMap<>();
+
+        return node;
+    }
+
+    /**
      * Get the result of the if-end construct.
      *
      * @return the if-end result.
