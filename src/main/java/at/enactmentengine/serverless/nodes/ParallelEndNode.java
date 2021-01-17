@@ -129,7 +129,7 @@ public class ParallelEndNode extends Node {
 
                     /* Check if there are contraints (e.g. aggregation) defined */
                     if (dataOuts.getConstraints() != null) {
-                        valueToPass = fulfillCollectionOutputConstraints(dataOuts.getConstraints(), parallelResult);
+                        valueToPass = fulfillCollectionOutputConstraints(dataOuts.getConstraints(), parallelResult, dataOuts.getSource());
                     }
 
                     outputValues.put(key, valueToPass);
@@ -217,10 +217,12 @@ public class ParallelEndNode extends Node {
      *
      * @param constraints the constraints to consider
      * @param data        the data elements
+     * @param source      the source string of the output
      * @return the resulting data elements
      */
     protected Object fulfillCollectionOutputConstraints(List<PropertyConstraint> constraints,
-                                                        Map<String, Object> data) {
+                                                        Map<String, Object> data,
+                                                        String source) {
         Object result = data;
 
         /* Iterate over all constraints */
@@ -234,6 +236,19 @@ public class ParallelEndNode extends Node {
                     JsonArray arr = new JsonArray(data.values().size());
                     for (Object value : data.values()) {
                         arr.addAll((JsonArray) value);
+                    }
+                    result = arr;
+                } else if ("*".equals(constraint.getValue())){
+                    JsonArray arr = new JsonArray(data.values().size());
+                    String[] sourceArray = source.split(",");
+                    
+                    /* We first iterate over the source entries to get the output in the right order */
+                    for(String sourceEntry : sourceArray){
+                        for (Entry<String, Object> inputElement : data.entrySet()) {
+                            if (sourceEntry.contains(inputElement.getKey())) {
+                                arr.addAll((JsonArray) inputElement.getValue());
+                            }
+                        }
                     }
                     result = arr;
                 } else if (",".equals(constraint.getValue())) {
