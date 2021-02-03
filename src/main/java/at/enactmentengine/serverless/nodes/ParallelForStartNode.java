@@ -448,7 +448,7 @@ public class ParallelForStartNode extends Node {
 
                 /* Extract a single value */
                 JsonArray arr = distributedElements.get(i);
-                block = "number".equals(data.getType()) ? arr.get(0).getAsInt() : arr.get(0);
+                block = "number".equals(data.getType()) ? arr.get(0).getAsInt() : arr.get(0).getAsString();
             }
 
             // TODO check if this should be dynamic
