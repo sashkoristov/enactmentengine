@@ -301,7 +301,20 @@ public class FunctionNode extends Node {
 
 			/* Invoke the function with fault tolerance */
 			FaultToleranceEngine ftEngine = null;
-			if(getAzureAccount() != null && getGoogleAccount() != null) {
+
+			if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null){
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(),getAWSAccount(), getIBMAccount());
+
+			}
+			else if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null){
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
+			}
+
+			else if(getGoogleAccount()!= null && getAzureAccount() != null && getAWSAccount() != null ){
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount());
+			}
+
+			else if(getAzureAccount() != null && getGoogleAccount() != null) {
 				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount());
 			} else if (getIBMAccount() != null && getAWSAccount() != null) {
 				ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
