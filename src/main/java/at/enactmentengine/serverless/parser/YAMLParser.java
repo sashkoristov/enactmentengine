@@ -1,8 +1,8 @@
 package at.enactmentengine.serverless.parser;
 
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
-import at.enactmentengine.serverless.object.ListPair;
 import at.enactmentengine.serverless.nodes.Node;
+import at.enactmentengine.serverless.object.ListPair;
 import at.uibk.dps.afcl.utils.Utils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -13,8 +13,7 @@ import java.io.IOException;
 /**
  * Class for parsing YAML files into an executable workflow.
  *
- * @author markusmoosbrugger, jakobnoeckl
- * extended by @author stefanpedratscher
+ * @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher
  */
 public class YAMLParser {
 
@@ -24,10 +23,27 @@ public class YAMLParser {
     /**
      * Parses a given YAML file to a workflow, which can be executed.
      *
-     * @param filename yaml file to parse
+     * @param filename    yaml file to parse.
+     * @param language    the language of the file.
+     * @param executionId the unique identifier for each execution.
+     *
      * @return Instance of class Executable workflow.
      */
     public ExecutableWorkflow parseExecutableWorkflow(byte[] filename, Language language, int executionId) {
+        return parseExecutableWorkflow(filename, language, executionId, false);
+    }
+
+    /**
+     * Parses a given YAML file to a workflow, which can be executed.
+     *
+     * @param filename    yaml file to parse.
+     * @param language    the language of the file.
+     * @param executionId the unique identifier for each execution.
+     * @param simulate    whether to simulate or execute.
+     *
+     * @return Instance of class Executable workflow.
+     */
+    public ExecutableWorkflow parseExecutableWorkflow(byte[] filename, Language language, int executionId, boolean simulate) {
 
         // Parse yaml file
         at.uibk.dps.afcl.Workflow workflow = null;
@@ -46,13 +62,14 @@ public class YAMLParser {
         }
 
 
-        return getExecutableWorkflow(workflow, executionId);
+        return getExecutableWorkflow(workflow, executionId, simulate);
     }
 
     /**
      * Parses a given JSON string to a workflow, which can be executed.
      *
      * @param content JSON string to parse
+     *
      * @return Instance of class Executable workflow.
      */
     public ExecutableWorkflow parseExecutableWorkflowByStringContent(String content, Language language, int executionId) {
@@ -73,20 +90,23 @@ public class YAMLParser {
             throw new NotImplementedException("Workflow language currently not supported.");
         }
 
-        return getExecutableWorkflow(workflow, executionId);
+        return getExecutableWorkflow(workflow, executionId, false);
     }
 
     /**
      * Get an executable workflow
      *
-     * @param workflow to convert
+     * @param workflow    to convert.
+     * @param executionId the unique identifier for each execution.
+     * @param simulate    whether to simulate or execute.
+     *
      * @return executable workflow
      */
-    public ExecutableWorkflow getExecutableWorkflow(at.uibk.dps.afcl.Workflow workflow, int executionId) {
+    public ExecutableWorkflow getExecutableWorkflow(at.uibk.dps.afcl.Workflow workflow, int executionId, boolean simulate) {
 
         ExecutableWorkflow executableWorkflow = null;
         if (workflow != null) {
-            NodeListHelper nodeListHelper = new NodeListHelper();
+            NodeListHelper nodeListHelper = new NodeListHelper(simulate);
             nodeListHelper.executionId = executionId;
 
             // Create node pairs from workflow functions

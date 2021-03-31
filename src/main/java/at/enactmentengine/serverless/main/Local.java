@@ -3,14 +3,13 @@ package at.enactmentengine.serverless.main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Map;
 
 /**
- * Main class of enactment engine which specifies the input file and starts the
- * workflow on the machine on which it gets started.
+ * Main class of enactment engine which specifies the input file and starts the workflow on the machine on which it gets
+ * started.
  * <p>
- * based on @author markusmoosbrugger, jakobnoeckl
- * extended by @author stefanpedratscher
+ * based on @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher
  */
 public class Local {
 
@@ -31,10 +30,13 @@ public class Local {
 
         /* Check for inputs and execute workflow */
         Map<String, Object> result = null;
-        if (args.length > 1) {
-            result = executor.executeWorkflow(args[0], args[1],  -1);
+        if (args.length > 2 && args[2].equals("--simulate")) {
+            Simulator simulator = new Simulator();
+            result = simulator.simulateWorkflow(args[0], args[1], -1);
+        } else if (args.length > 1) {
+            result = executor.executeWorkflow(args[0], args[1], -1);
         } else if (args.length > 0) {
-            result = executor.executeWorkflow(args[0], null,  -1);
+            result = executor.executeWorkflow(args[0], null, -1);
         } else {
             logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json]");
         }
