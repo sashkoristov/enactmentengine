@@ -1,0 +1,30 @@
+---
+name: "durationFailure"
+dataIns:
+- name: "name"
+  type: "string"
+  source: "name"
+- name: "sleepSec"
+  type: "number"
+  source: "sleepSec"
+workflowBody:
+- function:
+    name: "duration"
+    type: "string"
+    dataIns:
+    - name: "name"
+      type: "string"
+      source: "durationFailure/name"
+    - name: "sleepSec"
+      type: "number"
+      source: "durationFailure/sleepSec"
+    properties:
+    - name: "resource"
+      value: "python:https://us-central1-xxxxxxxxxx"
+    constraints:
+    - name: "FT-AltPlan-0"
+      value: "1;xxxxxxxxxx.azurewebsites.net/xxxxxxxxxx;"
+    - name: "FT-AltPlan-1"
+      value: "1;https://eu-de.functions.appdomain.cloud/xxxxxxxxxx;"
+    - name: "FT-AltPlan-2"
+      value: "1;arn:aws:lambda:us-east-1:xxxxxxxxxx;"
