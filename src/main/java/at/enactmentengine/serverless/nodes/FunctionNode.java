@@ -111,7 +111,7 @@ public class FunctionNode extends Node {
 	 * @param executionId for the logging of the execution.
 	 */
 	public FunctionNode(String name, String type, List<PropertyConstraint> properties,
-			List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
+						List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
 		super(name, type);
 		this.output = output;
 		this.properties = properties;
@@ -300,7 +300,27 @@ public class FunctionNode extends Node {
 		if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
 
 			/* Invoke the function with fault tolerance */
-			FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+			FaultToleranceEngine ftEngine = null;
+
+			if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null){
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(),getAWSAccount(), getIBMAccount());
+
+			}
+			else if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null){
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
+			}
+
+			else if(getGoogleAccount()!= null && getAzureAccount() != null && getAWSAccount() != null ){
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount());
+			}
+
+			else if(getAzureAccount() != null && getGoogleAccount() != null) {
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount());
+			} else if (getIBMAccount() != null && getAWSAccount() != null) {
+				ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+
+			}
+
 			try {
 				logger.info("Invoking function with fault tolerance...");
 				resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
@@ -384,26 +404,26 @@ public class FunctionNode extends Node {
 
 				/* Parse according data type */
 				switch (data.getType()) {
-				case "number":
-					Object number = jsonResult.get(data.getName()).getAsDouble();
-					functionOutputs.put(name + "/" + data.getName(), number);
-					break;
-				case "string":
-					functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsString());
-					break;
-				case "collection":
-					// array stays array to later decide which type
-					functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsJsonArray());
-					break;
-				case "object":
-					functionOutputs.put(name + "/" + data.getName(), jsonResult);
-					break;
-				case "bool":
-					functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsBoolean());
-					break;
-				default:
-					logger.error("Error while trying to parse key in function {}. Type: {}", name, data.getType());
-					break;
+					case "number":
+						Object number = jsonResult.get(data.getName()).getAsDouble();
+						functionOutputs.put(name + "/" + data.getName(), number);
+						break;
+					case "string":
+						functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsString());
+						break;
+					case "collection":
+						// array stays array to later decide which type
+						functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsJsonArray());
+						break;
+					case "object":
+						functionOutputs.put(name + "/" + data.getName(), jsonResult);
+						break;
+					case "bool":
+						functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsBoolean());
+						break;
+					default:
+						logger.error("Error while trying to parse key in function {}. Type: {}", name, data.getType());
+						break;
 				}
 			}
 			return true;
@@ -555,7 +575,7 @@ public class FunctionNode extends Node {
 	 * @return fault tolerance settings.
 	 */
 	private FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList,
-			Map<String, Object> functionInputs) {
+															 Map<String, Object> functionInputs) {
 
 		/* Set the default fault tolerance settings to zero retries */
 		FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
@@ -665,4 +685,44 @@ public class FunctionNode extends Node {
 		}
 		return new IBMAccount(ibmKey);
 	}
+
+	/**
+	 * Read the Azure credentials. TODO do we need this?
+	 *
+	 * @return azure account object.
+	 */
+	private AzureAccount getAzureAccount() {
+		String azure_key = null;
+		try {
+			Properties propertiesFile = new Properties();
+//			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+
+			azure_key = propertiesFile.getProperty("azure_key");
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}
+		return new AzureAccount(azure_key);
+	}
+
+
+	/**
+	 * Read the Google credentials. TODO do we need this?
+	 *
+	 * @return google account object.
+	 */
+	private GoogleFunctionAccount getGoogleAccount() {
+		String google_key = null;
+		try {
+			Properties propertiesFile = new Properties();
+//			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+
+			google_key = propertiesFile.getProperty("google_sa_key");
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}
+		return new GoogleFunctionAccount(google_key);
+	}
+
 }
