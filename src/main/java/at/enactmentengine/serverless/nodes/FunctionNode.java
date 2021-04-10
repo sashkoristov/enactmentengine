@@ -5,9 +5,7 @@ import at.enactmentengine.serverless.object.DatabaseAccess;
 import at.enactmentengine.serverless.object.Event;
 import at.enactmentengine.serverless.object.Type;
 import at.enactmentengine.serverless.object.Utils;
-import at.uibk.dps.AWSAccount;
-import at.uibk.dps.FaultToleranceEngine;
-import at.uibk.dps.IBMAccount;
+import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
@@ -277,7 +275,21 @@ public class FunctionNode extends Node {
         if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
 
             /* Invoke the function with fault tolerance */
-            FaultToleranceEngine ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+            FaultToleranceEngine ftEngine = null;
+
+            if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount(), getIBMAccount());
+
+            } else if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
+            } else if (getGoogleAccount() != null && getAzureAccount() != null && getAWSAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount());
+            } else if (getAzureAccount() != null && getGoogleAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount());
+            } else if (getIBMAccount() != null && getAWSAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+            }
+
             try {
                 logger.info("Invoking function with fault tolerance...");
                 resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
@@ -288,7 +300,8 @@ public class FunctionNode extends Node {
         } else {
             /* Invoke the function without fault tolerance */
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
-            logger.info("Function has {} MB of assigned memory.", gateway.getAssignedMemory(resourceLink));
+            // TODO fix in FT
+            //logger.info("Function has {} MB of assigned memory.", gateway.getAssignedMemory(resourceLink));
         }
         return resultString;
     }
@@ -401,6 +414,23 @@ public class FunctionNode extends Node {
         return result;
     }
 
+    public int getLoopCounter() {
+        return loopCounter;
+    }
+
+    public void setLoopCounter(int loopCounter) {
+        this.loopCounter = loopCounter;
+    }
+
+    /**
+     * Checks if the current node is within a parallelFor.
+     *
+     * @return true if it is within a parallelFor, false otherwise
+     */
+    private boolean inLoop() {
+        return loopCounter != -1;
+    }
+
     /**
      * Read the AWS credentials. TODO do we need this?
      *
@@ -449,20 +479,43 @@ public class FunctionNode extends Node {
         return new IBMAccount(ibmKey);
     }
 
-    public int getLoopCounter() {
-        return loopCounter;
+    /**
+     * Read the Azure credentials. TODO do we need this?
+     *
+     * @return azure account object.
+     */
+    private AzureAccount getAzureAccount() {
+        String azure_key = null;
+        try {
+            Properties propertiesFile = new Properties();
+//			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+            propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+
+            azure_key = propertiesFile.getProperty("azure_key");
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return new AzureAccount(azure_key);
     }
 
-    public void setLoopCounter(int loopCounter) {
-        this.loopCounter = loopCounter;
-    }
 
     /**
-     * Checks if the current node is within a parallelFor.
+     * Read the Google credentials. TODO do we need this?
      *
-     * @return true if it is within a parallelFor, false otherwise
+     * @return google account object.
      */
-    private boolean inLoop() {
-        return loopCounter != -1;
+    private GoogleFunctionAccount getGoogleAccount() {
+        String google_key = null;
+        try {
+            Properties propertiesFile = new Properties();
+//			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+            propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+
+            google_key = propertiesFile.getProperty("google_sa_key");
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return new GoogleFunctionAccount(google_key);
     }
+
 }
