@@ -1,6 +1,9 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.object.DatabaseAccess;
+import at.enactmentengine.serverless.object.Event;
+import at.enactmentengine.serverless.object.Type;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.AWSAccount;
 import at.uibk.dps.FaultToleranceEngine;
@@ -50,6 +53,10 @@ public class FunctionNode extends Node {
      * The invoker for the cloud functions.
      */
     private static Gateway gateway = new Gateway(Utils.PATH_TO_CREDENTIALS);
+    /**
+     * The number of execution in a parallelFor loop.
+     */
+    private int loopCounter = -1;
     /**
      * The execution id of the workflow (needed to log the execution).
      */
@@ -180,6 +187,8 @@ public class FunctionNode extends Node {
          */
         // TODO check for success
         boolean success = getValuesParsed(resultString, functionOutputs);
+
+        DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, end - start, success, loopCounter, start, Type.EXEC);
 
         /* Pass the output to the next node */
         for (Node node : children) {
@@ -438,5 +447,22 @@ public class FunctionNode extends Node {
             logger.error(e.getMessage(), e);
         }
         return new IBMAccount(ibmKey);
+    }
+
+    public int getLoopCounter() {
+        return loopCounter;
+    }
+
+    public void setLoopCounter(int loopCounter) {
+        this.loopCounter = loopCounter;
+    }
+
+    /**
+     * Checks if the current node is within a parallelFor.
+     *
+     * @return true if it is within a parallelFor, false otherwise
+     */
+    private boolean inLoop() {
+        return loopCounter != -1;
     }
 }

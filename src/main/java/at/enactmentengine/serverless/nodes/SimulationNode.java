@@ -1,7 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.object.PairResult;
-import at.enactmentengine.serverless.object.Utils;
+import at.enactmentengine.serverless.object.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
@@ -34,6 +33,11 @@ public class SimulationNode extends Node {
      * The number of executed functions.
      */
     private static int counter = 0;
+
+    /**
+     * The number of execution in a parallelFor loop.
+     */
+    private int loopCounter = -1;
 
     /**
      * The execution id of the workflow (needed to log the execution).
@@ -137,14 +141,24 @@ public class SimulationNode extends Node {
 
         /* Read the resource link of the base function */
         String resourceLink = Utils.getResourceLink(properties, this);
+        String loopId = "";
+        if (inLoop()) {
+            loopId = ", loopId=" + loopCounter;
+        }
         logger.info("Simulating function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
-                + "ms], id=" + id);
+                + "ms], id=" + id + loopId);
 
         // TODO as in FunctionNode, log function inputs by getting the values from the mdDB?
         // logFunctionInput(actualFunctionInputs, id);
 
         /* Parse function with optional constraints and properties */
         Function functionToInvoke = Utils.parseFTConstraints(resourceLink, null, constraints, type);
+
+        // parseFTConstraints returns null if there are no constraints set
+        // since it will be executed without FT, only the resourceLink is needed
+        if (functionToInvoke == null) {
+            functionToInvoke = new Function(resourceLink, type, null);
+        }
 
         //TODO check if function is stored in metadataDB
         // if not exists then log error and return
@@ -207,7 +221,7 @@ public class SimulationNode extends Node {
         PairResult<Long, String> result = null;
 
         // check if the function should be simulated with fault tolerance
-        if (functionToSimulate != null && (functionToSimulate.hasConstraintSet() || functionToSimulate.hasFTSet())) {
+        if (functionToSimulate.hasConstraintSet() || functionToSimulate.hasFTSet()) {
             // simulate with FT
             logger.info("Simulating function with fault tolerance...");
             // TODO create separate class?
@@ -218,11 +232,26 @@ public class SimulationNode extends Node {
             }
 
         } else {
+            long startTime = 0;
+            if (loopCounter == -1) {
+                startTime = DatabaseAccess.getLastEndDateOverall();
+            } else {
+                startTime = DatabaseAccess.getLastEndDateOutOfLoop();
+            }
+            if (startTime == 0) {
+                startTime = System.currentTimeMillis();
+            }
+            boolean success;
             Long RTT = calculateRoundTripTime(resourceLink);
             String resultString = getFunctionOutput(resourceLink);
             if (RTT != null) {
                 logger.info("Simulating function {} took {}ms.", resourceLink, RTT);
+                success = true;
+            } else {
+                logger.info("Simulating function {} failed.", resourceLink);
+                success = false;
             }
+            DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, RTT, success, loopCounter, startTime, Type.SIM);
             result = new PairResult<>(RTT, resultString);
         }
 
@@ -406,4 +435,20 @@ public class SimulationNode extends Node {
         return "{\"key1TestDB\": \"value1TestDB\"}";
     }
 
+    public int getLoopCounter() {
+        return loopCounter;
+    }
+
+    public void setLoopCounter(int loopCounter) {
+        this.loopCounter = loopCounter;
+    }
+
+    /**
+     * Checks if the current node is within a parallelFor.
+     *
+     * @return true if it is within a parallelFor, false otherwise
+     */
+    private boolean inLoop() {
+        return loopCounter != -1;
+    }
 }

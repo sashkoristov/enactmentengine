@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.object.DatabaseAccess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,5 +43,8 @@ public class Local {
         }
 
         logger.info("Result: {}", result);
+
+        DatabaseAccess.addAllEntries();
+        DatabaseAccess.close();
     }
 }
