@@ -73,7 +73,8 @@ public class DatabaseAccess {
             return 0;
         }
         return entries.stream()
-                .filter(d -> d.getLong("workflow_id") == workflowExecutionId)
+                .filter(d -> d.getLong("workflow_id") == workflowExecutionId
+                        && d.getString("function_id") != null)
                 .max(Comparator.comparing(d -> d.getDate("endTime")))
                 .get()
                 .getDate("endTime")
@@ -85,8 +86,9 @@ public class DatabaseAccess {
             return 0;
         }
         return entries.stream()
-                .filter(d -> d.getLong("workflow_id") == workflowExecutionId &&
-                        d.getInteger("loopCounter") == -1)
+                .filter(d -> d.getLong("workflow_id") == workflowExecutionId
+                        && d.getInteger("loopCounter") == -1
+                        && d.getString("function_id") != null)
                 .max(Comparator.comparing(d -> d.getDate("endTime")))
                 .get()
                 .getDate("endTime")
@@ -110,8 +112,9 @@ public class DatabaseAccess {
             return 0;
         }
         return entries.stream()
-                .filter(d -> d.getLong("workflow_id") == workflowExecutionId &&
-                        d.getInteger("loopCounter") != -1)
+                .filter(d -> d.getLong("workflow_id") == workflowExecutionId
+                        && d.getInteger("loopCounter") != -1
+                        && d.getString("function_id") != null)
                 .max(Comparator.comparing(d -> d.getDate("endTime")))
                 .get()
                 .getDate("endTime")

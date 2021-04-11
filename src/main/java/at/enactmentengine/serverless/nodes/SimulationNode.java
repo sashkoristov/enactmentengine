@@ -165,7 +165,7 @@ public class SimulationNode extends Node {
 
         /* Simulate function and measure duration */
         long start = System.currentTimeMillis();
-        PairResult<Long, String> simResult = simulateFunction(functionToInvoke);
+        TripleResult<Long, String, Boolean> simResult = simulateFunction(functionToInvoke);
         long end = System.currentTimeMillis();
 
         // TODO as in FunctionNode, log function output by getting the values from the mdDB?
@@ -211,14 +211,14 @@ public class SimulationNode extends Node {
     /**
      * Simulates the base function.
      *
-     * @param functionToSimulate the base function which should be invoked.
+     * @param functionToSimulate the base function which should be simulated.
      *
-     * @return the stringified json result of the base function invocation.
+     * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private PairResult<Long, String> simulateFunction(Function functionToSimulate) {
+    private TripleResult<Long, String, Boolean> simulateFunction(Function functionToSimulate) {
         // TODO simulate here
         String resourceLink = functionToSimulate.getUrl();
-        PairResult<Long, String> result = null;
+        TripleResult<Long, String, Boolean> result = null;
 
         // check if the function should be simulated with fault tolerance
         if (functionToSimulate.hasConstraintSet() || functionToSimulate.hasFTSet()) {
@@ -232,27 +232,14 @@ public class SimulationNode extends Node {
             }
 
         } else {
-            long startTime = 0;
-            if (loopCounter == -1) {
-                startTime = DatabaseAccess.getLastEndDateOverall();
-            } else {
-                startTime = DatabaseAccess.getLastEndDateOutOfLoop();
-            }
-            if (startTime == 0) {
-                startTime = System.currentTimeMillis();
-            }
-            boolean success;
-            Long RTT = calculateRoundTripTime(resourceLink);
-            String resultString = getFunctionOutput(resourceLink);
-            if (RTT != null) {
-                logger.info("Simulating function {} took {}ms.", resourceLink, RTT);
-                success = true;
+            long startTime = getStartingTime();
+            result = getSimulationResult(resourceLink);
+            if (result.isSuccess()) {
+                logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
             } else {
                 logger.info("Simulating function {} failed.", resourceLink);
-                success = false;
             }
-            DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, RTT, success, loopCounter, startTime, Type.SIM);
-            result = new PairResult<>(RTT, resultString);
+            DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
         }
 
         return result;
@@ -263,41 +250,40 @@ public class SimulationNode extends Node {
      *
      * @param function to simulate
      *
-     * @return the output of the function
+     * @return a TripleResult containing the RTT, output and success of the simulated function
      *
      * @throws LatestStartingTimeException  on latest start time exceeded
      * @throws InvokationFailureException   on failed invocation
      * @throws LatestFinishingTimeException on latest finish time exceeded
      * @throws MaxRunningTimeException      on maximum runtime exceeded
      */
-    private PairResult<Long, String> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException {
-        PairResult<Long, String> pairResult;
+    private TripleResult<Long, String, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException {
+        TripleResult<Long, String, Boolean> tripleResult;
 
         if (function != null) {
             if (function.hasConstraintSet()) {
-                Timestamp timeAtStart = new Timestamp((System.currentTimeMillis()));
+                Timestamp timeAtStart = new Timestamp(getStartingTime());
                 if (function.getConstraints().hasLatestStartingTime()) {
                     if (timeAtStart.after(function.getConstraints().getLatestStartingTime())) {
                         throw new LatestStartingTimeException("latestStartingTime constraint missed!");
                     }
                     if (!function.getConstraints().hasLatestFinishingTime()
                             && !function.getConstraints().hasMaxRunningTime()) {
-                        pairResult = simulateFT(function);
+                        tripleResult = simulateFT(function);
 
-                        if (pairResult.getRTT() == null) {
+                        if (!tripleResult.isSuccess()) {
                             throw new InvokationFailureException("Invocation has failed");
                         } else {
-                            return pairResult;
+                            return tripleResult;
                         }
                     }
                 }
 
-                pairResult = simulateFT(function);
+                tripleResult = simulateFT(function);
 
-                if (pairResult.getRTT() != null) {
+                if (tripleResult.isSuccess()) {
                     // check maxRunningTime
-                    long finishedTime = System.currentTimeMillis() + pairResult.getRTT().longValue();
-                    Timestamp newTime = new Timestamp(finishedTime);
+                    Timestamp newTime = new Timestamp(timeAtStart.getTime() + tripleResult.getRTT());
 
                     if (function.getConstraints().hasLatestFinishingTime()) {
                         if (newTime.after(function.getConstraints().getLatestFinishingTime())) {
@@ -311,17 +297,17 @@ public class SimulationNode extends Node {
                             throw new MaxRunningTimeException("MaxRunningTime has passed");
                         }
                     }
-                    return pairResult;
+                    return tripleResult;
                 } else {
                     throw new InvokationFailureException("Invocation has failed alter entire alternative strategy");
                 }
             } else {
                 // no constraints. Just invoke in current thread. (we do not need to cancel)
-                pairResult = simulateFT(function);
-                if (pairResult.getRTT() == null) {
+                tripleResult = simulateFT(function);
+                if (!tripleResult.isSuccess()) {
                     throw new InvokationFailureException("Invocation has failed");
                 } else {
-                    return pairResult;
+                    return tripleResult;
                 }
             }
         } else {
@@ -331,28 +317,32 @@ public class SimulationNode extends Node {
     }
 
     /**
-     * Simulates a function with FT.
+     * Helper method to simulate a function with FT.
      *
      * @param function to simulate
      *
-     * @return a pair consisting of the RTT and the output of the function
+     * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private PairResult<Long, String> simulateFT(Function function) {
+    private TripleResult<Long, String, Boolean> simulateFT(Function function) {
+        long startTime = getStartingTime();
         String resourceLink = function.getUrl();
-        String resultString = getFunctionOutput(resourceLink);
-        Long RTT = calculateRoundTripTime(resourceLink);
+        TripleResult<Long, String, Boolean> result = getSimulationResult(resourceLink);
 
-        if (RTT == null) {
+        if (!result.isSuccess()) {
+            DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
             if (function.hasFTSet()) {
                 logger.info("##############  First invocation has failed, retrying " + function.getFTSettings().getRetries() +
                         " times.  ##############");
                 for (int i = 0; i < function.getFTSettings().getRetries(); i++) {
-                    resultString = getFunctionOutput(resourceLink);
-                    RTT = calculateRoundTripTime(resourceLink);
-                    if (RTT != null) {
-                        logger.info("Simulating function {} took {}ms.", resourceLink, RTT);
-                        return new PairResult<>(RTT, resultString);
+                    // increment the starting time by the previous RTT
+                    startTime += result.getRTT();
+                    result = getSimulationResult(resourceLink);
+                    if (result.isSuccess()) {
+                        logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
+                        DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                        return result;
                     }
+                    DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
                 }
                 // Failed after all retries. Check for alternative Strategy
                 if (function.getFTSettings().hasAlternativeStartegy()) {
@@ -360,19 +350,20 @@ public class SimulationNode extends Node {
                         // AlternativeStrategy has correct Result
                         return simulateAlternativeStrategy(function);
                     } catch (Exception e) {
-                        return new PairResult<>(null, null);
+                        return new TripleResult<>(null, null, false);
                     }
                 } else {
                     // no alternativeStrategy set so failure
-                    return new PairResult<>(null, null);
+                    return new TripleResult<>(null, null, false);
                 }
             } else {
                 // function failed and no FT is set
-                return new PairResult<>(null, null);
+                return result;
             }
         }
-        logger.info("Simulating function {} took {}ms.", resourceLink, RTT);
-        return new PairResult<>(RTT, resultString);
+        logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
+        DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+        return result;
     }
 
     /**
@@ -380,11 +371,11 @@ public class SimulationNode extends Node {
      *
      * @param function to simulate the alternativeStrategy
      *
-     * @return a pair consisting of the RTT and the output of the function
+     * @return a TripleResult containing the RTT, output and success of the simulated function
      *
      * @throws Exception if the alternativeStrategies have been executed without success
      */
-    private PairResult<Long, String> simulateAlternativeStrategy(Function function) throws Exception {
+    private TripleResult<Long, String, Boolean> simulateAlternativeStrategy(Function function) throws Exception {
         if (function.getFTSettings().getAltStrategy() != null) {
             int i = 0;
             for (List<Function> alternativePlan : function.getFTSettings().getAltStrategy()) {
@@ -392,12 +383,14 @@ public class SimulationNode extends Node {
                 logger.info("##############  Trying Alternative Plan " + i + "  ##############");
                 for (Function alternativeFunction : alternativePlan) {
                     logger.info("##############  Trying Alternative Function " + j + "  ##############");
-                    String resultString = getFunctionOutput(alternativeFunction.getUrl());
-                    Long RTT = calculateRoundTripTime(alternativeFunction.getUrl());
-                    if (RTT != null) {
-                        logger.info("Simulating function {} took {}ms.", alternativeFunction.getUrl(), RTT);
-                        return new PairResult<>(RTT, resultString);
+                    long startTime = getStartingTime();
+                    TripleResult<Long, String, Boolean> result = getSimulationResult(alternativeFunction.getUrl());
+                    if (result.isSuccess()) {
+                        logger.info("Simulating function {} took {}ms.", alternativeFunction.getUrl(), result.getRTT());
+                        DatabaseAccess.saveLog(Event.FUNCTION_END, alternativeFunction.getUrl(), result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                        return result;
                     }
+                    DatabaseAccess.saveLog(Event.FUNCTION_FAILED, alternativeFunction.getUrl(), result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
                 }
 
                 i++;
@@ -412,13 +405,11 @@ public class SimulationNode extends Node {
      *
      * @param resourceLink the link to the function
      *
-     * @return the RTT in ms or null if simulation simulates a fail
+     * @return the RTT in ms
      */
     private Long calculateRoundTripTime(String resourceLink) {
         //TODO
-        if (resourceLink.endsWith("HW")) {
-            return null;
-        }
+
         return 1000L;
     }
 
@@ -433,6 +424,33 @@ public class SimulationNode extends Node {
         //TODO get output of function from metadataDB
 
         return "{\"key1TestDB\": \"value1TestDB\"}";
+    }
+
+    /**
+     * Simulates whether the function returns as expected or yields an error.
+     *
+     * @param resourceLink the function to simulate
+     *
+     * @return true if function simulation is successful, false otherwise
+     */
+    private Boolean simulateOutcome(String resourceLink) {
+        // TODO simulate whether the function is successful or yields an error
+        if (resourceLink.endsWith("HW")) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the RTT, output and success of the simulation of a function.
+     *
+     * @param resourceLink the url of the function to simulate
+     *
+     * @return a TripleResult containing the RTT, output and success of the simulated function
+     */
+    private TripleResult<Long, String, Boolean> getSimulationResult(String resourceLink) {
+        return new TripleResult<Long, String, Boolean>(calculateRoundTripTime(resourceLink), getFunctionOutput(resourceLink), simulateOutcome(resourceLink));
     }
 
     public int getLoopCounter() {
@@ -450,5 +468,23 @@ public class SimulationNode extends Node {
      */
     private boolean inLoop() {
         return loopCounter != -1;
+    }
+
+    /**
+     * Returns the starting time of a function depending on the already executed functions of the workflow.
+     *
+     * @return the start time in milliseconds
+     */
+    private long getStartingTime() {
+        long startTime = 0;
+        if (loopCounter == -1) {
+            startTime = DatabaseAccess.getLastEndDateOverall();
+        } else {
+            startTime = DatabaseAccess.getLastEndDateOutOfLoop();
+        }
+        if (startTime == 0) {
+            startTime = System.currentTimeMillis();
+        }
+        return startTime;
     }
 }

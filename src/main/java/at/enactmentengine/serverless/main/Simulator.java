@@ -1,6 +1,9 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
+import at.enactmentengine.serverless.object.DatabaseAccess;
+import at.enactmentengine.serverless.object.Event;
+import at.enactmentengine.serverless.object.Type;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
 import com.google.gson.Gson;
@@ -110,7 +113,11 @@ public class Simulator {
 
             /* Measure end time of the workflow execution */
             long end = System.currentTimeMillis();
-            LOGGER.info("Execution took {}ms.", (end - start));
+            LOGGER.info("Simulation took {}ms.", (end - start));
+            long simWorkflowDuration = DatabaseAccess.getLastEndDateOverall() - start;
+
+            LOGGER.info("Simulation of workflow takes {}ms", simWorkflowDuration);
+            DatabaseAccess.saveLog(Event.WORKFLOW_END, null, simWorkflowDuration, true, -1, start, Type.SIM);
         }
 
         return workflowOutput;
