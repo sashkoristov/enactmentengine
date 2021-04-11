@@ -1,14 +1,17 @@
 package at.enactmentengine.serverless.object;
 
-public class PairResult<Long, String> {
+public class TripleResult<Long, String, Boolean> {
 
     private Long RTT;
 
     private String output;
 
-    public PairResult(Long RTT, String output) {
+    private Boolean success;
+
+    public TripleResult(Long RTT, String output, Boolean success) {
         this.RTT = RTT;
         this.output = output;
+        this.success = success;
     }
 
     public Long getRTT() {
@@ -26,4 +29,8 @@ public class PairResult<Long, String> {
     public void setOutput(String output) {
         this.output = output;
     }
+
+    public Boolean isSuccess() { return success; }
+
+    public void setSuccess(Boolean success) { this.success = success; }
 }
