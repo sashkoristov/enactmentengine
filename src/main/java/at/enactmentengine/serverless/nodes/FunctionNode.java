@@ -300,8 +300,7 @@ public class FunctionNode extends Node {
         } else {
             /* Invoke the function without fault tolerance */
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
-            // TODO fix in FT
-            //logger.info("Function has {} MB of assigned memory.", gateway.getAssignedMemory(resourceLink));
+            logger.info("Function has {} MB of assigned memory.", gateway.getAssignedMemory(resourceLink));
         }
         return resultString;
     }
