@@ -12,10 +12,7 @@ import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Sorts.*;
@@ -24,7 +21,7 @@ public class DatabaseAccess {
     private static final long workflowExecutionId = System.currentTimeMillis();
     private static MongoClient mongoClient;
     private static DatabaseAccess databaseAccess;
-    private static List<Document> entries = new ArrayList<>();
+    private static List<Document> entries = Collections.synchronizedList(new ArrayList<>());
 
     Block<Document> printBlock = new Block<Document>() {
         @Override
