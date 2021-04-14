@@ -1,6 +1,6 @@
 # *xAFCL EE* - Portable and scalable enactment engine to run serverless workflows across multiple FaaS systems
 
-This project provides a portable and scalable middleware service *xAFCL Enactment Engine (xAFCL EE)* that can simultaneouusly execute individual functions of a serverless workflow application (Function Choreographies - *FCs*) across multiple FaaS systems (AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Alibaba Function Compute, and Microsoft Functions). 
+This project provides a portable and scalable middleware service *xAFCL Enactment Engine (xAFCL EE)* that can simultaneously execute individual functions of a serverless workflow application (Function Choreographies - *FCs*) across multiple FaaS systems (AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Alibaba Function Compute, and Microsoft Functions). 
 
 *xAFCL EE* is the core part of the overall [AFCL Environment], a platform to develop, deploy, and fault tolerant execution of FCs developed in our Abstract Function Choreography Language ([AFCL](https://doi.org/10.1016/j.future.2020.08.012)).
 
@@ -232,7 +232,7 @@ You can find many examples for FCs including fault tolerance in the folder [exam
 
 ## Contributions
 
-This project resulted as a part of several bachelor theses at department of computer science, University of Innsbruck, supervised by Dr. Sashko Ristov (sashko@dps.uibk.ac.at):
+Several bachelor theses at department of computer science, University of Innsbruck, supervised by Dr. Sashko Ristov contributed to this project:
 
 - "Multi-provider enactment engine (EE) for serverless workflow applications", Jakob Nöckl, Markus Moosbrugger, SS2019. `Among top three theses for 2019` at the institute of computer science. (The initial version of the *xAFCL EE*)
 - "Fault-tolerant execution of serverless functions across multiple FaaS systems", Matteo Bernard, Battaglin, SS2020.
