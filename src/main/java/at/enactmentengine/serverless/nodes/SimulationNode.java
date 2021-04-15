@@ -9,13 +9,15 @@ import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
 import at.uibk.dps.exception.MaxRunningTimeException;
 import at.uibk.dps.function.Function;
-import at.uibk.dps.socketutils.entity.Invocation;
-import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Class which handles the simulation of a function.
@@ -165,45 +167,40 @@ public class SimulationNode extends Node {
 
         /* Simulate function and measure duration */
         long start = System.currentTimeMillis();
-        TripleResult<Long, String, Boolean> simResult = simulateFunction(functionToInvoke);
+        TripleResult<Long, Map<String, Object>, Boolean> simResult = simulateFunction(functionToInvoke);
         long end = System.currentTimeMillis();
 
         // TODO as in FunctionNode, log function output by getting the values from the mdDB?
         // logFunctionOutput(start, end, resultString, id);
 
-        Map<String, Object> functionOutputs = new HashMap<>();
-        JsonObject jsonResult = Utils.generateJson(simResult.getOutput(), new DataOutsAtomic("key1TestDB", "string"));
-        // TODO fix outputs (as in FunctionNode.getValuesParsed)
-        for (String key : jsonResult.keySet()) {
-            functionOutputs.put(key, jsonResult.get(key).toString());
-        }
+        result = simResult.getOutput();
 
         /* Pass the output to the next node */
         for (Node node : children) {
-            node.passResult(functionOutputs);
+            node.passResult(result);
             node.call();
         }
 
         /* Set the result of the function node */
-        result = functionOutputs;
+//        result = functionOutputs;
 
         // TODO
         /*
          * Check if the execution identifier is specified (check if execution should be
          * stored in the database)
          */
-        if (executionId != -1) {
-
-            /* Create a function invocation object */
-            Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
-                    Utils.detectRegion(resourceLink),
-                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-                    Utils.checkResultSuccess(simResult.getOutput()).toString(), null, executionId);
-
-            /* Store the invocation in the database */
-            Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
-        }
+//        if (executionId != -1) {
+//
+//            /* Create a function invocation object */
+//            Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
+//                    Utils.detectRegion(resourceLink),
+//                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+//                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
+//                    Utils.checkResultSuccess(simResult.getOutput()).toString(), null, executionId);
+//
+//            /* Store the invocation in the database */
+//            Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
+//        }
 
         return true;
     }
@@ -215,10 +212,10 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, String, Boolean> simulateFunction(Function functionToSimulate) {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) {
         // TODO simulate here
         String resourceLink = functionToSimulate.getUrl();
-        TripleResult<Long, String, Boolean> result = null;
+        TripleResult<Long, Map<String, Object>, Boolean> result = null;
 
         // check if the function should be simulated with fault tolerance
         if (functionToSimulate.hasConstraintSet() || functionToSimulate.hasFTSet()) {
@@ -257,8 +254,8 @@ public class SimulationNode extends Node {
      * @throws LatestFinishingTimeException on latest finish time exceeded
      * @throws MaxRunningTimeException      on maximum runtime exceeded
      */
-    private TripleResult<Long, String, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException {
-        TripleResult<Long, String, Boolean> tripleResult;
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException {
+        TripleResult<Long, Map<String, Object>, Boolean> tripleResult;
 
         if (function != null) {
             if (function.hasConstraintSet()) {
@@ -323,10 +320,10 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, String, Boolean> simulateFT(Function function) {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFT(Function function) {
         long startTime = getStartingTime();
         String resourceLink = function.getUrl();
-        TripleResult<Long, String, Boolean> result = getSimulationResult(resourceLink);
+        TripleResult<Long, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink);
 
         if (!result.isSuccess()) {
             DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
@@ -375,22 +372,53 @@ public class SimulationNode extends Node {
      *
      * @throws Exception if the alternativeStrategies have been executed without success
      */
-    private TripleResult<Long, String, Boolean> simulateAlternativeStrategy(Function function) throws Exception {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws Exception {
+
         if (function.getFTSettings().getAltStrategy() != null) {
             int i = 0;
             for (List<Function> alternativePlan : function.getFTSettings().getAltStrategy()) {
+                // create a map to store the intermediate results
+                HashMap<String, TripleResult<Long, Map<String, Object>, Boolean>> tempResults = new HashMap<>();
+                TripleResult<Long, Map<String, Object>, Boolean> result = null;
+                long startTime = getStartingTime();
                 int j = 0;
                 logger.info("##############  Trying Alternative Plan " + i + "  ##############");
                 for (Function alternativeFunction : alternativePlan) {
                     logger.info("##############  Trying Alternative Function " + j + "  ##############");
-                    long startTime = getStartingTime();
-                    TripleResult<Long, String, Boolean> result = getSimulationResult(alternativeFunction.getUrl());
-                    if (result.isSuccess()) {
-                        logger.info("Simulating function {} took {}ms.", alternativeFunction.getUrl(), result.getRTT());
-                        DatabaseAccess.saveLog(Event.FUNCTION_END, alternativeFunction.getUrl(), result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
-                        return result;
+                    result = getSimulationResult(alternativeFunction.getUrl());
+                    tempResults.put(alternativeFunction.getUrl(), result);
+                    j++;
+                }
+                // go through all executed alternative functions to determine which of the successful ones was the fastest
+                result = null;
+                String url = null;
+                for (Map.Entry<String, TripleResult<Long, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
+                    if (set.getValue().isSuccess()) {
+                        // check if result is null or if the RTT in the result is greater than the current RTT
+                        if (result == null || (result.getRTT() > set.getValue().getRTT())) {
+                            result = set.getValue();
+                            url = set.getKey();
+                        }
+                    } else {
+                        DatabaseAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), set.getValue().getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
                     }
-                    DatabaseAccess.saveLog(Event.FUNCTION_FAILED, alternativeFunction.getUrl(), result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                }
+
+                // check if at least one function simulated successfully
+                if (result != null) {
+                    // go through the executed functions to log that they were "canceled"
+                    for (Map.Entry<String, TripleResult<Long, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
+                        if (!set.getKey().equals(url)) {
+                            // they were "canceled" after the fastest function finished, therefore the RTT of the
+                            // result is the RTT of the canceled function
+                            logger.info("Canceled simulation of function {} after {}ms.", set.getKey(), result.getRTT());
+                            DatabaseAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), result.getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
+                        }
+                    }
+                    // log the fastest successful function
+                    logger.info("Simulating function {} took {}ms.", url, result.getRTT());
+                    DatabaseAccess.saveLog(Event.FUNCTION_END, url, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                    return result;
                 }
 
                 i++;
@@ -420,10 +448,50 @@ public class SimulationNode extends Node {
      *
      * @return the output of the function
      */
-    private String getFunctionOutput(String resourceLink) {
+    private Map<String, Object> getFunctionOutput(String resourceLink) {
         //TODO get output of function from metadataDB
+        HashMap<String, Object> outputs = new HashMap<>();
+        for (DataOutsAtomic out : output) {
+            if (out.getProperties() != null && !out.getProperties().isEmpty()) {
+                for (PropertyConstraint constraint : out.getProperties()) {
+                    if (constraint.getName().equals("simValue")) {
+                        String numStr = constraint.getValue();
+                        // taken from FunctionNode's method getValuesParsed
+                        switch (out.getType()) {
+                            case "number":
+                                Number num = null;
+                                if (numStr != null && numStr.matches("[0-9.]+")) {
+                                    if (numStr.contains(".")) {
+                                        num = Double.parseDouble(numStr);
+                                    } else {
+                                        num = Integer.parseInt(numStr);
+                                    }
+                                } else {
+                                    throw new NumberFormatException("Given value is not a number.");
+                                }
+                                outputs.put(name + "/" + out.getName(), num);
+                                break;
+                            case "string":
+                                outputs.put(name + "/" + out.getName(), JsonParser.parseString(constraint.getValue()));
+                                break;
+                            case "collection":
+                                // array stays array to later decide which type
+                                outputs.put(name + "/" + out.getName(), JsonParser.parseString(numStr).getAsJsonArray());
+                                break;
+                            case "bool":
+                                outputs.put(name + "/" + out.getName(), Boolean.valueOf(constraint.getValue()));
+                                break;
+                            default:
+                                logger.error("Error while trying to parse key in function {}. Type: {}", name, out.getType());
+                                break;
+                        }
+                    }
+                }
+            }
 
-        return "{\"key1TestDB\": \"value1TestDB\"}";
+        }
+
+        return outputs;
     }
 
     /**
@@ -449,8 +517,8 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, String, Boolean> getSimulationResult(String resourceLink) {
-        return new TripleResult<Long, String, Boolean>(calculateRoundTripTime(resourceLink), getFunctionOutput(resourceLink), simulateOutcome(resourceLink));
+    private TripleResult<Long, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) {
+        return new TripleResult<Long, Map<String, Object>, Boolean>(calculateRoundTripTime(resourceLink), getFunctionOutput(resourceLink), simulateOutcome(resourceLink));
     }
 
     public int getLoopCounter() {

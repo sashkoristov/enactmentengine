@@ -1,14 +1,16 @@
 package at.enactmentengine.serverless.object;
 
-public class TripleResult<Long, String, Boolean> {
+import java.util.Map;
+
+public class TripleResult<Long, JsonObject, Boolean> {
 
     private Long RTT;
 
-    private String output;
+    private Map<String, Object> output;
 
     private Boolean success;
 
-    public TripleResult(Long RTT, String output, Boolean success) {
+    public TripleResult(Long RTT, Map<String, Object> output, Boolean success) {
         this.RTT = RTT;
         this.output = output;
         this.success = success;
@@ -22,11 +24,11 @@ public class TripleResult<Long, String, Boolean> {
         this.RTT = RTT;
     }
 
-    public String getOutput() {
+    public Map<String, Object> getOutput() {
         return output;
     }
 
-    public void setOutput(String output) {
+    public void setOutput(Map<String, Object> output) {
         this.output = output;
     }
 
