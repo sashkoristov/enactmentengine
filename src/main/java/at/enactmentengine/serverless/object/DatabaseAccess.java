@@ -1,6 +1,9 @@
 package at.enactmentengine.serverless.object;
 
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
 import com.mongodb.Block;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
@@ -10,6 +13,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Timestamp;
 import java.util.*;
@@ -32,9 +36,9 @@ public class DatabaseAccess {
 
     private DatabaseAccess() {
 
-        //LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-        //Logger rootLogger = loggerContext.getLogger("com.mongodb.driver");
-        //rootLogger.setLevel(Level.OFF);
+        LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+        Logger mongoLogger = loggerContext.getLogger("org.mongodb.driver");
+        mongoLogger.setLevel(Level.OFF);
 
         final String host = "10.0.0.62";
         final int port = 27017;
@@ -63,7 +67,8 @@ public class DatabaseAccess {
                 .append("loopCounter", loopCounter)
                 .append("startTime", new Timestamp(startTime))
                 .append("endTime", new Timestamp(startTime + RTT)) // TODO handle NULL value
-                .append("type", type.toString());
+                .append("type", type.toString())
+                .append("done", Boolean.FALSE); // flag used to update metadataDB
 
         entries.add(log);
     }
