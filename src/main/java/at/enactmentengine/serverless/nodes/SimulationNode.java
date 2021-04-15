@@ -326,6 +326,7 @@ public class SimulationNode extends Node {
         TripleResult<Long, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink);
 
         if (!result.isSuccess()) {
+            logger.info("Simulating function {} failed.", resourceLink);
             DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
             if (function.hasFTSet()) {
                 logger.info("##############  First invocation has failed, retrying " + function.getFTSettings().getRetries() +
@@ -339,6 +340,7 @@ public class SimulationNode extends Node {
                         DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
                         return result;
                     }
+                    logger.info("Simulating function {} failed.", resourceLink);
                     DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
                 }
                 // Failed after all retries. Check for alternative Strategy
@@ -399,8 +401,6 @@ public class SimulationNode extends Node {
                             result = set.getValue();
                             url = set.getKey();
                         }
-                    } else {
-                        DatabaseAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), set.getValue().getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
                     }
                 }
 
@@ -408,17 +408,28 @@ public class SimulationNode extends Node {
                 if (result != null) {
                     // go through the executed functions to log that they were "canceled"
                     for (Map.Entry<String, TripleResult<Long, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
-                        if (!set.getKey().equals(url)) {
+                        if (!set.getKey().equals(url) && (set.getValue().getRTT() >= result.getRTT())) {
                             // they were "canceled" after the fastest function finished, therefore the RTT of the
                             // result is the RTT of the canceled function
                             logger.info("Canceled simulation of function {} after {}ms.", set.getKey(), result.getRTT());
+                            // TODO which value to set here for success? True or false?
                             DatabaseAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), result.getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
+                        } else if (!set.getValue().isSuccess()) {
+                            // if a function was unsuccessful AND it ran shorter than the fastest successful one
+                            logger.info("Simulating function {} failed.", set.getKey());
+                            DatabaseAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), set.getValue().getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
                         }
                     }
                     // log the fastest successful function
                     logger.info("Simulating function {} took {}ms.", url, result.getRTT());
                     DatabaseAccess.saveLog(Event.FUNCTION_END, url, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
                     return result;
+                } else {
+                    // no function was successful, log their failures
+                    for (Map.Entry<String, TripleResult<Long, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
+                        logger.info("Simulating function {} failed.", set.getKey());
+                        DatabaseAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), set.getValue().getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
+                    }
                 }
 
                 i++;
