@@ -460,49 +460,80 @@ public class SimulationNode extends Node {
      * @return the output of the function
      */
     private Map<String, Object> getFunctionOutput(String resourceLink) {
-        //TODO get output of function from metadataDB
+        // TODO read default values from a config file?
         HashMap<String, Object> outputs = new HashMap<>();
         for (DataOutsAtomic out : output) {
             if (out.getProperties() != null && !out.getProperties().isEmpty()) {
                 for (PropertyConstraint constraint : out.getProperties()) {
                     if (constraint.getName().equals("simValue")) {
-                        String numStr = constraint.getValue();
-                        // taken from FunctionNode's method getValuesParsed
-                        switch (out.getType()) {
-                            case "number":
-                                Number num = null;
-                                if (numStr != null && numStr.matches("[0-9.]+")) {
-                                    if (numStr.contains(".")) {
-                                        num = Double.parseDouble(numStr);
-                                    } else {
-                                        num = Integer.parseInt(numStr);
-                                    }
-                                } else {
-                                    throw new NumberFormatException("Given value is not a number.");
-                                }
-                                outputs.put(name + "/" + out.getName(), num);
-                                break;
-                            case "string":
-                                outputs.put(name + "/" + out.getName(), JsonParser.parseString(constraint.getValue()));
-                                break;
-                            case "collection":
-                                // array stays array to later decide which type
-                                outputs.put(name + "/" + out.getName(), JsonParser.parseString(numStr).getAsJsonArray());
-                                break;
-                            case "bool":
-                                outputs.put(name + "/" + out.getName(), Boolean.valueOf(constraint.getValue()));
-                                break;
-                            default:
-                                logger.error("Error while trying to parse key in function {}. Type: {}", name, out.getType());
-                                break;
-                        }
+                        parseOutputValues(out, constraint, outputs, false);
                     }
                 }
+            } else {
+                // if no properties are set, fill with default values
+                parseOutputValues(out, null, outputs, true);
             }
-
         }
 
         return outputs;
+    }
+
+    /**
+     * Adapted from FunctionNode's method getValuesParsed to parse output values. The default values for the output are:
+     * Number: 1 String: "" Collection: [] Boolean: False
+     *
+     * @param out        the DataOutsAtomic
+     * @param constraint the constraint of a DataOutsAtomic
+     * @param outputs    the map to put the results
+     * @param useDefault if it is set, a default value is used for the output
+     */
+    private void parseOutputValues(DataOutsAtomic out, PropertyConstraint constraint, HashMap<String, Object> outputs, boolean useDefault) {
+        String numStr = null;
+        if (!useDefault) {
+            numStr = constraint.getValue();
+        }
+        switch (out.getType()) {
+            case "number":
+                Number num = null;
+                if (useDefault) {
+                    num = 1;
+                } else if (numStr != null && numStr.matches("[0-9.]+")) {
+                    if (numStr.contains(".")) {
+                        num = Double.parseDouble(numStr);
+                    } else {
+                        num = Integer.parseInt(numStr);
+                    }
+                } else {
+                    throw new NumberFormatException("Given value is not a number.");
+                }
+                outputs.put(name + "/" + out.getName(), num);
+                break;
+            case "string":
+                if (useDefault) {
+                    outputs.put(name + "/" + out.getName(), "");
+                } else {
+                    outputs.put(name + "/" + out.getName(), JsonParser.parseString(constraint.getValue()));
+                }
+                break;
+            case "collection":
+                if (useDefault) {
+                    outputs.put(name + "/" + out.getName(), JsonParser.parseString("[]").getAsJsonArray());
+                } else {
+                    // array stays array to later decide which type
+                    outputs.put(name + "/" + out.getName(), JsonParser.parseString(numStr).getAsJsonArray());
+                }
+                break;
+            case "bool":
+                if (useDefault) {
+                    outputs.put(name + "/" + out.getName(), Boolean.FALSE);
+                } else {
+                    outputs.put(name + "/" + out.getName(), Boolean.valueOf(constraint.getValue()));
+                }
+                break;
+            default:
+                logger.error("Error while trying to parse key in function {}. Type: {}", name, out.getType());
+                break;
+        }
     }
 
     /**
