@@ -1,20 +1,12 @@
 # *xAFCL EE* - Portable and scalable enactment engine to run serverless workflows across multiple FaaS systems
 
-This project provides a portable and scalable middleware service *xAFCL Enactment Engine (xAFCL EE)* that can simultaneouusly execute individual functions of a serverless workflow application (Function Choreographies - *FCs*) across multiple FaaS systems (AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Alibaba Function Compute, and Microsoft Functions). 
+This project provides a portable and scalable middleware service *xAFCL Enactment Engine (xAFCL EE)* that can simultaneously execute individual functions of a serverless workflow application (Function Choreographies - *FCs*) across multiple FaaS systems (AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Alibaba Function Compute, and Microsoft Functions). 
 
-*xAFCL EE* is the core part of the overall [AFCL Environment](https://github.com/sashkoristov/AFCLEnvironment), a platform to develop, deploy, and fault tolerant execution of FCs developed in our Abstract Function Choreography Language ([AFCL](https://doi.org/10.1016/j.future.2020.08.012)).
+*xAFCL EE* is the core part of the overall [AFCL Environment], a platform to develop, deploy, and fault tolerant execution of FCs developed in our Abstract Function Choreography Language ([AFCL](https://doi.org/10.1016/j.future.2020.08.012)).
 
-*xAFCL EE* integrates the component `FTjFaaS` for optional fault tolerant execution of FC functions (currently supported AWS Lambda and IBM Cloud Functions).
+*xAFCL EE* integrates the component [FTjFaaS](https://github.com/sashkoristov/FTjFaaS) for optional fault tolerant execution of FC functions (supported all widely-known FaaS systems AWS Lambda, IBM Cloud Functions, Google Cloud Functions, and Microzoft Azure Functions).
 
-
-## Versions
-
-The initial version of the *xAFCL EE* was developed as a part of a bachelor thesis at the University of Innsbruck, Computer Science Department (among top three bachelor theses in 2019):
-
-* Bachelor thesis: Multi-provider enactment engine (EE) for serverless workflow applications
-* students: Jakob Nöckl, Markus Moosbrugger
-* supervisor: Sashko Ristov
-* Final presentation: June, 2019
+*xAFCL EE* integrates the component [jFaaS](https://github.com/sashkoristov/jFaaS) for portable execution of individual FC functions (supported all widely-known FaaS systems AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Microzoft Azure Functions, and Alibaba).
 
 
 ## File structure
@@ -25,13 +17,27 @@ The initial version of the *xAFCL EE* was developed as a part of a bachelor thes
     - **[/resources](src/main/resources)** contains example yaml files to test the execution.
 - You will need to create a **credentials.properties** file in the root directory of the project, which contains the login credentials for the FaaS providers. This file will be ignored from git (**[.gitignore](.gitignore)**).
 
-    The file should look as follows:
-    ````
-    aws_access_key=<your_aws_access_key>
-    aws_secret_key=<your_aws_secret_key>
-    aws_session_token=<your_aws_session_token> (e.g., for AWS Educate)
-    ibm_api_key=<your_ibm_api_key>
-    ````
+The file should look as follows:
+
+````
+aws_access_key=
+aws_secret_key=
+aws_session_token=              // (needed for AWS Educate)
+ibm_api_key=
+google_sa_key={\
+ "type": "",\
+ "project_id": "",\
+ "private_key_id": "",\
+ "private_key": "-----BEGIN PRIVATE KEY-----\\n ... \\n-----END PRIVATE KEY-----\\n",\
+ "client_email": "",\
+ "client_id": "",\
+ "auth_uri": "",\
+ "token_uri": "",\
+ "auth_provider_x509_cert_url": "",\
+ "client_x509_cert_url": ""\
+}
+azure_key=
+````
     
 ---------------
     
@@ -219,12 +225,19 @@ constraints:
 
 will stop waiting for a response of the cloud function after `1240` milliseconds. The *xAFCL EE* will throw an `at.uibk.dps.exception.MaxRunningTimeException` exception if the specified runtime is exceeded.
 
+## Examples
+
+You can find many examples for FCs including fault tolerance in the folder [examples](/examples/).
 
 
+## Contributions
 
-# Support
+Several bachelor theses at department of computer science, University of Innsbruck, supervised by Dr. Sashko Ristov contributed to this project:
+
+- "Multi-provider enactment engine (EE) for serverless workflow applications", Jakob Nöckl, Markus Moosbrugger, SS2019. `Among top three theses for 2019` at the institute of computer science. (The initial version of the *xAFCL EE*)
+- "Fault-tolerant execution of serverless functions across multiple FaaS systems", Matteo Bernard, Battaglin, SS2020.
+
+
+## Support
 
 If you need any additional information, please do not hesitate to contact sashko@dps.uibk.ac.at.
-
-
-  
