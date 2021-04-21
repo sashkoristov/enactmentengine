@@ -1,15 +1,14 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import at.enactmentengine.serverless.object.DatabaseAccess;
-import at.enactmentengine.serverless.object.Event;
-import at.enactmentengine.serverless.object.Type;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
-import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.database.Event;
+import at.uibk.dps.database.MongoDBAccess;
+import at.uibk.dps.database.Type;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
@@ -79,6 +78,16 @@ public class FunctionNode extends Node {
      * The result of the function node.
      */
     private Map<String, Object> result;
+
+    /**
+     * Flag if function was successful or not.
+     */
+    private boolean success;
+
+    /**
+     * The memory size of the function.
+     */
+    private int memorySize = -1; //TODO
 
     /**
      * Constructor for a function node.
@@ -158,22 +167,22 @@ public class FunctionNode extends Node {
             return false;
         }
 
-        /* Simulate Availability if specified TODO is this really needed? */
-        if (Utils.SIMULATE_AVAILABILITY) {
-            SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
-            double simAvail = db.getSimulatedAvail(resourceLink);
-            actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
-        }
+//        /* Simulate Availability if specified TODO is this really needed? */
+//        if (Utils.SIMULATE_AVAILABILITY) {
+//            SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+//            double simAvail = db.getSimulatedAvail(resourceLink);
+//            actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
+//        }
 
         /* Log the function input */
         logFunctionInput(actualFunctionInputs, id);
 
         /* Parse function with optional constraints and properties */
-        Function functionToInvoke = Utils.parseFTConstraints(resourceLink, actualFunctionInputs, constraints, type);
+        Function functionToInvoke = Utils.parseFTConstraints(resourceLink, actualFunctionInputs, constraints, type, name, loopCounter);
 
         /* Invoke function and measure duration */
         long start = System.currentTimeMillis();
-        String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs);
+        String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs, functionOutputs);
         long end = System.currentTimeMillis();
 
         /* Log the function output */
@@ -184,9 +193,9 @@ public class FunctionNode extends Node {
          * functionOutputs
          */
         // TODO check for success
-        boolean success = getValuesParsed(resultString, functionOutputs);
+        // boolean success = getValuesParsed(resultString, functionOutputs);
 
-        DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, end - start, success, loopCounter, start, Type.EXEC);
+        //MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), type, end - start, success, loopCounter, start, Type.EXEC);
 
         /* Pass the output to the next node */
         for (Node node : children) {
@@ -266,10 +275,10 @@ public class FunctionNode extends Node {
      * @throws InvokationFailureException   on failed invocation.
      * @throws IOException                  on input output exception.
      */
-    private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs)
+    private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs, Map<String, Object> functionOutputs)
             throws MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException,
             InvokationFailureException, IOException {
-        String resultString;
+        String resultString = null;
 
         /* Check if function should be invoked with fault tolerance settings */
         if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
@@ -296,11 +305,33 @@ public class FunctionNode extends Node {
             } catch (Exception e) {
                 result = null;
                 throw e;
+            } finally {
+                /*
+                 * Read the actual function outputs by their key and store them in
+                 * functionOutputs
+                 */
+                // TODO check for success
+                success = getValuesParsed(resultString, functionOutputs);
             }
         } else {
             /* Invoke the function without fault tolerance */
+            long start = System.currentTimeMillis();
             resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
-            logger.info("Function has {} MB of assigned memory.", gateway.getAssignedMemory(resourceLink));
+            long end = System.currentTimeMillis();
+            memorySize = gateway.getAssignedMemory(resourceLink);
+            /*
+             * Read the actual function outputs by their key and store them in
+             * functionOutputs
+             */
+            // TODO check for success
+            success = getValuesParsed(resultString, functionOutputs);
+            Event event = null;
+            if (success) {
+                event = Event.FUNCTION_END;
+            } else {
+                event = Event.FUNCTION_FAILED;
+            }
+            MongoDBAccess.saveLog(event, resourceLink, getName(), type, end - start, success, memorySize, loopCounter, start, Type.EXEC);
         }
         return resultString;
     }
