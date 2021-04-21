@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.object.DatabaseAccess;
+import at.uibk.dps.database.MongoDBAccess;
 import ch.qos.logback.classic.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +46,8 @@ public class Local {
 
         logger.info("Result: {}", result);
 
-        DatabaseAccess.addAllEntries();
-        DatabaseAccess.close();
+        MongoDBAccess.addAllEntries();
+//        MariaDBAccess.doSth();
+        MongoDBAccess.close();
     }
 }

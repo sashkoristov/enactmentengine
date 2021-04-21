@@ -1,11 +1,11 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
-import at.enactmentengine.serverless.object.DatabaseAccess;
-import at.enactmentengine.serverless.object.Event;
-import at.enactmentengine.serverless.object.Type;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
+import at.uibk.dps.database.Event;
+import at.uibk.dps.database.MongoDBAccess;
+import at.uibk.dps.database.Type;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.FileUtils;
@@ -114,10 +114,12 @@ public class Simulator {
             /* Measure end time of the workflow execution */
             long end = System.currentTimeMillis();
             LOGGER.info("Simulation took {}ms.", (end - start));
-            long simWorkflowDuration = DatabaseAccess.getLastEndDateOverall() - start;
+            long simWorkflowDuration = MongoDBAccess.getLastEndDateOverall() - start;
+            boolean success = ex.getEndNode().getResult() != null;
+            Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
 
             LOGGER.info("Simulation of workflow takes {}ms", simWorkflowDuration);
-            DatabaseAccess.saveLog(Event.WORKFLOW_END, null, simWorkflowDuration, true, -1, start, Type.SIM);
+            MongoDBAccess.saveLog(event, null, null, null, simWorkflowDuration, success, -1, -1, start, Type.SIM);
         }
 
         return workflowOutput;
