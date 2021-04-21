@@ -150,7 +150,8 @@ public class Utils {
      *
      * @return function object with correctly set ft values.
      */
-    public static Function parseFTConstraints(String resourceLink, Map<String, Object> functionInputs, List<PropertyConstraint> constraints, String type) {
+    public static Function parseFTConstraints(String resourceLink, Map<String, Object> functionInputs, List<PropertyConstraint> constraints,
+                                              String type, String name, int loopCounter) {
 
         /* Keeps track of all constraint settings */
         List<PropertyConstraint> cList = new LinkedList<>();
@@ -173,12 +174,12 @@ public class Utils {
         }
 
         /* Parse fault tolerance settings */
-        FaultToleranceSettings ftSettings = getFaultToleranceSettings(ftList, functionInputs, type);
+        FaultToleranceSettings ftSettings = getFaultToleranceSettings(ftList, functionInputs, type, name, loopCounter);
 
         /* Parse constraint settings */
         ConstraintSettings cSettings = getConstraintSettings(cList);
 
-        return new Function(resourceLink, type, functionInputs, ftSettings.isEmpty() ? null : ftSettings,
+        return new Function(resourceLink, name, type, loopCounter, functionInputs, ftSettings.isEmpty() ? null : ftSettings,
                 cSettings.isEmpty() ? null : cSettings);
     }
 
@@ -190,8 +191,8 @@ public class Utils {
      *
      * @return fault tolerance settings.
      */
-    private static FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList,
-                                                                    Map<String, Object> functionInputs, String type) {
+    private static FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList, Map<String, Object> functionInputs,
+                                                                    String type, String name, int loopCounter) {
 
         /* Set the default fault tolerance settings to zero retries */
         FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
@@ -215,7 +216,7 @@ public class Utils {
                 String possibleResources = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
                 while (possibleResources.contains(";")) {
                     String funcString = possibleResources.substring(0, possibleResources.indexOf(";"));
-                    Function tmpFunc = new Function(funcString, type, functionInputs);
+                    Function tmpFunc = new Function(funcString, name, type, loopCounter, functionInputs);
                     possibleResources = possibleResources.substring(possibleResources.indexOf(";") + 1);
 
                     alternativePlan.add(tmpFunc);

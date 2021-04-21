@@ -1,7 +1,6 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.exception.RegionDetectionException;
-import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.database.SQLLiteDatabase;
 import at.uibk.dps.function.Function;
 
@@ -49,10 +48,10 @@ public class DataBaseFiller {
             double d = new SecureRandom().nextDouble();
             if (d < successRate) {
                 /* Add successful invocation */
-                database.addInvocation(func.getUrl(), func.getType(), String.valueOf(Utils.detectProvider(func.getUrl())), Utils.detectRegion(func.getUrl()), start, end, "OK", null);
+//                database.addInvocation(func.getUrl(), func.getType(), String.valueOf(Utils.detectProvider(func.getUrl())), Utils.detectRegion(func.getUrl()), start, end, "OK", null);
             } else {
                 /* Add failed invocation */
-                database.addInvocation(func.getUrl(), func.getType(), String.valueOf(Utils.detectProvider(func.getUrl())), Utils.detectRegion(func.getUrl()), start, end, "ERROR", "Execution failed");
+//                database.addInvocation(func.getUrl(), func.getType(), String.valueOf(Utils.detectProvider(func.getUrl())), Utils.detectRegion(func.getUrl()), start, end, "ERROR", "Execution failed");
             }
         }
     }
