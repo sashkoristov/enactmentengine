@@ -1,9 +1,13 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.object.*;
+import at.enactmentengine.serverless.object.TripleResult;
+import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.database.Event;
+import at.uibk.dps.database.MongoDBAccess;
+import at.uibk.dps.database.Type;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
@@ -70,6 +74,11 @@ public class SimulationNode extends Node {
      * The result of the simulation node.
      */
     private Map<String, Object> result;
+
+    /**
+     * The memory size of the function.
+     */
+    private int memorySize = -1; //TODO
 
     /**
      * Constructor for a simulation node.
@@ -154,12 +163,12 @@ public class SimulationNode extends Node {
         // logFunctionInput(actualFunctionInputs, id);
 
         /* Parse function with optional constraints and properties */
-        Function functionToInvoke = Utils.parseFTConstraints(resourceLink, null, constraints, type);
+        Function functionToInvoke = Utils.parseFTConstraints(resourceLink, null, constraints, type, name, loopCounter);
 
         // parseFTConstraints returns null if there are no constraints set
         // since it will be executed without FT, only the resourceLink is needed
         if (functionToInvoke == null) {
-            functionToInvoke = new Function(resourceLink, type, null);
+            functionToInvoke = new Function(resourceLink, name, type, loopCounter, null);
         }
 
         //TODO check if function is stored in metadataDB
@@ -236,7 +245,7 @@ public class SimulationNode extends Node {
             } else {
                 logger.info("Simulating function {} failed.", resourceLink);
             }
-            DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+            MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), functionToSimulate.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
         }
 
         return result;
@@ -327,7 +336,7 @@ public class SimulationNode extends Node {
 
         if (!result.isSuccess()) {
             logger.info("Simulating function {} failed.", resourceLink);
-            DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+            MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
             if (function.hasFTSet()) {
                 logger.info("##############  First invocation has failed, retrying " + function.getFTSettings().getRetries() +
                         " times.  ##############");
@@ -337,11 +346,11 @@ public class SimulationNode extends Node {
                     result = getSimulationResult(resourceLink);
                     if (result.isSuccess()) {
                         logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
-                        DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                        MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                         return result;
                     }
                     logger.info("Simulating function {} failed.", resourceLink);
-                    DatabaseAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                    MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                 }
                 // Failed after all retries. Check for alternative Strategy
                 if (function.getFTSettings().hasAlternativeStartegy()) {
@@ -361,7 +370,7 @@ public class SimulationNode extends Node {
             }
         }
         logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
-        DatabaseAccess.saveLog(Event.FUNCTION_END, resourceLink, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+        MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
         return result;
     }
 
@@ -413,22 +422,22 @@ public class SimulationNode extends Node {
                             // result is the RTT of the canceled function
                             logger.info("Canceled simulation of function {} after {}ms.", set.getKey(), result.getRTT());
                             // TODO which value to set here for success? True or false?
-                            DatabaseAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), result.getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
+                            MongoDBAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), getName(), function.getType(), result.getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                         } else if (!set.getValue().isSuccess()) {
                             // if a function was unsuccessful AND it ran shorter than the fastest successful one
                             logger.info("Simulating function {} failed.", set.getKey());
-                            DatabaseAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), set.getValue().getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
+                            MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), getName(), function.getType(), set.getValue().getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                         }
                     }
                     // log the fastest successful function
                     logger.info("Simulating function {} took {}ms.", url, result.getRTT());
-                    DatabaseAccess.saveLog(Event.FUNCTION_END, url, result.getRTT(), result.isSuccess(), loopCounter, startTime, Type.SIM);
+                    MongoDBAccess.saveLog(Event.FUNCTION_END, url, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                     return result;
                 } else {
                     // no function was successful, log their failures
                     for (Map.Entry<String, TripleResult<Long, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
                         logger.info("Simulating function {} failed.", set.getKey());
-                        DatabaseAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), set.getValue().getRTT(), set.getValue().isSuccess(), loopCounter, startTime, Type.SIM);
+                        MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), getName(), function.getType(), set.getValue().getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                     }
                 }
 
@@ -588,9 +597,9 @@ public class SimulationNode extends Node {
     private long getStartingTime() {
         long startTime = 0;
         if (loopCounter == -1) {
-            startTime = DatabaseAccess.getLastEndDateOverall();
+            startTime = MongoDBAccess.getLastEndDateOverall();
         } else {
-            startTime = DatabaseAccess.getLastEndDateOutOfLoop();
+            startTime = MongoDBAccess.getLastEndDateOutOfLoop();
         }
         if (startTime == 0) {
             startTime = System.currentTimeMillis();
