@@ -6,15 +6,15 @@ import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
-import at.uibk.dps.database.Event;
-import at.uibk.dps.database.MongoDBAccess;
-import at.uibk.dps.database.Type;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
 import at.uibk.dps.exception.MaxRunningTimeException;
 import at.uibk.dps.function.Function;
+import at.uibk.dps.mongoLogger.MongoDBAccess;
 import at.uibk.dps.socketutils.entity.Invocation;
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import com.google.gson.JsonObject;
 import jFaaS.Gateway;
 import org.slf4j.Logger;
@@ -87,7 +87,7 @@ public class FunctionNode extends Node {
     /**
      * The memory size of the function.
      */
-    private int memorySize = -1; //TODO
+    private Integer memorySize = null; //TODO
 
     /**
      * Constructor for a function node.

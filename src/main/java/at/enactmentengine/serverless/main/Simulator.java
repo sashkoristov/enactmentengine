@@ -3,9 +3,9 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import at.uibk.dps.database.Event;
-import at.uibk.dps.database.MongoDBAccess;
-import at.uibk.dps.database.Type;
+import at.uibk.dps.mongoLogger.MongoDBAccess;
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.FileUtils;
@@ -119,7 +119,7 @@ public class Simulator {
             Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
 
             LOGGER.info("Simulation of workflow takes {}ms", simWorkflowDuration);
-            MongoDBAccess.saveLog(event, null, null, null, simWorkflowDuration, success, -1, -1, start, Type.SIM);
+            MongoDBAccess.saveLog(event, null, null, null, simWorkflowDuration, success, null, -1, start, Type.SIM);
         }
 
         return workflowOutput;

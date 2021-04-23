@@ -3,9 +3,9 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import at.uibk.dps.database.Event;
-import at.uibk.dps.database.MongoDBAccess;
-import at.uibk.dps.database.Type;
+import at.uibk.dps.mongoLogger.MongoDBAccess;
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.FileUtils;
@@ -115,7 +115,7 @@ class Executor {
                 workflowOutput = ex.executeWorkflow(this.workflowInput);
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
-                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, System.currentTimeMillis() - start, false, -1, -1, start, Type.EXEC);
+                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, System.currentTimeMillis() - start, false, null, -1, start, Type.EXEC);
                 return null;
             }
 
@@ -124,7 +124,7 @@ class Executor {
             LOGGER.info("Execution took {}ms.", (end - start));
             boolean success = ex.getEndNode().getResult() != null;
             Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
-            MongoDBAccess.saveLog(event, null, null, null, end - start, success, -1, -1, start, Type.EXEC);
+            MongoDBAccess.saveLog(event, null, null, null, end - start, success, null, -1, start, Type.EXEC);
         }
 
         return workflowOutput;

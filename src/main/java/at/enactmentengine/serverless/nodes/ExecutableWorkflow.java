@@ -3,9 +3,9 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.object.ListPair;
 import at.uibk.dps.afcl.functions.objects.DataIns;
-import at.uibk.dps.database.Event;
-import at.uibk.dps.database.MongoDBAccess;
-import at.uibk.dps.database.Type;
+import at.uibk.dps.mongoLogger.MongoDBAccess;
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +102,7 @@ public class ExecutableWorkflow {
         }
 
         long start = System.currentTimeMillis();
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, 0L, true, -1, -1, start, Type.EXEC);
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, 0L, true, null, -1, start, Type.EXEC);
         /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 
@@ -169,7 +169,7 @@ public class ExecutableWorkflow {
             }
         }
 
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, 0L, true, -1, -1, System.currentTimeMillis(), Type.SIM);
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, 0L, true, null, -1, System.currentTimeMillis(), Type.SIM);
         /* Start workflow execution */
         logger.info("Starting simulation of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 
