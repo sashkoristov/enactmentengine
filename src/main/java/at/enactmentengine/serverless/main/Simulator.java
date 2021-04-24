@@ -3,7 +3,7 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
-import at.uibk.dps.mongoLogger.MongoDBAccess;
+import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Event;
 import at.uibk.dps.util.Type;
 import com.google.gson.Gson;

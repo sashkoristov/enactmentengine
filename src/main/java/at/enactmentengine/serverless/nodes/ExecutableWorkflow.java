@@ -3,7 +3,7 @@ package at.enactmentengine.serverless.nodes;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.object.ListPair;
 import at.uibk.dps.afcl.functions.objects.DataIns;
-import at.uibk.dps.mongoLogger.MongoDBAccess;
+import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Event;
 import at.uibk.dps.util.Type;
 import org.slf4j.Logger;
