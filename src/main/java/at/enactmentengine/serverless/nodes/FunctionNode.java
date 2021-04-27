@@ -331,7 +331,7 @@ public class FunctionNode extends Node {
             } else {
                 event = Event.FUNCTION_FAILED;
             }
-            MongoDBAccess.saveLog(event, resourceLink, getName(), type, end - start, success, memorySize, loopCounter, start, Type.EXEC);
+            MongoDBAccess.saveLog(event, resourceLink, getName(), type, resultString, end - start, success, memorySize, loopCounter, start, Type.EXEC);
         }
         return resultString;
     }

@@ -245,7 +245,7 @@ public class SimulationNode extends Node {
             } else {
                 logger.info("Simulating function {} failed.", resourceLink);
             }
-            MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), functionToSimulate.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+            MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), functionToSimulate.getType(), null, result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
         }
 
         return result;
@@ -336,7 +336,7 @@ public class SimulationNode extends Node {
 
         if (!result.isSuccess()) {
             logger.info("Simulating function {} failed.", resourceLink);
-            MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+            MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, getName(), function.getType(), null, result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
             if (function.hasFTSet()) {
                 logger.info("##############  First invocation has failed, retrying " + function.getFTSettings().getRetries() +
                         " times.  ##############");
@@ -346,11 +346,11 @@ public class SimulationNode extends Node {
                     result = getSimulationResult(resourceLink);
                     if (result.isSuccess()) {
                         logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
-                        MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+                        MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), function.getType(), null, result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                         return result;
                     }
                     logger.info("Simulating function {} failed.", resourceLink);
-                    MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+                    MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, getName(), function.getType(), null, result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                 }
                 // Failed after all retries. Check for alternative Strategy
                 if (function.getFTSettings().hasAlternativeStartegy()) {
@@ -370,7 +370,7 @@ public class SimulationNode extends Node {
             }
         }
         logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
-        MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+        MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), function.getType(), null, result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
         return result;
     }
 
@@ -422,22 +422,22 @@ public class SimulationNode extends Node {
                             // result is the RTT of the canceled function
                             logger.info("Canceled simulation of function {} after {}ms.", set.getKey(), result.getRTT());
                             // TODO which value to set here for success? True or false?
-                            MongoDBAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), getName(), function.getType(), result.getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+                            MongoDBAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), getName(), function.getType(), null, result.getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                         } else if (!set.getValue().isSuccess()) {
                             // if a function was unsuccessful AND it ran shorter than the fastest successful one
                             logger.info("Simulating function {} failed.", set.getKey());
-                            MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), getName(), function.getType(), set.getValue().getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+                            MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), getName(), function.getType(), null, set.getValue().getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                         }
                     }
                     // log the fastest successful function
                     logger.info("Simulating function {} took {}ms.", url, result.getRTT());
-                    MongoDBAccess.saveLog(Event.FUNCTION_END, url, getName(), function.getType(), result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+                    MongoDBAccess.saveLog(Event.FUNCTION_END, url, getName(), function.getType(), null, result.getRTT(), result.isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                     return result;
                 } else {
                     // no function was successful, log their failures
                     for (Map.Entry<String, TripleResult<Long, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
                         logger.info("Simulating function {} failed.", set.getKey());
-                        MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), getName(), function.getType(), set.getValue().getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
+                        MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), getName(), function.getType(), null, set.getValue().getRTT(), set.getValue().isSuccess(), memorySize, loopCounter, startTime, Type.SIM);
                     }
                 }
 

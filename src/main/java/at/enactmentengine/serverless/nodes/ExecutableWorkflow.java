@@ -102,7 +102,7 @@ public class ExecutableWorkflow {
         }
 
         long start = System.currentTimeMillis();
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, 0L, true, null, -1, start, Type.EXEC);
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, null, -1, start, Type.EXEC);
         /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 
@@ -169,7 +169,7 @@ public class ExecutableWorkflow {
             }
         }
 
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, 0L, true, null, -1, System.currentTimeMillis(), Type.SIM);
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, null, -1, System.currentTimeMillis(), Type.SIM);
         /* Start workflow execution */
         logger.info("Starting simulation of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 

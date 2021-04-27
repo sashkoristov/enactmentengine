@@ -119,7 +119,7 @@ public class Simulator {
             Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
 
             LOGGER.info("Simulation of workflow takes {}ms", simWorkflowDuration);
-            MongoDBAccess.saveLog(event, null, null, null, simWorkflowDuration, success, null, -1, start, Type.SIM);
+            MongoDBAccess.saveLog(event, null, null, null, null, simWorkflowDuration, success, null, -1, start, Type.SIM);
         }
 
         return workflowOutput;
