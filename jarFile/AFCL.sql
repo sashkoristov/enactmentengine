@@ -1,7 +1,7 @@
 -- --------------------------------------------------------
 -- Host:                         10.0.0.62
--- Server Version:               10.3.24-MariaDB - Source distribution
--- Server Betriebssystem:        Linux
+-- Server version:               10.3.24-MariaDB - Source distribution
+-- Server OS:                    Linux
 -- HeidiSQL Version:             11.2.0.6213
 -- --------------------------------------------------------
 
@@ -13,11 +13,11 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
--- Exportiere Datenbank Struktur für afcl
+-- Dumping database structure for afcl
 CREATE DATABASE IF NOT EXISTS `afcl` /*!40100 DEFAULT CHARACTER SET latin1 */;
 USE `afcl`;
 
--- Exportiere Struktur von Tabelle afcl.fcdeployment
+-- Dumping structure for table afcl.fcdeployment
 CREATE TABLE IF NOT EXISTS `fcdeployment` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `FCteam` int(11) NOT NULL DEFAULT 0,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `fcdeployment` (
   CONSTRAINT `FKfcteam` FOREIGN KEY (`FCteam`) REFERENCES `fcteam` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=113 DEFAULT CHARSET=latin1 COMMENT='8 deployments for each FC, based on function deployments';
 
--- Exportiere Daten aus Tabelle afcl.fcdeployment: ~112 rows (ungefähr)
+-- Dumping data for table afcl.fcdeployment: ~112 rows (approximately)
 /*!40000 ALTER TABLE `fcdeployment` DISABLE KEYS */;
 REPLACE INTO `fcdeployment` (`id`, `FCteam`, `fd`, `description`) VALUES
 	(1, 1, 1, 'IBM Frankfurt 128 MB'),
@@ -145,7 +145,7 @@ REPLACE INTO `fcdeployment` (`id`, `FCteam`, `fd`, `description`) VALUES
 	(112, 14, 8, 'AWS N. Virginia 256 MB');
 /*!40000 ALTER TABLE `fcdeployment` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.fcteam
+-- Dumping structure for table afcl.fcteam
 CREATE TABLE IF NOT EXISTS `fcteam` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `fctype` mediumint(9) DEFAULT NULL,
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS `fcteam` (
   CONSTRAINT `fctype` FOREIGN KEY (`fctype`) REFERENCES `fctype` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=latin1 COMMENT='concrete CFCL for some AFCL (FCType tabe)';
 
--- Exportiere Daten aus Tabelle afcl.fcteam: ~14 rows (ungefähr)
+-- Dumping data for table afcl.fcteam: ~14 rows (approximately)
 /*!40000 ALTER TABLE `fcteam` DISABLE KEYS */;
 REPLACE INTO `fcteam` (`id`, `fctype`, `name`) VALUES
 	(1, 2, 'Plangger Samuel Benjamin'),
@@ -174,7 +174,7 @@ REPLACE INTO `fcteam` (`id`, `fctype`, `name`) VALUES
 	(14, 3, 'Wurzer Thomas, Gatta David');
 /*!40000 ALTER TABLE `fcteam` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.fctype
+-- Dumping structure for table afcl.fctype
 CREATE TABLE IF NOT EXISTS `fctype` (
   `id` mediumint(9) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL DEFAULT '0',
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS `fctype` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1 COMMENT='A table that contain all FCs that can be executed for logging';
 
--- Exportiere Daten aus Tabelle afcl.fctype: ~4 rows (ungefähr)
+-- Dumping data for table afcl.fctype: ~4 rows (approximately)
 /*!40000 ALTER TABLE `fctype` DISABLE KEYS */;
 REPLACE INTO `fctype` (`id`, `name`, `AFCL`) VALUES
 	(1, 'p1ObjectRecognition', NULL),
@@ -191,7 +191,7 @@ REPLACE INTO `fctype` (`id`, `name`, `AFCL`) VALUES
 	(4, 'P4GateChangeAlert', NULL);
 /*!40000 ALTER TABLE `fctype` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functiondeployment
+-- Dumping structure for table afcl.functiondeployment
 CREATE TABLE IF NOT EXISTS `functiondeployment` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
@@ -216,11 +216,11 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   CONSTRAINT `FKrjwhvvrdf0kji44tg2kis0v3e` FOREIGN KEY (`functionImplementation_id`) REFERENCES `functionimplementation` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functiondeployment: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functiondeployment: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functiondeployment` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functiondeployment` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functiondeployment_environmentvariables
+-- Dumping structure for table afcl.functiondeployment_environmentvariables
 CREATE TABLE IF NOT EXISTS `functiondeployment_environmentvariables` (
   `FunctionDeployment_id` bigint(20) NOT NULL,
   `environmentVariables` varchar(255) DEFAULT NULL,
@@ -229,11 +229,11 @@ CREATE TABLE IF NOT EXISTS `functiondeployment_environmentvariables` (
   CONSTRAINT `FKkekgwdaqekiticds1wq2mn35j` FOREIGN KEY (`FunctionDeployment_id`) REFERENCES `functiondeployment` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functiondeployment_environmentvariables: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functiondeployment_environmentvariables: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functiondeployment_environmentvariables` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functiondeployment_environmentvariables` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functionimplementation
+-- Dumping structure for table afcl.functionimplementation
 CREATE TABLE IF NOT EXISTS `functionimplementation` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
@@ -259,11 +259,11 @@ CREATE TABLE IF NOT EXISTS `functionimplementation` (
   CONSTRAINT `FKiclu7oaoqp57tdx8772jv5hpc` FOREIGN KEY (`functionType_id`) REFERENCES `functiontype` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functionimplementation: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functionimplementation: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functionimplementation` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functionimplementation` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functionimplementation_additionalservicetype
+-- Dumping structure for table afcl.functionimplementation_additionalservicetype
 CREATE TABLE IF NOT EXISTS `functionimplementation_additionalservicetype` (
   `FunctionImplementation_id` bigint(20) NOT NULL,
   `additionalServices_id` bigint(20) NOT NULL,
@@ -271,11 +271,11 @@ CREATE TABLE IF NOT EXISTS `functionimplementation_additionalservicetype` (
   CONSTRAINT `FKhy7o5bstrj9h0rkarhad9u55c` FOREIGN KEY (`FunctionImplementation_id`) REFERENCES `functionimplementation` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functionimplementation_additionalservicetype: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functionimplementation_additionalservicetype: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functionimplementation_additionalservicetype` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functionimplementation_additionalservicetype` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functionimplementation_functiondeployment
+-- Dumping structure for table afcl.functionimplementation_functiondeployment
 CREATE TABLE IF NOT EXISTS `functionimplementation_functiondeployment` (
   `FunctionImplementation_id` bigint(20) NOT NULL,
   `functionDeployments_id` bigint(20) NOT NULL,
@@ -285,11 +285,11 @@ CREATE TABLE IF NOT EXISTS `functionimplementation_functiondeployment` (
   CONSTRAINT `FKlh59x9loub8e4uma0uvn8jxf0` FOREIGN KEY (`functionDeployments_id`) REFERENCES `functiondeployment` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functionimplementation_functiondeployment: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functionimplementation_functiondeployment: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functionimplementation_functiondeployment` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functionimplementation_functiondeployment` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functiontype
+-- Dumping structure for table afcl.functiontype
 CREATE TABLE IF NOT EXISTS `functiontype` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
@@ -302,7 +302,7 @@ CREATE TABLE IF NOT EXISTS `functiontype` (
   UNIQUE KEY `UK_p9rvsuvhqwj84qagf3d5myr35` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functiontype: ~24 rows (ungefähr)
+-- Dumping data for table afcl.functiontype: ~24 rows (approximately)
 /*!40000 ALTER TABLE `functiontype` DISABLE KEYS */;
 REPLACE INTO `functiontype` (`id`, `name`, `type`, `avgRTT`, `avgCost`, `successRate`, `invocations`) VALUES
 	(1, 'countVideos', 'countVideosType', NULL, NULL, NULL, 0),
@@ -330,7 +330,7 @@ REPLACE INTO `functiontype` (`id`, `name`, `type`, `avgRTT`, `avgCost`, `success
 	(23, 'averageTime', 'averageTimeType', NULL, NULL, NULL, 0);
 /*!40000 ALTER TABLE `functiontype` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functiontype_inputs
+-- Dumping structure for table afcl.functiontype_inputs
 CREATE TABLE IF NOT EXISTS `functiontype_inputs` (
   `FunctionType_id` bigint(20) NOT NULL,
   `inputs` varchar(255) DEFAULT NULL,
@@ -338,11 +338,11 @@ CREATE TABLE IF NOT EXISTS `functiontype_inputs` (
   CONSTRAINT `FK7qrq191xp1j948y9309x41475` FOREIGN KEY (`FunctionType_id`) REFERENCES `functiontype` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functiontype_inputs: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functiontype_inputs: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functiontype_inputs` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functiontype_inputs` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.functiontype_outputs
+-- Dumping structure for table afcl.functiontype_outputs
 CREATE TABLE IF NOT EXISTS `functiontype_outputs` (
   `FunctionType_id` bigint(20) NOT NULL,
   `outputs` varchar(255) DEFAULT NULL,
@@ -350,16 +350,16 @@ CREATE TABLE IF NOT EXISTS `functiontype_outputs` (
   CONSTRAINT `FK42twsvtuudf0y8d8auiwwf57s` FOREIGN KEY (`FunctionType_id`) REFERENCES `functiontype` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.functiontype_outputs: ~0 rows (ungefähr)
+-- Dumping data for table afcl.functiontype_outputs: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functiontype_outputs` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functiontype_outputs` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.hibernate_sequence
+-- Dumping structure for table afcl.hibernate_sequence
 CREATE TABLE IF NOT EXISTS `hibernate_sequence` (
   `next_val` bigint(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.hibernate_sequence: ~4 rows (ungefähr)
+-- Dumping data for table afcl.hibernate_sequence: ~4 rows (approximately)
 /*!40000 ALTER TABLE `hibernate_sequence` DISABLE KEYS */;
 REPLACE INTO `hibernate_sequence` (`next_val`) VALUES
 	(1),
@@ -368,7 +368,7 @@ REPLACE INTO `hibernate_sequence` (`next_val`) VALUES
 	(1);
 /*!40000 ALTER TABLE `hibernate_sequence` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.language
+-- Dumping structure for table afcl.language
 CREATE TABLE IF NOT EXISTS `language` (
   `id` bigint(20) NOT NULL,
   `idAWS` varchar(255) DEFAULT NULL,
@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS `language` (
   UNIQUE KEY `UK_nk4c9qcgv8el6abqd6etg77yy` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.language: ~17 rows (ungefähr)
+-- Dumping data for table afcl.language: ~17 rows (approximately)
 /*!40000 ALTER TABLE `language` DISABLE KEYS */;
 REPLACE INTO `language` (`id`, `idAWS`, `idAlibaba`, `idAzure`, `idGoogle`, `idIBM`, `name`) VALUES
 	(0, 'java8', NULL, NULL, NULL, 'java (JDK 8)', 'Java 8'),
@@ -403,7 +403,7 @@ REPLACE INTO `language` (`id`, `idAWS`, `idAlibaba`, `idAzure`, `idGoogle`, `idI
 	(16, NULL, NULL, NULL, NULL, 'php:7.3', 'PHP 7.3');
 /*!40000 ALTER TABLE `language` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.logger
+-- Dumping structure for table afcl.logger
 CREATE TABLE IF NOT EXISTS `logger` (
   `id` bigint(20) NOT NULL,
   `date` datetime(6) DEFAULT NULL,
@@ -411,11 +411,11 @@ CREATE TABLE IF NOT EXISTS `logger` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.logger: ~0 rows (ungefähr)
+-- Dumping data for table afcl.logger: ~0 rows (approximately)
 /*!40000 ALTER TABLE `logger` DISABLE KEYS */;
 /*!40000 ALTER TABLE `logger` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.provider
+-- Dumping structure for table afcl.provider
 CREATE TABLE IF NOT EXISTS `provider` (
   `id` smallint(6) NOT NULL AUTO_INCREMENT,
   `name` varchar(50) DEFAULT NULL,
@@ -433,7 +433,7 @@ CREATE TABLE IF NOT EXISTS `provider` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1 COMMENT='Table for all providers';
 
--- Exportiere Daten aus Tabelle afcl.provider: ~5 rows (ungefähr)
+-- Dumping data for table afcl.provider: ~5 rows (approximately)
 /*!40000 ALTER TABLE `provider` DISABLE KEYS */;
 REPLACE INTO `provider` (`id`, `name`, `invocationCost`, `durationGBpsCost`, `durationGHzpsCost`, `unitTimems`, `maxConcurrency`, `maxThroughput`, `maxDurationSec`, `maxDataInputMB`, `maxDataOutputMB`, `concurrencyOverheadms`, `faasSystemOverheadms`) VALUES
 	(1, 'AWS', 0.0000002, 0.0000166667, 0, 1, 1000, NULL, 900, 6, 6, NULL, NULL),
@@ -443,7 +443,7 @@ REPLACE INTO `provider` (`id`, `name`, `invocationCost`, `durationGBpsCost`, `du
 	(5, 'Alibaba', 0.0000002, 0.00001668, 0, 100, 300, NULL, 600, 6, 6, NULL, NULL);
 /*!40000 ALTER TABLE `provider` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.region
+-- Dumping structure for table afcl.region
 CREATE TABLE IF NOT EXISTS `region` (
   `id` smallint(6) NOT NULL AUTO_INCREMENT,
   `region` varchar(255) DEFAULT NULL,
@@ -464,7 +464,7 @@ CREATE TABLE IF NOT EXISTS `region` (
   CONSTRAINT `FK_region_Providers` FOREIGN KEY (`providerID`) REFERENCES `provider` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=50 DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.region: ~49 rows (ungefähr)
+-- Dumping data for table afcl.region: ~49 rows (approximately)
 /*!40000 ALTER TABLE `region` DISABLE KEYS */;
 REPLACE INTO `region` (`id`, `region`, `availability`, `provider`, `providerID`, `location`, `networkOverheadms`, `overheadLoadms`, `overheadBurstms`, `invocationDelayLoadms`, `invocationDelayBurstms`, `concurrencyOverheadms`, `faasSystemOverheadms`) VALUES
 	(1, 'ap-northeast-1', 0.9995, 'AWS', 1, 'Tokyo', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
@@ -518,7 +518,7 @@ REPLACE INTO `region` (`id`, `region`, `availability`, `provider`, `providerID`,
 	(49, 'asia-northeast3', NULL, 'Google', 3, 'Seoul', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 /*!40000 ALTER TABLE `region` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.storagedeployment
+-- Dumping structure for table afcl.storagedeployment
 CREATE TABLE IF NOT EXISTS `storagedeployment` (
   `id` bigint(20) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
@@ -529,11 +529,11 @@ CREATE TABLE IF NOT EXISTS `storagedeployment` (
   UNIQUE KEY `UK_8lgh2aqmm0ft7txkeeorbndnw` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.storagedeployment: ~0 rows (ungefähr)
+-- Dumping data for table afcl.storagedeployment: ~0 rows (approximately)
 /*!40000 ALTER TABLE `storagedeployment` DISABLE KEYS */;
 /*!40000 ALTER TABLE `storagedeployment` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.vm_deployment
+-- Dumping structure for table afcl.vm_deployment
 CREATE TABLE IF NOT EXISTS `vm_deployment` (
   `id` bigint(20) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
@@ -556,11 +556,11 @@ CREATE TABLE IF NOT EXISTS `vm_deployment` (
   UNIQUE KEY `UK_p6h0a5srh1aav2v2axn5vyjmq` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.vm_deployment: ~0 rows (ungefähr)
+-- Dumping data for table afcl.vm_deployment: ~0 rows (approximately)
 /*!40000 ALTER TABLE `vm_deployment` DISABLE KEYS */;
 /*!40000 ALTER TABLE `vm_deployment` ENABLE KEYS */;
 
--- Exportiere Struktur von Tabelle afcl.vm_deployment_disks
+-- Dumping structure for table afcl.vm_deployment_disks
 CREATE TABLE IF NOT EXISTS `vm_deployment_disks` (
   `VM_Deployment_id` bigint(20) NOT NULL,
   `disks` int(11) DEFAULT NULL,
@@ -568,7 +568,7 @@ CREATE TABLE IF NOT EXISTS `vm_deployment_disks` (
   CONSTRAINT `FK2k0gqg7e225ne24prsgx08ot2` FOREIGN KEY (`VM_Deployment_id`) REFERENCES `vm_deployment` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Exportiere Daten aus Tabelle afcl.vm_deployment_disks: ~0 rows (ungefähr)
+-- Dumping data for table afcl.vm_deployment_disks: ~0 rows (approximately)
 /*!40000 ALTER TABLE `vm_deployment_disks` DISABLE KEYS */;
 /*!40000 ALTER TABLE `vm_deployment_disks` ENABLE KEYS */;
 
