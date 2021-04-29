@@ -197,6 +197,7 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   `name` varchar(255) DEFAULT NULL,
   `functionImplementation_id` bigint(20) DEFAULT NULL,
   `KMS_Arn` varchar(255) DEFAULT NULL,
+  `regionID` smallint(6) DEFAULT NULL,
   `description` varchar(255) NOT NULL,
   `handlerName` varchar(255) NOT NULL,
   `input` varchar(255) DEFAULT NULL,
@@ -213,8 +214,10 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UK_si8kq5j31b1h3ixxiqjoein15` (`name`),
   KEY `FKrjwhvvrdf0kji44tg2kis0v3e` (`functionImplementation_id`),
-  CONSTRAINT `FKrjwhvvrdf0kji44tg2kis0v3e` FOREIGN KEY (`functionImplementation_id`) REFERENCES `functionimplementation` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+  KEY `FKs9d8fj3fc9383n38` (`regionID`),
+  CONSTRAINT `FKrjwhvvrdf0kji44tg2kis0v3e` FOREIGN KEY (`functionImplementation_id`) REFERENCES `functionimplementation` (`id`),
+  CONSTRAINT `FKs9d8fj3fc9383n38` FOREIGN KEY (`regionID`) REFERENCES `region` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dumping data for table afcl.functiondeployment: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functiondeployment` DISABLE KEYS */;
@@ -257,7 +260,7 @@ CREATE TABLE IF NOT EXISTS `functionimplementation` (
   CONSTRAINT `FKProvider` FOREIGN KEY (`provider`) REFERENCES `provider` (`id`),
   CONSTRAINT `FKd8t6ku556b5yr94nmge02nw8r` FOREIGN KEY (`language_id`) REFERENCES `language` (`id`),
   CONSTRAINT `FKiclu7oaoqp57tdx8772jv5hpc` FOREIGN KEY (`functionType_id`) REFERENCES `functiontype` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dumping data for table afcl.functionimplementation: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functionimplementation` DISABLE KEYS */;
