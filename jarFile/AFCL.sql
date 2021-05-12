@@ -205,6 +205,7 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   `memorySize` int(11) NOT NULL,
   `timeout` int(11) NOT NULL,
   `avgRTT` double DEFAULT NULL,
+  `avgRuntime` double DEFAULT NULL,
   `avgCost` double DEFAULT NULL,
   `successRate` double DEFAULT NULL,
   `computationalSpeed` double DEFAULT NULL,
@@ -216,7 +217,7 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   KEY `FKrjwhvvrdf0kji44tg2kis0v3e` (`functionImplementation_id`),
   KEY `FKs9d8fj3fc9383n38` (`regionID`),
   CONSTRAINT `FKrjwhvvrdf0kji44tg2kis0v3e` FOREIGN KEY (`functionImplementation_id`) REFERENCES `functionimplementation` (`id`),
-  CONSTRAINT `FKs9d8fj3fc9383n38` FOREIGN KEY (`regionID`) REFERENCES `region` (`id`)
+  CONSTRAINT `FKs9d8fj3fc9383n38sfs3csdco` FOREIGN KEY (`regionID`) REFERENCES `region` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dumping data for table afcl.functiondeployment: ~0 rows (approximately)
@@ -305,7 +306,7 @@ CREATE TABLE IF NOT EXISTS `functiontype` (
   UNIQUE KEY `UK_p9rvsuvhqwj84qagf3d5myr35` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8;
 
--- Dumping data for table afcl.functiontype: ~24 rows (approximately)
+-- Dumping data for table afcl.functiontype: ~23 rows (approximately)
 /*!40000 ALTER TABLE `functiontype` DISABLE KEYS */;
 REPLACE INTO `functiontype` (`id`, `name`, `type`, `avgRTT`, `avgCost`, `successRate`, `invocations`) VALUES
 	(1, 'countVideos', 'countVideosType', NULL, NULL, NULL, 0),
