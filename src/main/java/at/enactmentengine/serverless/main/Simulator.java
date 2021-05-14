@@ -108,6 +108,7 @@ public class Simulator {
                 workflowOutput = ex.simulateWorkflow(this.workflowInput);
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
+                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, null, System.currentTimeMillis() - start, false, null, -1, start, Type.SIM);
                 return null;
             }
 
