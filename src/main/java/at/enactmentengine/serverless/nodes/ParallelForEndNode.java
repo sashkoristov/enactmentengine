@@ -1,6 +1,9 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.uibk.dps.afcl.functions.objects.DataOuts;
+import at.uibk.dps.databases.MongoDBAccess;
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import org.slf4j.Logger;
@@ -44,15 +47,21 @@ public class ParallelForEndNode extends Node {
     private int numberOfParents;
 
     /**
+     * If simulation is selected.
+     */
+    private boolean simulate;
+
+    /**
      * Default constructor for a parallel-for-end node
      *
-     * @param name of the parallel-for node.
-     * @param type of the parallel-for node.
+     * @param name   of the parallel-for node.
+     * @param type   of the parallel-for node.
      * @param output defined output of the parallel-for node.
      */
-    public ParallelForEndNode(String name, String type, List<DataOuts> output) {
+    public ParallelForEndNode(String name, String type, List<DataOuts> output, boolean simulate) {
         super(name, type);
         this.output = output;
+        this.simulate = simulate;
     }
 
     /**
@@ -90,6 +99,10 @@ public class ParallelForEndNode extends Node {
         }
 
         logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, outputValues);
+        if (simulate) {
+            MongoDBAccess.saveLog(Event.PARALLEL_FOR_END, null, null, null, null,
+                    0L, true, null, -1, MongoDBAccess.getLastEndDateOverall(), Type.SIM);
+        }
 
         /* Pass results to every child */
         for (Node node : children) {
@@ -168,7 +181,7 @@ public class ParallelForEndNode extends Node {
      * @param number of children
      */
     public void setNumberOfParents(int number) {
-        this.numberOfParents = number;
+        numberOfParents = number;
     }
 
     /**

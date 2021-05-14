@@ -1,10 +1,15 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.exception.AlternativeStrategyException;
+import at.enactmentengine.serverless.exception.NoDatabaseEntryForIdException;
+import at.enactmentengine.serverless.exception.NotYetInvokedException;
 import at.enactmentengine.serverless.object.TripleResult;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.cronjob.ManualUpdate;
+import at.uibk.dps.databases.MariaDBAccess;
 import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
@@ -17,11 +22,10 @@ import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Class which handles the simulation of a function.
@@ -187,6 +191,9 @@ public class SimulationNode extends Node {
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(result);
+            if (node instanceof SimulationNode && loopCounter != -1) {
+                ((SimulationNode) node).setLoopCounter(loopCounter);
+            }
             node.call();
         }
 
@@ -221,7 +228,7 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) throws NoDatabaseEntryForIdException, NotYetInvokedException {
         // TODO simulate here
         String resourceLink = functionToSimulate.getUrl();
         TripleResult<Long, Map<String, Object>, Boolean> result = null;
@@ -263,7 +270,7 @@ public class SimulationNode extends Node {
      * @throws LatestFinishingTimeException on latest finish time exceeded
      * @throws MaxRunningTimeException      on maximum runtime exceeded
      */
-    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException, NoDatabaseEntryForIdException, NotYetInvokedException {
         TripleResult<Long, Map<String, Object>, Boolean> tripleResult;
 
         if (function != null) {
@@ -329,7 +336,7 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, Map<String, Object>, Boolean> simulateFT(Function function) {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFT(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException {
         long startTime = getStartingTime();
         String resourceLink = function.getUrl();
         TripleResult<Long, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink);
@@ -357,7 +364,7 @@ public class SimulationNode extends Node {
                     try {
                         // AlternativeStrategy has correct Result
                         return simulateAlternativeStrategy(function);
-                    } catch (Exception e) {
+                    } catch (AlternativeStrategyException e) {
                         return new TripleResult<>(null, null, false);
                     }
                 } else {
@@ -383,7 +390,7 @@ public class SimulationNode extends Node {
      *
      * @throws Exception if the alternativeStrategies have been executed without success
      */
-    private TripleResult<Long, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws Exception {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, AlternativeStrategyException {
 
         if (function.getFTSettings().getAltStrategy() != null) {
             int i = 0;
@@ -443,32 +450,31 @@ public class SimulationNode extends Node {
 
                 i++;
             }
-            throw new Exception("Failed after entire Alternative Strategy");
+            throw new AlternativeStrategyException("Failed after entire Alternative Strategy");
         }
-        throw new Exception("No alternative Strategy defined");
+        throw new AlternativeStrategyException("No alternative Strategy defined");
     }
 
     /**
      * Calculates the RTT of a given function.
      *
-     * @param resourceLink the link to the function
+     * @param entry the entry from the database
      *
      * @return the RTT in ms
      */
-    private Long calculateRoundTripTime(String resourceLink) {
+    private Long calculateRoundTripTime(ResultSet entry) {
         //TODO
 
         return 1000L;
     }
 
     /**
-     * Retrieves the stored output from a function from the metadata DB.
-     *
-     * @param resourceLink the function to retrieve the output from
+     * Retrieves the simValue from the yaml file if present in the properties of the data-outs of the function or
+     * returns default values.
      *
      * @return the output of the function
      */
-    private Map<String, Object> getFunctionOutput(String resourceLink) {
+    private Map<String, Object> getFunctionOutput() {
         // TODO read default values from a config file?
         HashMap<String, Object> outputs = new HashMap<>();
         for (DataOutsAtomic out : output) {
@@ -548,17 +554,27 @@ public class SimulationNode extends Node {
     /**
      * Simulates whether the function returns as expected or yields an error.
      *
-     * @param resourceLink the function to simulate
+     * @param entry the entry from the database
      *
      * @return true if function simulation is successful, false otherwise
      */
-    private Boolean simulateOutcome(String resourceLink) {
+    private Boolean simulateOutcome(ResultSet entry) {
         // TODO simulate whether the function is successful or yields an error
-        if (resourceLink.endsWith("HW")) {
-            return false;
+//        if (resourceLink.endsWith("HW")) {
+//            return false;
+//        }
+        double successRate = 0;
+        try {
+            successRate = entry.getDouble("successRate");
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
+        // get a random double between 0 and 1
+        Random random = new Random();
+        double randomValue = random.nextDouble();
 
-        return true;
+        // if the random value is smaller than the success rate, the invocation was successful
+        return randomValue < successRate;
     }
 
     /**
@@ -568,8 +584,31 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) {
-        return new TripleResult<Long, Map<String, Object>, Boolean>(calculateRoundTripTime(resourceLink), getFunctionOutput(resourceLink), simulateOutcome(resourceLink));
+    private TripleResult<Long, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) throws NoDatabaseEntryForIdException, NotYetInvokedException {
+        ResultSet entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
+        try {
+            if (!entry.next()) {
+                // TODO change message?
+                throw new NoDatabaseEntryForIdException("No entry for '" + resourceLink + "' found. Make sure the resource link is correct and the "
+                        + "function has been added to the database.");
+            }
+
+            // TODO check if invocations > 0, maybe perform manual update here?
+            if (entry.getInt("invocations") == 0) {
+                ManualUpdate.main(null);
+                entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
+                entry.next();
+                if (entry.getInt("invocations") == 0) {
+                    // TODO change message?
+                    throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet. It has to be executed "
+                            + "at least once.");
+                }
+            }
+
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return new TripleResult<Long, Map<String, Object>, Boolean>(calculateRoundTripTime(entry), getFunctionOutput(), simulateOutcome(entry));
     }
 
     public int getLoopCounter() {

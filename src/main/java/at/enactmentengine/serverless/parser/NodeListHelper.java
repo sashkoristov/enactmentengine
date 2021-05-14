@@ -48,7 +48,7 @@ class NodeListHelper {
             AtomicFunction tmp = (AtomicFunction) function;
             SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(simulationNode, simulationNode);
-        } else if (function instanceof AtomicFunction && !simulate) {
+        } else if (function instanceof AtomicFunction) {
             AtomicFunction tmp = (AtomicFunction) function;
             FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(functionNode, functionNode);
@@ -57,7 +57,7 @@ class NodeListHelper {
         } else if (function instanceof Parallel) {
             return toNodeListParallel((Parallel) function);
         } else if (function instanceof ParallelFor) {
-            return toNodeListParallelFor((ParallelFor) function);
+            return toNodeListParallelFor((ParallelFor) function, simulate);
         } else if (function instanceof Sequence) {
             return toNodeListSequence((Sequence) function);
         } else if (function instanceof Switch) {
@@ -137,9 +137,9 @@ class NodeListHelper {
      *
      * @return NodeList
      */
-    private ListPair<Node, Node> toNodeListParallelFor(ParallelFor function) {
+    private ListPair<Node, Node> toNodeListParallelFor(ParallelFor function, boolean simulate) {
         ParallelForStartNode parallelForStartNode = new ParallelForStartNode(function.getName(), "type", function.getDataIns(), function.getLoopCounter(), function.getProperties(), function.getConstraints());
-        ParallelForEndNode parallelForEndNode = new ParallelForEndNode(function.getName(), "", function.getDataOuts());
+        ParallelForEndNode parallelForEndNode = new ParallelForEndNode(function.getName(), "", function.getDataOuts(), simulate);
 
         // Create parallel compound NodeList
         ListPair<Node, Node> firstPair = toNodeList(function.getLoopBody().get(0));

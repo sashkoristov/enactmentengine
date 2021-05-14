@@ -224,6 +224,9 @@ public class ParallelForStartNode extends Node {
 
             Node node = children.get(i);
             setLoopCounter(node, i);
+//            for (int j = 0; j < node.getChildren().size(); j++) {
+//                setLoopCounter(node.children.get(j), i);
+//            }
 
             /* Pass results to the children (if there is an output value left) */
             if (i < outValuesForChildren.size()) {
