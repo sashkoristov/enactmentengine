@@ -17,6 +17,7 @@ import at.uibk.dps.util.Event;
 import at.uibk.dps.util.Type;
 import com.google.gson.JsonObject;
 import jFaaS.Gateway;
+import jFaaS.utils.PairResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -182,11 +183,11 @@ public class FunctionNode extends Node {
 
         /* Invoke function and measure duration */
         long start = System.currentTimeMillis();
-        String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs, functionOutputs);
+        PairResult<String, Long> pairResult = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs, functionOutputs);
         long end = System.currentTimeMillis();
 
         /* Log the function output */
-        logFunctionOutput(start, end, resultString, id);
+        logFunctionOutput(pairResult.getRTT(), pairResult.getResult(), id);
 
         /*
          * Read the actual function outputs by their key and store them in
@@ -200,6 +201,9 @@ public class FunctionNode extends Node {
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(functionOutputs);
+            if (node instanceof FunctionNode && loopCounter != -1) {
+                ((FunctionNode) node).setLoopCounter(loopCounter);
+            }
             node.call();
         }
 
@@ -217,7 +221,7 @@ public class FunctionNode extends Node {
                     Utils.detectRegion(resourceLink),
                     new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
                     new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-                    Utils.checkResultSuccess(resultString).toString(), null, executionId);
+                    Utils.checkResultSuccess(pairResult.getResult()).toString(), null, executionId);
 
             /* Store the invocation in the database */
             Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
@@ -245,17 +249,16 @@ public class FunctionNode extends Node {
     /**
      * Log the function output.
      *
-     * @param start        time of the base function.
-     * @param end          time of the base function.
+     * @param RTT          the RTT of the base function.
      * @param resultString json result of the base function.
      * @param id           unique identifier of the base function.
      */
-    private void logFunctionOutput(long start, long end, String resultString, int id) {
+    private void logFunctionOutput(long RTT, String resultString, int id) {
         if (resultString.length() > 100000) {
-            logger.info("Function took: " + (end - start) + " ms. Result: too large [" + System.currentTimeMillis()
+            logger.info("Function took: " + RTT + " ms. Result: too large [" + System.currentTimeMillis()
                     + "ms], id=" + id + "");
         } else {
-            logger.info("Function took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
+            logger.info("Function took: " + RTT + " ms. Result: " + name + " : " + resultString + " ["
                     + System.currentTimeMillis() + "ms], id=" + id + "");
         }
     }
@@ -267,7 +270,8 @@ public class FunctionNode extends Node {
      * @param resourceLink     the resource of the base function.
      * @param functionInputs   the input to the base function.
      *
-     * @return the stringified json result of the base function invocation.
+     * @return a PairResult containing the stringified json result of the base function invocation and the round trip
+     * time.
      *
      * @throws MaxRunningTimeException      on maximum runtime exceeded.
      * @throws LatestFinishingTimeException on latest finish time exceeded.
@@ -275,10 +279,11 @@ public class FunctionNode extends Node {
      * @throws InvokationFailureException   on failed invocation.
      * @throws IOException                  on input output exception.
      */
-    private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs, Map<String, Object> functionOutputs)
+    private PairResult<String, Long> invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs, Map<String, Object> functionOutputs)
             throws MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException,
             InvokationFailureException, IOException {
         String resultString = null;
+        PairResult<String, Long> pairResult = null;
 
         /* Check if function should be invoked with fault tolerance settings */
         if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
@@ -288,7 +293,6 @@ public class FunctionNode extends Node {
 
             if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null) {
                 ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount(), getIBMAccount());
-
             } else if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null) {
                 ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
             } else if (getGoogleAccount() != null && getAzureAccount() != null && getAWSAccount() != null) {
@@ -301,7 +305,8 @@ public class FunctionNode extends Node {
 
             try {
                 logger.info("Invoking function with fault tolerance...");
-                resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
+                pairResult = ftEngine.InvokeFunctionFT(functionToInvoke);
+                resultString = pairResult.getResult();
             } catch (Exception e) {
                 result = null;
                 throw e;
@@ -316,9 +321,11 @@ public class FunctionNode extends Node {
         } else {
             /* Invoke the function without fault tolerance */
             long start = System.currentTimeMillis();
-            resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
+            pairResult = gateway.invokeFunction(resourceLink, functionInputs);
             long end = System.currentTimeMillis();
-            memorySize = gateway.getAssignedMemory(resourceLink);
+            resultString = pairResult.getResult();
+//            memorySize = gateway.getAssignedMemory(resourceLink);
+            memorySize = -1;
             /*
              * Read the actual function outputs by their key and store them in
              * functionOutputs
@@ -331,9 +338,9 @@ public class FunctionNode extends Node {
             } else {
                 event = Event.FUNCTION_FAILED;
             }
-            MongoDBAccess.saveLog(event, resourceLink, getName(), type, resultString, end - start, success, memorySize, loopCounter, start, Type.EXEC);
+            MongoDBAccess.saveLog(event, resourceLink, getName(), type, resultString, pairResult.getRTT(), success, memorySize, loopCounter, start, Type.EXEC);
         }
-        return resultString;
+        return pairResult;
     }
 
     /**
