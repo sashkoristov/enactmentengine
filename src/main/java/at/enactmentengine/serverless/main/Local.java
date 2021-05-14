@@ -30,24 +30,29 @@ public class Local {
         rootLogger.setLevel(Level.INFO);
         /* Workflow executor */
         Executor executor = new Executor();
+        Simulator simulator = new Simulator();
 
         /* Check for inputs and execute workflow */
         Map<String, Object> result = null;
-        if (args.length > 2 && args[2].equals("--simulate")) {
-            Simulator simulator = new Simulator();
-            result = simulator.simulateWorkflow(args[0], args[1], -1);
-        } else if (args.length > 1) {
-            result = executor.executeWorkflow(args[0], args[1], -1);
-        } else if (args.length > 0) {
-            result = executor.executeWorkflow(args[0], null, -1);
-        } else {
-            logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json]");
-        }
-
-        logger.info("Result: {}", result);
-
-        MongoDBAccess.addAllEntries();
+        try {
+            if (args.length > 2 && args[2].equals("--simulate")) {
+                result = simulator.simulateWorkflow(args[0], args[1], -1);
+            } else if (args.length > 1 && args[1].equals("--simulate")) {
+                result = simulator.simulateWorkflow(args[0], null, -1);
+            } else if (args.length > 1) {
+                result = executor.executeWorkflow(args[0], args[1], -1);
+            } else if (args.length > 0) {
+                result = executor.executeWorkflow(args[0], null, -1);
+            } else {
+                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json]");
+            }
+            logger.info("Result: {}", result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            MongoDBAccess.addAllEntries();
 //        MariaDBAccess.doSth();
-        MongoDBAccess.close();
+            MongoDBAccess.close();
+        }
     }
 }
