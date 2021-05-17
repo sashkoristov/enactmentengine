@@ -21,7 +21,7 @@ USE `afcl`;
 CREATE TABLE IF NOT EXISTS `fcdeployment` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `FCteam` int(11) NOT NULL DEFAULT 0,
-  `fd` smallint(6) NOT NULL DEFAULT 0,
+  `fd` int(11) NOT NULL,
   `description` varchar(50) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `FKfcteam` (`FCteam`),
@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   `name` varchar(255) DEFAULT NULL,
   `functionImplementation_id` bigint(20) DEFAULT NULL,
   `KMS_Arn` varchar(255) DEFAULT NULL,
-  `regionID` smallint(6) DEFAULT NULL,
+  `regionID` int(11) DEFAULT NULL,
   `description` varchar(255) NOT NULL,
   `handlerName` varchar(255) NOT NULL,
   `input` varchar(255) DEFAULT NULL,
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `UK_si8kq5j31b1h3ixxiqjoein15` (`name`),
   KEY `FKrjwhvvrdf0kji44tg2kis0v3e` (`functionImplementation_id`),
-  KEY `FKs9d8fj3fc9383n38` (`regionID`),
+  KEY `FKs9d8fj3fc9383n38sfs3csdco` (`regionID`) USING BTREE,
   CONSTRAINT `FKrjwhvvrdf0kji44tg2kis0v3e` FOREIGN KEY (`functionImplementation_id`) REFERENCES `functionimplementation` (`id`),
   CONSTRAINT `FKs9d8fj3fc9383n38sfs3csdco` FOREIGN KEY (`regionID`) REFERENCES `region` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -267,6 +267,19 @@ CREATE TABLE IF NOT EXISTS `functionimplementation` (
 /*!40000 ALTER TABLE `functionimplementation` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functionimplementation` ENABLE KEYS */;
 
+-- Dumping structure for table afcl.functionimplementation_additionalservices
+CREATE TABLE IF NOT EXISTS `functionimplementation_additionalservices` (
+  `PersistentFunctionImplementation_id` bigint(20) NOT NULL,
+  `isDerived` bit(1) DEFAULT NULL,
+  `additionalService_id` bigint(20) NOT NULL,
+  PRIMARY KEY (`PersistentFunctionImplementation_id`,`additionalService_id`),
+  CONSTRAINT `FKe3rrelg2btkb0ueyw9fao7ae1` FOREIGN KEY (`PersistentFunctionImplementation_id`) REFERENCES `functionimplementation` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Dumping data for table afcl.functionimplementation_additionalservices: ~0 rows (approximately)
+/*!40000 ALTER TABLE `functionimplementation_additionalservices` DISABLE KEYS */;
+/*!40000 ALTER TABLE `functionimplementation_additionalservices` ENABLE KEYS */;
+
 -- Dumping structure for table afcl.functionimplementation_additionalservicetype
 CREATE TABLE IF NOT EXISTS `functionimplementation_additionalservicetype` (
   `FunctionImplementation_id` bigint(20) NOT NULL,
@@ -278,20 +291,6 @@ CREATE TABLE IF NOT EXISTS `functionimplementation_additionalservicetype` (
 -- Dumping data for table afcl.functionimplementation_additionalservicetype: ~0 rows (approximately)
 /*!40000 ALTER TABLE `functionimplementation_additionalservicetype` DISABLE KEYS */;
 /*!40000 ALTER TABLE `functionimplementation_additionalservicetype` ENABLE KEYS */;
-
--- Dumping structure for table afcl.functionimplementation_functiondeployment
-CREATE TABLE IF NOT EXISTS `functionimplementation_functiondeployment` (
-  `FunctionImplementation_id` bigint(20) NOT NULL,
-  `functionDeployments_id` bigint(20) NOT NULL,
-  PRIMARY KEY (`FunctionImplementation_id`,`functionDeployments_id`),
-  UNIQUE KEY `UK_f3aso43x4bywch5jjl0nc72u0` (`functionDeployments_id`),
-  CONSTRAINT `FKcgkgqicg2mu3esj81dmn6etmx` FOREIGN KEY (`FunctionImplementation_id`) REFERENCES `functionimplementation` (`id`),
-  CONSTRAINT `FKlh59x9loub8e4uma0uvn8jxf0` FOREIGN KEY (`functionDeployments_id`) REFERENCES `functiondeployment` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- Dumping data for table afcl.functionimplementation_functiondeployment: ~0 rows (approximately)
-/*!40000 ALTER TABLE `functionimplementation_functiondeployment` DISABLE KEYS */;
-/*!40000 ALTER TABLE `functionimplementation_functiondeployment` ENABLE KEYS */;
 
 -- Dumping structure for table afcl.functiontype
 CREATE TABLE IF NOT EXISTS `functiontype` (
@@ -449,7 +448,7 @@ REPLACE INTO `provider` (`id`, `name`, `invocationCost`, `durationGBpsCost`, `du
 
 -- Dumping structure for table afcl.region
 CREATE TABLE IF NOT EXISTS `region` (
-  `id` smallint(6) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `region` varchar(255) DEFAULT NULL,
   `availability` double DEFAULT NULL,
   `provider` varchar(255) DEFAULT NULL,
