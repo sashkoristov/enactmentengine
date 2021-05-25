@@ -4,6 +4,7 @@ import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 //import at.enactmentengine.serverless.main.LambdaHandler;
 //import at.enactmentengine.serverless.main.Local;
+import at.enactmentengine.serverless.object.State;
 import at.enactmentengine.serverless.object.Status;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
@@ -26,6 +27,7 @@ import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
 import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import jFaaS.Gateway;
@@ -149,6 +151,9 @@ public class FunctionNode extends Node {
 		/* Output values of the base function */
 		Map<String, Object> functionOutputs = new HashMap<>();
 
+		State stateInstance = State.getInstance();
+		JsonObject state = stateInstance.getStateObject();
+
 		try {
 			/* Check if an input is specified */
 			if (input != null) {
@@ -157,13 +162,16 @@ public class FunctionNode extends Node {
 				for (DataIns data : input) {
 
 					/* Check if actual data contains the specified source */
-					if (dataValues.containsKey(data.getSource())) {
+					if (state.get(data.getSource()) != null) {
+
+						logger.info("GETTING FROM STATE");
+						state.add(name + "/" + data.getName(), new Gson().fromJson(state.get(data.getSource()).toString(), JsonElement.class));
 
 						/* Check if the element should be passed to the output */
 						if (data.getPassing() != null && data.getPassing()) {
-							functionOutputs.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+							functionOutputs.put(name + "/" + data.getName(), state.get(data.getSource()));
 						} else {
-							actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
+							actualFunctionInputs.put(data.getName(), state.get(data.getSource()));
 						}
 					} else {
 						throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
@@ -197,6 +205,10 @@ public class FunctionNode extends Node {
 		/* Log the function output */
 		logFunctionOutput(start, end, resultString, id);
 
+		stateInstance.addResultToState(resultString, name);
+
+		logger.info("State after " + name + ": " + State.getInstance().getStateObject());
+
 		/*
 		 * Read the actual function outputs by their key and store them in
 		 * functionOutputs
@@ -206,7 +218,6 @@ public class FunctionNode extends Node {
 
 		/* Pass the output to the next node */
 		for (Node node : children) {
-			node.passResult(functionOutputs);
 			node.call();
 		}
 
