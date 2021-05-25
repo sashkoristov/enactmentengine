@@ -2,11 +2,12 @@ package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.object.ListPair;
+import at.enactmentengine.serverless.object.State;
 import at.uibk.dps.afcl.functions.objects.DataIns;
+import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -80,8 +81,7 @@ public class ExecutableWorkflow {
      */
     public Map<String, Object> executeWorkflow(Map<String, Object> input) throws MissingInputDataException, ExecutionException, InterruptedException {
 
-        /* Create a variable to handle the present input */
-        final Map<String, Object> presentInput = new HashMap<>();
+        JsonObject state = State.getInstance().getStateObject();
 
         /* Iterate over all expected inputs */
         if( definedInput!= null ) {
@@ -90,8 +90,8 @@ public class ExecutableWorkflow {
                 /* Check if the actual input contains the expected input */
                 if (input != null && input.containsKey(data.getSource())) {
 
-                    /* Add the actual input to the list of actually present inputs */
-                    presentInput.put(workflowName + "/" + data.getName(), input.get(data.getSource()));
+                    /* Add the input of the workflow to the state*/
+                    state.addProperty(workflowName + "/" + data.getName(), input.get(data.getSource()).toString());
                 } else {
                     /* The expected input is not present */
                     throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
@@ -99,11 +99,10 @@ public class ExecutableWorkflow {
             }
         }
 
+        logger.info("State before executing: " + state);
+
         /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
-
-        /* Pass the present inputs to the start node */
-        startNode.passResult(presentInput);
 
         /* Run the start node */
         Future<Boolean> future = executorService.submit(startNode);
