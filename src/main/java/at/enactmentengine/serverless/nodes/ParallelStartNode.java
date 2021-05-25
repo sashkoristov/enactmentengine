@@ -1,7 +1,11 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.object.State;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,18 +59,18 @@ public class ParallelStartNode extends Node {
     @Override
     public Boolean call() throws Exception {
 
-        final Map<String, Object> outValues = new HashMap<>();
+        JsonObject state = State.getInstance().getStateObject();
 
         /* Check if there is an input defined */
         if (definedInput != null) {
 
             /* Iterate over the possible inputs and look for defined ones */
             for (DataIns data : definedInput) {
-                if (!dataValues.containsKey(data.getSource())) {
+                if ((state.get(data.getSource()) == null)) {
                     throw new MissingInputDataException(ParallelStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
                 } else {
-                    outValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                    state.add(name + "/" + data.getName(), new Gson().fromJson(state.get(data.getSource()).toString(), JsonElement.class));
                 }
             }
         }
@@ -80,7 +84,6 @@ public class ParallelStartNode extends Node {
         /* Pass data to all children and execute them */
         List<Future<Boolean>> futures = new ArrayList<>();
         for (Node node : children) {
-            node.passResult(outValues);
             futures.add(exec.submit(node));
         }
 

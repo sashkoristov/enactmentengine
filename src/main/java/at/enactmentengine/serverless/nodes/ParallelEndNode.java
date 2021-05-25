@@ -1,8 +1,12 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.object.State;
 import at.uibk.dps.afcl.functions.objects.DataOuts;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +76,8 @@ public class ParallelEndNode extends Node {
         /* Get the output of the executed parents */
         Map<String, Object> outputValues = new HashMap<>();
 
+        JsonObject state = State.getInstance().getStateObject();
+
         /* Check if there is an output specified */
         if (output != null) {
             for (DataOuts data : output) {
@@ -81,12 +87,15 @@ public class ParallelEndNode extends Node {
                 String key = name + "/" + data.getName();
 
                 /* Check if the result contains the specified source */
-                if (parallelResult.containsKey(data.getSource())) {
+                if (state.get(data.getSource()) != null) {
+
                     outputValues.put(key, parallelResult.get(data.getSource()));
+                    state.add(key, new Gson().fromJson(state.get(data.getSource()).toString(), JsonElement.class));
                     continue;
                 }
 
                 /* Check for a collection result */
+                // @Todo: check if output of parallel sections has to be dealt with
                 outputValues.putAll(checkCollection(data, key));
             }
             logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues);
@@ -95,7 +104,6 @@ public class ParallelEndNode extends Node {
 
         /* Pass the results to all children */
         for (Node node : children) {
-            node.passResult(outputValues);
             node.call();
         }
 
