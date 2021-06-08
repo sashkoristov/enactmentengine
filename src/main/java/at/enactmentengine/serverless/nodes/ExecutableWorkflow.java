@@ -169,7 +169,6 @@ public class ExecutableWorkflow {
             }
         }
 
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, null, -1, System.currentTimeMillis(), Type.SIM);
         /* Start workflow execution */
         logger.info("Starting simulation of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 

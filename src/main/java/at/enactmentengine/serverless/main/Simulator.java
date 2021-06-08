@@ -74,6 +74,7 @@ public class Simulator {
 
         /* Measure start time of the workflow execution */
         long start = System.currentTimeMillis();
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, null, -1, start, Type.SIM);
 
         /* Disable hostname verification (enable OpenWhisk connections) */
         final Properties props = System.getProperties();
