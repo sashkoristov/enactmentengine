@@ -46,7 +46,7 @@ class NodeListHelper {
     ListPair<Node, Node> toNodeList(Function function) {
         if (function instanceof AtomicFunction && simulate) {
             AtomicFunction tmp = (AtomicFunction) function;
-            SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
+            SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getDeployment(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(simulationNode, simulationNode);
         } else if (function instanceof AtomicFunction) {
             AtomicFunction tmp = (AtomicFunction) function;

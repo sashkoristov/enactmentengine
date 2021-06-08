@@ -57,7 +57,7 @@ repositories {
     }
 }
 dependencies {
-    implementation 'com.github.stefanpedratscher:AFCLCore:v0.0.1'
+//    implementation 'com.github.stefanpedratscher:AFCLCore:v0.0.1'
     implementation 'com.github.ApolloCEC:socketUtils:-SNAPSHOT'
 
     testCompile group: 'junit', name: 'junit', version: '4.+'

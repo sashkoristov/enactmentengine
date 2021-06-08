@@ -55,6 +55,11 @@ public class SimulationNode extends Node {
     private int executionId;
 
     /**
+     * The deployment of the Atomic Function.
+     */
+    private String deployment;
+
+    /**
      * The constraints for the simulation node.
      */
     private List<PropertyConstraint> constraints;
@@ -89,15 +94,17 @@ public class SimulationNode extends Node {
      *
      * @param name        of the base function.
      * @param type        of the base function (fType).
+     * @param deployment  of the base function.
      * @param properties  of the base function.
      * @param constraints of the base function.
      * @param input       to the base function.
      * @param output      of the base function.
      * @param executionId for the logging of the simulation.
      */
-    public SimulationNode(String name, String type, List<PropertyConstraint> properties, List<PropertyConstraint> constraints,
+    public SimulationNode(String name, String type, String deployment, List<PropertyConstraint> properties, List<PropertyConstraint> constraints,
                           List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
         super(name, type);
+        this.deployment = deployment;
         this.output = output;
         this.properties = properties;
         this.constraints = constraints;
@@ -458,14 +465,31 @@ public class SimulationNode extends Node {
     /**
      * Calculates the RTT of a given function.
      *
-     * @param entry the entry from the database
+     * @param entry   the entry from the database
+     * @param success if the simulation is success or not
      *
      * @return the RTT in ms
      */
-    private Long calculateRoundTripTime(ResultSet entry) {
+    private Long calculateRoundTripTime(ResultSet entry, Boolean success) {
         //TODO
+        long rtt = 0;
+        try {
+            rtt = (long) entry.getDouble("avgRTT");
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        if (success) {
+            // calculate the time as usual
+            Random r = new Random();
+            double newRTT = r.nextGaussian() * (rtt * 0.05) + rtt;
+            return (long) newRTT;
+        } else {
+            // get a random double between 0 and 1
+            Random random = new Random();
+            rtt *= random.nextDouble();
+            return rtt;
+        }
 
-        return 1000L;
     }
 
     /**
@@ -608,7 +632,8 @@ public class SimulationNode extends Node {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-        return new TripleResult<Long, Map<String, Object>, Boolean>(calculateRoundTripTime(entry), getFunctionOutput(), simulateOutcome(entry));
+        Boolean success = simulateOutcome(entry);
+        return new TripleResult<Long, Map<String, Object>, Boolean>(calculateRoundTripTime(entry, success), getFunctionOutput(), success);
     }
 
     public int getLoopCounter() {
