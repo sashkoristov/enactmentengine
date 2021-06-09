@@ -261,7 +261,7 @@ public class Utils {
      * @return status og the execution.
      */
     public static Status checkResultSuccess(String resultString) {
-        return resultString.contains("error:") ? Status.ERROR : Status.SUCCESS;
+        return (resultString.contains("error:") || resultString.contains("\"error\":")) ? Status.ERROR : Status.SUCCESS;
     }
 
     /**

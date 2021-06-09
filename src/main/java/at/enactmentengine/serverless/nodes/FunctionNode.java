@@ -367,7 +367,6 @@ public class FunctionNode extends Node {
      * @return success or failure of the value parsing.
      */
     private boolean getValuesParsed(String result, Map<String, Object> functionOutputs) {
-
         /* Check if there is a function result and a specified output */
         if (result == null || "null".equals(result)) {
             return output == null || output.isEmpty();
@@ -413,7 +412,8 @@ public class FunctionNode extends Node {
                         break;
                 }
             }
-            return true;
+
+            return !(result.contains("error:") || result.contains("\"error\":"));
 
         } catch (Exception e) {
             logger.error("Error while trying to parse key in function {}", name);
