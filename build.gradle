@@ -78,7 +78,8 @@ dependencies {
 //    compile group: 'org.mongodb', name: 'mongo-java-driver', version: '3.12.8'
     //compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     testCompile group: 'junit', name: 'junit', version: '3.8.1'
-    compile fileTree(dir: 'externalJars', include: ['*.jar'])
+    compile fileTree(dir: 'externalJars', include: ['FTjFaaS.jar'])
+    implementation fileTree(dir: 'externalJars', include: ['afclCore.jar'])
 }
 
 //jacocoTestReport {
