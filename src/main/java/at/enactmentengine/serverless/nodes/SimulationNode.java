@@ -235,7 +235,8 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) throws NoDatabaseEntryForIdException, NotYetInvokedException {
+    private TripleResult<Long, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) throws NoDatabaseEntryForIdException,
+            NotYetInvokedException, InvokationFailureException, LatestFinishingTimeException, LatestStartingTimeException, MaxRunningTimeException {
         // TODO simulate here
         String resourceLink = functionToSimulate.getUrl();
         TripleResult<Long, Map<String, Object>, Boolean> result = null;
@@ -249,6 +250,7 @@ public class SimulationNode extends Node {
                 result = simulateFunctionFT(functionToSimulate);
             } catch (LatestStartingTimeException | InvokationFailureException | LatestFinishingTimeException | MaxRunningTimeException e) {
                 e.printStackTrace();
+                throw e;
             }
 
         } else {
