@@ -39,6 +39,11 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
     protected Map<String, Object> dataValues;
 
     /**
+     * The id of the iteration in parallelFor
+     */
+    private int id = 0;
+
+    /**
      * Default constructor for a node.
      *
      * @param name of the node.
@@ -99,6 +104,14 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
 
     public void setDataValues(Map<String, Object> dataValues) {
         this.dataValues = dataValues;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     /**
