@@ -151,9 +151,6 @@ public class FunctionNode extends Node {
 		/* Output values of the base function */
 		Map<String, Object> functionOutputs = new HashMap<>();
 
-		State stateInstance = State.getInstance();
-		JsonObject state = stateInstance.getStateObject();
-
 		try {
 			/* Check if an input is specified */
 			if (input != null) {
@@ -161,17 +158,25 @@ public class FunctionNode extends Node {
 				/* Iterate over all specified inputs */
 				for (DataIns data : input) {
 
-					/* Check if actual data contains the specified source */
-					if (state.get(data.getSource()) != null) {
+					String dataSource;
+					if (this.getId() != 0) {
+						dataSource = data.getSource() + "/" + this.getId();
+					} else if(!parents.isEmpty() && parents.get(0).getId() != 0 && parents.get(0).getClass() != ParallelForEndNode.class) {
+						dataSource = data.getSource() + "/" + parents.get(0).getId();
+					} else {
+						dataSource = data.getSource();
+					}
 
-						logger.info("GETTING FROM STATE");
-						state.add(name + "/" + data.getName(), new Gson().fromJson(state.get(data.getSource()).toString(), JsonElement.class));
+					if (State.getInstance().getStateObject().get(dataSource) != null) {
+
+						//logger.info("GETTING FROM STATE");
+						State.getInstance().getStateObject().add(name + "/" + data.getName(), new Gson().fromJson(State.getInstance().getStateObject().get(dataSource).toString(), JsonElement.class));
 
 						/* Check if the element should be passed to the output */
 						if (data.getPassing() != null && data.getPassing()) {
-							functionOutputs.put(name + "/" + data.getName(), state.get(data.getSource()));
+							functionOutputs.put(name + "/" + data.getName(), State.getInstance().getStateObject().get(dataSource));
 						} else {
-							actualFunctionInputs.put(data.getName(), state.get(data.getSource()));
+							actualFunctionInputs.put(data.getName(), State.getInstance().getStateObject().get(dataSource));
 						}
 					} else {
 						throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
@@ -205,9 +210,7 @@ public class FunctionNode extends Node {
 		/* Log the function output */
 		logFunctionOutput(start, end, resultString, id);
 
-		stateInstance.addResultToState(resultString, name);
-
-		logger.info("State after " + name + ": " + State.getInstance().getStateObject());
+		State.getInstance().addResultToState(resultString, name, this.getId());
 
 		/*
 		 * Read the actual function outputs by their key and store them in
