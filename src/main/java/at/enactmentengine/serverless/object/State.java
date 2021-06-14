@@ -30,14 +30,14 @@ public class State {
         this.stateObject = stateObject;
     }
 
-    public void addResultToState(String result, String name){
+    public synchronized void addResultToState(String result, String name, Integer id){
 
         JsonObject jsonObj = new Gson().fromJson(result, JsonElement.class).getAsJsonObject();
 
         JsonObject state = State.getInstance().getStateObject();
 
         for (String key : jsonObj.keySet()) {
-            state.add(name + "/" + key, jsonObj.get(key));
+            state.add(name + "/" + key + (id != 0 ? "/" + id : ""), jsonObj.get(key));
         }
     }
 }
