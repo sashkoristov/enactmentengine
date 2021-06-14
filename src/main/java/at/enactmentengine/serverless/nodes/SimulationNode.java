@@ -465,6 +465,30 @@ public class SimulationNode extends Node {
     }
 
     /**
+     * Extracts the memory size, region and function name of the deployment string.
+     *
+     * @param deployment to extract the values from
+     *
+     * @return a list containing 3 elements, the first is the memory size, the second the region and the third the
+     * function name.
+     */
+    private List<String> extractValuesFromDeployment(String deployment) {
+        List<String> result = new ArrayList<>();
+        String[] parts = deployment.split("_");
+        result.add(parts[parts.length - 1]);
+        result.add(parts[parts.length - 2]);
+        // since the function name could contain underscores as well, we have to concat all remaining elements
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < parts.length - 3; i++) {
+            stringBuilder.append(parts[i]).append("_");
+        }
+        stringBuilder.setLength(stringBuilder.length() - 1);
+        result.add(stringBuilder.toString());
+
+        return result;
+    }
+
+    /**
      * Calculates the RTT of a given function.
      *
      * @param entry   the entry from the database
@@ -474,6 +498,17 @@ public class SimulationNode extends Node {
      */
     private Long calculateRoundTripTime(ResultSet entry, Boolean success) {
         //TODO
+
+        // if the deployment is null, simulate in the same region and with the same memory
+        if (deployment == null) {
+            // simply read from the values from the DB without calculating them again
+        } else {
+            List<String> elements = extractValuesFromDeployment(deployment);
+            int memory = Integer.parseInt(elements.get(0));
+            String region = elements.get(1);
+            String functionName = elements.get(2);
+        }
+
         long rtt = 0;
         try {
             rtt = (long) entry.getDouble("avgRTT");
