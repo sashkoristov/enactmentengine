@@ -1,14 +1,17 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.object.State;
 import at.uibk.dps.afcl.functions.objects.DataOuts;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Control node which manages the tasks at the end of a parallel for loop.
@@ -76,15 +79,26 @@ public class ParallelForEndNode extends Node {
         if (output != null) {
             for (DataOuts data : output) {
 
+                Set<String> set = State.getInstance().getStateObject().keySet().stream().filter(s -> s.startsWith(data.getSource())).collect(Collectors.toSet());
+
+                ArrayList list = new ArrayList();
+                for(String key : set){
+                    list.add(State.getInstance().getStateObject().get(key));
+                }
+
+                State.getInstance().getStateObject().addProperty(data.getSource(), list.toString());
+
                 /* Define the output key */
                 // TODO should we remove name?
                 String key = name + "/" + data.getName();
 
                 /* Check if the result contains the specified source */
-                if (parallelForResult.containsKey(data.getSource())) {
-                    outputValues.put(key, parallelForResult.get(data.getSource()));
+                if (State.getInstance().getStateObject().get(data.getSource()) != null) {
+                    State.getInstance().getStateObject().add(key, new Gson().fromJson(State.getInstance().getStateObject().get(data.getSource()).toString(), JsonElement.class));
+                    outputValues.put(key, State.getInstance().getStateObject().get(data.getSource()));
                 } else if ("collection".equals(data.getType())) {
-                    outputValues.put(key, parallelForResult);
+                    State.getInstance().getStateObject().add(key, new Gson().fromJson(State.getInstance().getStateObject().toString(), JsonElement.class));
+                    //outputValues.put(key, parallelForResult);
                 }
             }
         }
@@ -93,7 +107,7 @@ public class ParallelForEndNode extends Node {
 
         /* Pass results to every child */
         for (Node node : children) {
-            node.passResult(outputValues);
+            //node.passResult(outputValues);
             node.call();
         }
 

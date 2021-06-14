@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.object.State;
 import at.enactmentengine.serverless.parser.ElementIndex;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
@@ -7,6 +8,8 @@ import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.LoopCounter;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -203,16 +206,46 @@ public class ParallelForStartNode extends Node {
         /* Prepare the output values */
         final Map<String, Object> outValues = new HashMap<>();
 
+        synchronized (this) {
+
+            /* Prepare data value holders, if not already done */
+            if (dataValues == null) {
+                dataValues = new HashMap<>();
+            }
+            if (counterValues == null) {
+                counterValues = new HashMap<>();
+            }
+
+            /* Check if there is an input specified */
+            if (dataIns != null) {
+
+                /* Iterate over inputs and add corresponding values to the data values */
+                for (DataIns data : dataIns) {
+                    if (State.getInstance().getStateObject().get(data.getSource()) != null) {
+                        dataValues.put(data.getSource(), State.getInstance().getStateObject().get(data.getSource()));
+                    }
+                }
+            }
+
+            /* Iterate over counter variables and check if the input contains the values */
+            for (String counterValue : counterVariableNames) {
+                if (State.getInstance().getStateObject().get(counterValue) != null) {
+                    counterValues.put(counterValue, State.getInstance().getStateObject().get(counterValue));
+                }
+            }
+        }
+
         /* Check if there is input defined in the workflow file */
         if (dataIns != null) {
 
             /* Iterate over the input data and handle input values */
             for (DataIns data : dataIns) {
-                if (!dataValues.containsKey(data.getSource())) {
+                if (State.getInstance().getStateObject().get(data.getSource()) == null) {
                     throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
                 } else {
-                    outValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                    State.getInstance().getStateObject().add(name + "/" + data.getName(), new Gson().fromJson(State.getInstance().getStateObject().get(data.getSource()).toString(), JsonElement.class));
+                    outValues.put(name + "/" + data.getName(), State.getInstance().getStateObject().get(data.getSource()));
                 }
             }
         }
@@ -233,9 +266,15 @@ public class ParallelForStartNode extends Node {
 
             Node node = children.get(i);
 
+            node.setId(i + 1);
+            setIdOfChildren(node, i + 1);
+
             /* Pass results to the children (if there is an output value left) */
             if (i < outValuesForChildren.size()) {
-                node.passResult(outValuesForChildren.get(i));
+                for(String temp : outValuesForChildren.get(i).keySet()){
+                    State.getInstance().getStateObject().addProperty(temp + "/" + (i + 1), outValuesForChildren.get(i).get(temp).toString());
+                }
+                //node.passResult(outValuesForChildren.get(i));
             }
 
             /* Execute the child node */
@@ -251,6 +290,22 @@ public class ParallelForStartNode extends Node {
         exec.shutdown();
 
         return true;
+    }
+
+    /**
+     *
+     * @param node Node for which the id's of the children are set
+     * @param id The id of the iteration
+     */
+    private void setIdOfChildren(Node node, int id){
+        if(node.getClass() == ParallelForEndNode.class){
+            return;
+        }
+
+        for(int j = 0; j < node.getChildren().size(); j++){
+            node.getChildren().get(j).setId(id);
+            setIdOfChildren(node.getChildren().get(j), id);
+        }
     }
 
     /**
