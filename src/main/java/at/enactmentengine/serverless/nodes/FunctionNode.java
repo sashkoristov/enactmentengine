@@ -412,12 +412,12 @@ public class FunctionNode extends Node {
 					continue;
 				}
 
-				// TODO why not do this?
-				// functionOutputs.put(name + "/" + data.getName(),
-				// jsonResult.get(data.getName()));
+				// TODO this easier solution seems to work as well; use this or change again?
+				 functionOutputs.put(name + "/" + data.getName(),
+				 jsonResult.get(data.getName()));
 
 				/* Parse according data type */
-				switch (data.getType()) {
+/*				switch (data.getType()) {
 					case "number":
 						Object number = jsonResult.get(data.getName()).getAsDouble();
 						functionOutputs.put(name + "/" + data.getName(), number);
@@ -438,7 +438,7 @@ public class FunctionNode extends Node {
 					default:
 						logger.error("Error while trying to parse key in function {}. Type: {}", name, data.getType());
 						break;
-				}
+				}*/
 			}
 			return true;
 
