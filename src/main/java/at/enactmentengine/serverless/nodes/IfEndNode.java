@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.object.State;
 import at.uibk.dps.afcl.functions.objects.DataOuts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,18 +64,20 @@ public class IfEndNode extends Node {
             /* Iterate over all data outputs specified in the workflow file */
             for (DataOuts data : dataOuts) {
 
-                /* Find the corresponding actual output of the if node */
-                for (Entry<String, Object> inputElement : this.ifResult.entrySet()) {
-                    outputValues.put(name + "/" + data.getName(), inputElement.getValue());
+                if(State.getInstance().getStateObject().get(data.getSource()) != null){
+                    String keyName = name + "/" + data.getName();
+                    State.getInstance().getStateObject().add(keyName, State.getInstance().stateObject.get(data.getSource()));
+                    outputValues.put(keyName, State.getInstance().stateObject.get(data.getSource()));
                 }
             }
         }
+
+        ifResult = outputValues;
 
         logger.info("Executing {} IfEndNode with output: {}", name, outputValues);
 
         /* Pass the output to all child nodes */
         for (Node node : children) {
-            node.passResult(outputValues);
             node.call();
         }
 

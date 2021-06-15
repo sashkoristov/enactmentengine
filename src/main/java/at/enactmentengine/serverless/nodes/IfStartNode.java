@@ -1,12 +1,15 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.object.State;
 import at.uibk.dps.afcl.functions.objects.ACondition;
 import at.uibk.dps.afcl.functions.objects.Condition;
 import at.uibk.dps.afcl.functions.objects.DataIns;
+import com.google.gson.JsonElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,15 +70,14 @@ public class IfStartNode extends Node {
             for (DataIns data : dataIns) {
 
                 /* Check if the actual input does not contains the specified input */
-                if (!dataValues.containsKey(data.getSource())) {
+                if (State.getInstance().getStateObject().get(data.getSource()) == null) {
                     throw new MissingInputDataException(
                             IfStartNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
                 } else {
-                    ifInputValues.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+                    State.getInstance().getStateObject().add(name + "/" + data.getName(), State.getInstance().getStateObject().get(data.getSource()));
                 }
             }
         }
-
 
         /* Keeps track whether the condition of th if statement is valid */
         boolean statementEvaluationValue = false;
@@ -109,7 +111,6 @@ public class IfStartNode extends Node {
         }
 
         /* Pass data to the according branch and execute */
-        node.passResult(ifInputValues);
         node.call();
 
         return true;
@@ -201,12 +202,9 @@ public class IfStartNode extends Node {
         }
         try {
             if (conditionName != null) {
-                Object condition = ifInputValues.get(conditionName);
-                if (condition instanceof Double){
-                    conditionData = ((Double) condition).intValue();
-                } else {
-                    conditionData = (Integer) condition;
-                }
+                String condition = State.getInstance().getStateObject().get(conditionName).toString().replaceAll("\"", "");
+
+                conditionData = NumberFormat.getInstance().parse(condition).intValue();
             }
         } catch (Exception e) {
             throw new MissingInputDataException(
