@@ -74,7 +74,7 @@ public class Simulator {
 
         /* Measure start time of the workflow execution */
         long start = System.currentTimeMillis();
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, null, -1, start, Type.SIM);
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, -1, -1, start, Type.SIM);
 
         /* Disable hostname verification (enable OpenWhisk connections) */
         final Properties props = System.getProperties();
@@ -109,7 +109,7 @@ public class Simulator {
                 workflowOutput = ex.simulateWorkflow(this.workflowInput);
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
-                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, null, System.currentTimeMillis() - start, false, null, -1, start, Type.SIM);
+                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, null, System.currentTimeMillis() - start, false, -1, -1, start, Type.SIM);
                 return null;
             }
 
@@ -121,7 +121,7 @@ public class Simulator {
             Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
 
             LOGGER.info("Simulation of workflow takes {}ms", simWorkflowDuration);
-            MongoDBAccess.saveLog(event, null, null, null, null, simWorkflowDuration, success, null, -1, start, Type.SIM);
+            MongoDBAccess.saveLog(event, null, null, null, null, simWorkflowDuration, success, -1, -1, start, Type.SIM);
         }
 
         return workflowOutput;

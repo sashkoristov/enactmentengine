@@ -56,6 +56,10 @@ public class FunctionNode extends Node {
      */
     private int loopCounter = -1;
     /**
+     * The end of a parallelFor loop.
+     */
+    private int maxLoopCounter = -1;
+    /**
      * The execution id of the workflow (needed to log the execution).
      */
     private int executionId;
@@ -84,11 +88,6 @@ public class FunctionNode extends Node {
      * Flag if function was successful or not.
      */
     private boolean success;
-
-    /**
-     * The memory size of the function.
-     */
-    private Integer memorySize = null; //TODO
 
     /**
      * Constructor for a function node.
@@ -203,6 +202,7 @@ public class FunctionNode extends Node {
             node.passResult(functionOutputs);
             if (node instanceof FunctionNode && loopCounter != -1) {
                 ((FunctionNode) node).setLoopCounter(loopCounter);
+                ((FunctionNode) node).setMaxLoopCounter(maxLoopCounter);
             }
             node.call();
         }
@@ -324,8 +324,6 @@ public class FunctionNode extends Node {
             pairResult = gateway.invokeFunction(resourceLink, functionInputs);
             long end = System.currentTimeMillis();
             resultString = pairResult.getResult();
-//            memorySize = gateway.getAssignedMemory(resourceLink);
-            memorySize = -1;
             /*
              * Read the actual function outputs by their key and store them in
              * functionOutputs
@@ -338,7 +336,7 @@ public class FunctionNode extends Node {
             } else {
                 event = Event.FUNCTION_FAILED;
             }
-            MongoDBAccess.saveLog(event, resourceLink, getName(), type, resultString, pairResult.getRTT(), success, memorySize, loopCounter, start, Type.EXEC);
+            MongoDBAccess.saveLog(event, resourceLink, getName(), type, resultString, pairResult.getRTT(), success, loopCounter, maxLoopCounter, start, Type.EXEC);
         }
         return pairResult;
     }
@@ -457,6 +455,14 @@ public class FunctionNode extends Node {
 
     public void setLoopCounter(int loopCounter) {
         this.loopCounter = loopCounter;
+    }
+
+    public int getMaxLoopCounter() {
+        return maxLoopCounter;
+    }
+
+    public void setMaxLoopCounter(int maxLoopCounter) {
+        this.maxLoopCounter = maxLoopCounter;
     }
 
     /**

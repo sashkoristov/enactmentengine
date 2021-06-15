@@ -224,6 +224,7 @@ public class ParallelForStartNode extends Node {
 
             Node node = children.get(i);
             setLoopCounter(node, i);
+            setMaxLoopCounter(node, counterEnd - 1);
 //            for (int j = 0; j < node.getChildren().size(); j++) {
 //                setLoopCounter(node.children.get(j), i);
 //            }
@@ -259,6 +260,20 @@ public class ParallelForStartNode extends Node {
             ((FunctionNode) node).setLoopCounter(i);
         } else if (node instanceof SimulationNode) {
             ((SimulationNode) node).setLoopCounter(i);
+        }
+    }
+
+    /**
+     * If the node is of type FunctionNode or SimulationNode, the maxLoopCounter will be set.
+     *
+     * @param node the node to set the loopCounter
+     * @param i    the current loopCounter
+     */
+    private void setMaxLoopCounter(Node node, int i) {
+        if (node instanceof FunctionNode) {
+            ((FunctionNode) node).setMaxLoopCounter(i);
+        } else if (node instanceof SimulationNode) {
+            ((SimulationNode) node).setMaxLoopCounter(i);
         }
     }
 
