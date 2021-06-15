@@ -99,8 +99,6 @@ public class ExecutableWorkflow {
             }
         }
 
-        logger.info("State before executing: " + state);
-
         /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 
