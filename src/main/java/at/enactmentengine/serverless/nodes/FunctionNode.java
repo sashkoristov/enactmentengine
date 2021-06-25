@@ -52,14 +52,6 @@ public class FunctionNode extends Node {
      */
     private static Gateway gateway = new Gateway(Utils.PATH_TO_CREDENTIALS);
     /**
-     * The number of execution in a parallelFor loop.
-     */
-    private int loopCounter = -1;
-    /**
-     * The end of a parallelFor loop.
-     */
-    private int maxLoopCounter = -1;
-    /**
      * The execution id of the workflow (needed to log the execution).
      */
     private int executionId;
@@ -200,9 +192,9 @@ public class FunctionNode extends Node {
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(functionOutputs);
-            if (node instanceof FunctionNode && loopCounter != -1) {
-                ((FunctionNode) node).setLoopCounter(loopCounter);
-                ((FunctionNode) node).setMaxLoopCounter(maxLoopCounter);
+            if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
             }
             node.call();
         }
@@ -447,22 +439,6 @@ public class FunctionNode extends Node {
     @Override
     public Map<String, Object> getResult() {
         return result;
-    }
-
-    public int getLoopCounter() {
-        return loopCounter;
-    }
-
-    public void setLoopCounter(int loopCounter) {
-        this.loopCounter = loopCounter;
-    }
-
-    public int getMaxLoopCounter() {
-        return maxLoopCounter;
-    }
-
-    public void setMaxLoopCounter(int maxLoopCounter) {
-        this.maxLoopCounter = maxLoopCounter;
     }
 
     /**

@@ -18,10 +18,10 @@ import java.util.Map;
  * @author markusmoosbrugger, jakobnoeckl
  */
 public class SwitchStartNode extends Node {
+    static final Logger logger = LoggerFactory.getLogger(SwitchStartNode.class);
     private List<DataIns> dataIns;
     private List<Case> cases;
     private DataEval dataEval;
-    static final Logger logger = LoggerFactory.getLogger(SwitchStartNode.class);
 
     public SwitchStartNode(String name, List<DataIns> dataIns, DataEval dataEval, List<Case> cases) {
         super(name, "");
@@ -59,11 +59,19 @@ public class SwitchStartNode extends Node {
             if (caseMatches(cases.get(i).getValue(), switchValue)) {
                 logger.info("Switch case {} fulfilled with value {}", cases.get(i).getValue(), switchValue);
                 children.get(i).passResult(switchInputValues);
+                if (getLoopCounter() != -1) {
+                    children.get(i).setLoopCounter(loopCounter);
+                    children.get(i).setMaxLoopCounter(maxLoopCounter);
+                }
                 children.get(i).call();
                 return true;
             } else if (children.size() > cases.size()) {
                 logger.info("Switch default case is executed.");
                 children.get(children.size() - 1).passResult(switchInputValues);
+                if (getLoopCounter() != -1) {
+                    children.get(children.size() - 1).setLoopCounter(loopCounter);
+                    children.get(children.size() - 1).setMaxLoopCounter(maxLoopCounter);
+                }
                 children.get(children.size() - 1).call();
                 return true;
             }

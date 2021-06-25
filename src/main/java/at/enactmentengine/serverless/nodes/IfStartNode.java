@@ -110,6 +110,10 @@ public class IfStartNode extends Node {
 
         /* Pass data to the according branch and execute */
         node.passResult(ifInputValues);
+        if (getLoopCounter() != -1) {
+            node.setLoopCounter(loopCounter);
+            node.setMaxLoopCounter(maxLoopCounter);
+        }
         node.call();
 
         return true;

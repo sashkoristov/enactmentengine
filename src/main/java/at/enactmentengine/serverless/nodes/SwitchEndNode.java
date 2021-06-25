@@ -75,6 +75,10 @@ public class SwitchEndNode extends Node {
         }
         for (Node node : children) {
             node.passResult(outputValues);
+            if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
+            }
             node.call();
         }
         return true;

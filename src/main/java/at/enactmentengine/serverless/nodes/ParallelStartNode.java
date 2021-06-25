@@ -1,7 +1,7 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.uibk.dps.afcl.functions.objects.DataIns;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,16 +25,14 @@ public class ParallelStartNode extends Node {
      * Logger for the parallel-start node.
      */
     static final Logger logger = LoggerFactory.getLogger(ParallelStartNode.class);
-
-    /**
-     * The input defined within the workflow file.
-     */
-    private List<DataIns> definedInput;
-
     /**
      * The maximum number of threads running in parallel
      */
     private static final int MAX_NUMBER_THREADS = 1000;
+    /**
+     * The input defined within the workflow file.
+     */
+    private List<DataIns> definedInput;
 
     /**
      * Default constructor for the parallel-start node.
@@ -81,6 +79,10 @@ public class ParallelStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
         for (Node node : children) {
             node.passResult(outValues);
+            if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
+            }
             futures.add(exec.submit(node));
         }
 

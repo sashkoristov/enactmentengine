@@ -39,6 +39,16 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
     protected Map<String, Object> dataValues;
 
     /**
+     * The number of execution in a parallelFor loop.
+     */
+    protected int loopCounter = -1;
+
+    /**
+     * The end of a parallelFor loop.
+     */
+    protected int maxLoopCounter = -1;
+
+    /**
      * Default constructor for a node.
      *
      * @param name of the node.
@@ -48,8 +58,8 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         super();
         this.name = name;
         this.type = type;
-        this.parents = new ArrayList<>();
-        this.children = new ArrayList<>();
+        parents = new ArrayList<>();
+        children = new ArrayList<>();
     }
 
     /**
@@ -101,11 +111,25 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         this.dataValues = dataValues;
     }
 
+    public int getLoopCounter() {
+        return loopCounter;
+    }
+
+    public void setLoopCounter(int loopCounter) {
+        this.loopCounter = loopCounter;
+    }
+
+    public int getMaxLoopCounter() { return maxLoopCounter; }
+
+    public void setMaxLoopCounter(int maxLoopCounter) { this.maxLoopCounter = maxLoopCounter; }
+
     /**
      * Clone the whole node.
      *
      * @param endNode end node.
+     *
      * @return cloned node.
+     *
      * @throws CloneNotSupportedException on failure.
      */
     public Node clone(Node endNode) throws CloneNotSupportedException {
