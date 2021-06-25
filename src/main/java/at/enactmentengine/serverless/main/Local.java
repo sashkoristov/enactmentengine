@@ -1,10 +1,13 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.uibk.dps.databases.MongoDBAccess;
 import ch.qos.logback.classic.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -35,6 +38,12 @@ public class Local {
         /* Check for inputs and execute workflow */
         Map<String, Object> result = null;
         try {
+            List<String> parameterList = Arrays.asList(args);
+            if (parameterList.contains("--simulate")) {
+                SimulationParameters.USE_COLD_START = parameterList.contains("--cold-start");
+                SimulationParameters.USE_AUTHENTICATION = parameterList.contains("--authenticate");
+            }
+
             if (args.length > 2 && args[2].equals("--simulate")) {
                 result = simulator.simulateWorkflow(args[0], args[1], -1);
             } else if (args.length > 1 && args[1].equals("--simulate")) {

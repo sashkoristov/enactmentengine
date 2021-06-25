@@ -1,8 +1,10 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.Simulation.SimulationModel;
 import at.enactmentengine.serverless.exception.AlternativeStrategyException;
 import at.enactmentengine.serverless.exception.NoDatabaseEntryForIdException;
 import at.enactmentengine.serverless.exception.NotYetInvokedException;
+import at.enactmentengine.serverless.exception.RegionDetectionException;
 import at.enactmentengine.serverless.object.TripleResult;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.afcl.functions.objects.DataIns;
@@ -17,6 +19,7 @@ import at.uibk.dps.exception.LatestStartingTimeException;
 import at.uibk.dps.exception.MaxRunningTimeException;
 import at.uibk.dps.function.Function;
 import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Provider;
 import at.uibk.dps.util.Type;
 import com.google.gson.JsonParser;
 import org.slf4j.Logger;
@@ -43,16 +46,6 @@ public class SimulationNode extends Node {
      * The number of executed functions.
      */
     private static int counter = 0;
-
-    /**
-     * The number of execution in a parallelFor loop.
-     */
-    private int loopCounter = -1;
-
-    /**
-     * The end of a parallelFor loop.
-     */
-    private int maxLoopCounter = -1;
 
     /**
      * The execution id of the workflow (needed to log the execution).
@@ -113,6 +106,31 @@ public class SimulationNode extends Node {
         if (output == null) {
             this.output = new ArrayList<>();
         }
+    }
+
+    /**
+     * Extracts the memory size, region and function name of the deployment string.
+     *
+     * @param deployment to extract the values from
+     *
+     * @return a list containing 4 elements, the first is the memory size, the second the region, the third the provider
+     * and the fourth the function name.
+     */
+    private static List<String> extractValuesFromDeployment(String deployment) {
+        List<String> result = new ArrayList<>();
+        String[] parts = deployment.split("_");
+        result.add(parts[parts.length - 1]);
+        result.add(parts[parts.length - 2]);
+        result.add(parts[parts.length - 3]);
+        // since the function name could contain underscores as well, we have to concat all remaining elements
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < parts.length - 3; i++) {
+            stringBuilder.append(parts[i]).append("_");
+        }
+        stringBuilder.setLength(stringBuilder.length() - 1);
+        result.add(stringBuilder.toString());
+
+        return result;
     }
 
     /**
@@ -198,9 +216,9 @@ public class SimulationNode extends Node {
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(result);
-            if (node instanceof SimulationNode && loopCounter != -1) {
-                ((SimulationNode) node).setLoopCounter(loopCounter);
-                ((SimulationNode) node).setMaxLoopCounter(maxLoopCounter);
+            if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
             }
             node.call();
         }
@@ -475,27 +493,34 @@ public class SimulationNode extends Node {
     }
 
     /**
-     * Extracts the memory size, region and function name of the deployment string.
+     * Checks if the functionDeployment has the same memory-size, provider and region.
      *
-     * @param deployment to extract the values from
+     * @param functionDeployment to get the parameters
+     * @param memorySize         of the simulationDeployment
+     * @param provider           of the simulationDeployment
+     * @param region             of the simulationDeployment
      *
-     * @return a list containing 3 elements, the first is the memory size, the second the region and the third the
-     * function name.
+     * @return true if they are the same, false otherwise
      */
-    private List<String> extractValuesFromDeployment(String deployment) {
-        List<String> result = new ArrayList<>();
-        String[] parts = deployment.split("_");
-        result.add(parts[parts.length - 1]);
-        result.add(parts[parts.length - 2]);
-        // since the function name could contain underscores as well, we have to concat all remaining elements
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < parts.length - 3; i++) {
-            stringBuilder.append(parts[i]).append("_");
-        }
-        stringBuilder.setLength(stringBuilder.length() - 1);
-        result.add(stringBuilder.toString());
+    private boolean deploymentsAreTheSame(ResultSet functionDeployment, int memorySize, Provider provider, String region) {
+        // TODO also check for same name in DB if different ARN??
+        String functionId = null;
+        int fdMemorySize = 0;
+        Provider fdProvider = null;
+        String fdRegion = null;
 
-        return result;
+        try {
+            functionId = functionDeployment.getString("KMS_Arn");
+            fdMemorySize = functionDeployment.getInt("memorySize");
+            fdProvider = Utils.detectProvider(functionId);
+            fdRegion = Utils.detectRegion(functionId);
+        } catch (SQLException | RegionDetectionException throwables) {
+            throwables.printStackTrace();
+        }
+        if (fdProvider != null && fdRegion != null && fdMemorySize != 0) {
+            return fdMemorySize == memorySize && fdProvider == provider && fdRegion.equals(region);
+        }
+        return false;
     }
 
     /**
@@ -508,23 +533,31 @@ public class SimulationNode extends Node {
      */
     private Long calculateRoundTripTime(ResultSet entry, Boolean success) {
         //TODO
-
-        // if the deployment is null, simulate in the same region and with the same memory
-        if (deployment == null) {
-            // simply read from the values from the DB without calculating them again
-        } else {
-            List<String> elements = extractValuesFromDeployment(deployment);
-            int memory = Integer.parseInt(elements.get(0));
-            String region = elements.get(1);
-            String functionName = elements.get(2);
-        }
-
         long rtt = 0;
-        try {
-            rtt = (long) entry.getDouble("avgRTT");
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        int averageLoopCounter = 0;
+        List<String> elements = extractValuesFromDeployment(deployment);
+        int memory = Integer.parseInt(elements.get(0));
+        String region = elements.get(1);
+        Provider provider = Provider.valueOf(elements.get(2));
+        String functionName = elements.get(3);
+
+        // if the deployment is null or deployment is already saved in the MD-DB,
+        // simulate in the same region and with the same memory
+        if (deployment == null || deploymentsAreTheSame(entry, memory, provider, region)) {
+            // simply read from the values from the DB without calculating them again
+            // TODO handle averageLoopCounter
+            try {
+                rtt = (long) entry.getDouble("avgRTT");
+                averageLoopCounter = entry.getInt("avgLoopCounter");
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+        } else {
+            // simulate
+            SimulationModel model = new SimulationModel(entry, provider, region, memory, loopCounter);
+            rtt = model.simulateRoundTripTime();
         }
+
         if (success) {
             // calculate the time as usual
             Random r = new Random();
@@ -682,18 +715,6 @@ public class SimulationNode extends Node {
         Boolean success = simulateOutcome(entry);
         return new TripleResult<Long, Map<String, Object>, Boolean>(calculateRoundTripTime(entry, success), getFunctionOutput(), success);
     }
-
-    public int getLoopCounter() {
-        return loopCounter;
-    }
-
-    public void setLoopCounter(int loopCounter) {
-        this.loopCounter = loopCounter;
-    }
-
-    public int getMaxLoopCounter() { return maxLoopCounter; }
-
-    public void setMaxLoopCounter(int maxLoopCounter) { this.maxLoopCounter = maxLoopCounter; }
 
     /**
      * Checks if the current node is within a parallelFor.
