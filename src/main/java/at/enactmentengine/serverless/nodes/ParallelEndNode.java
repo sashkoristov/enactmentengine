@@ -89,7 +89,7 @@ public class ParallelEndNode extends Node {
                 /* Check if the result contains the specified source */
                 if (state.get(data.getSource()) != null) {
 
-                    outputValues.put(key, parallelResult.get(data.getSource()));
+                    outputValues.put(key, state.get(data.getSource()));
                     state.add(key, new Gson().fromJson(state.get(data.getSource()).toString(), JsonElement.class));
                     continue;
                 }
@@ -98,8 +98,13 @@ public class ParallelEndNode extends Node {
                 // @Todo: check if output of parallel sections has to be dealt with
                 outputValues.putAll(checkCollection(data, key));
             }
+
+            parallelResult = outputValues;
+
             logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues);
 
+        } else {
+            parallelResult = parents.get(0).getResult();
         }
 
         /* Pass the results to all children */
