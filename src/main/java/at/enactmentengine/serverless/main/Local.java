@@ -39,9 +39,9 @@ public class Local {
         Map<String, Object> result = null;
         try {
             List<String> parameterList = Arrays.asList(args);
-            if (parameterList.contains("--simulate")) {
-                SimulationParameters.USE_COLD_START = parameterList.contains("--cold-start");
-                SimulationParameters.USE_AUTHENTICATION = parameterList.contains("--authenticate");
+            boolean simulate = parameterList.contains("--simulate");
+            if (simulate) {
+                SimulationParameters.IGNORE_FT = parameterList.contains("--ignore-FT") || parameterList.contains("--ignore-ft");
             }
 
             if (args.length > 2 && args[2].equals("--simulate")) {
@@ -55,7 +55,9 @@ public class Local {
             } else {
                 logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json]");
             }
-            logger.info("Result: {}", result);
+            if (!simulate) {
+                logger.info("Result: {}", result);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

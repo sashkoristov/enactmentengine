@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.main;
 
+import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
@@ -109,19 +110,17 @@ public class Simulator {
                 workflowOutput = ex.simulateWorkflow(this.workflowInput);
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
-                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, null, System.currentTimeMillis() - start, false, -1, -1, start, Type.SIM);
+                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, null, System.currentTimeMillis() - start,
+                        SimulationParameters.workflowCost, false, -1, -1, start, Type.SIM);
                 return null;
             }
 
-            /* Measure end time of the workflow execution */
-            long end = System.currentTimeMillis();
-            LOGGER.info("Simulation took {}ms.", (end - start));
             long simWorkflowDuration = MongoDBAccess.getLastEndDateOverall() - start;
             boolean success = ex.getEndNode().getResult() != null;
             Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
 
-            LOGGER.info("Simulation of workflow takes {}ms", simWorkflowDuration);
-            MongoDBAccess.saveLog(event, null, null, null, null, simWorkflowDuration, success, -1, -1, start, Type.SIM);
+            LOGGER.info("Simulation of workflow takes {}ms with a cost of {}.", simWorkflowDuration, SimulationParameters.workflowCost);
+            MongoDBAccess.saveLog(event, null, null, null, null, simWorkflowDuration, SimulationParameters.workflowCost, success, -1, -1, start, Type.SIM);
         }
 
         return workflowOutput;
