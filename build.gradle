@@ -30,7 +30,7 @@ configurations.all {
 }
 
 apply plugin: 'java'
-apply plugin: 'maven'
+apply plugin: 'maven-publish'
 apply plugin: 'application'
 apply plugin: 'eclipse'
 apply plugin: 'eclipse-wtp'
@@ -60,25 +60,25 @@ dependencies {
 //    implementation 'com.github.stefanpedratscher:AFCLCore:v0.0.1'
     implementation 'com.github.ApolloCEC:socketUtils:-SNAPSHOT'
 
-    testCompile group: 'junit', name: 'junit', version: '4.+'
-    compile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.30.1'
-    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.8.5'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.8.5'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.8.5'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.8.5'
-    compile group: 'com.google.code.gson', name: 'gson', version: '2.8.5'
-    compile group: 'com.github.docker-java', name: 'docker-java', version: '3.0.14'
-    compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.4'
-    compile group: 'javax.activation', name: 'activation', version: '1.1.1'
+    testImplementation group: 'junit', name: 'junit', version: '4.+'
+    implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.30.1'
+    implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.8.5'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.8.5'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.8.5'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.8.5'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.8.5'
+    implementation group: 'com.github.docker-java', name: 'docker-java', version: '3.0.14'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.4'
+    implementation group: 'javax.activation', name: 'activation', version: '1.1.1'
 //    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.6.1'
-    compile group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.1.0'
-    compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.327'
-    compile group: 'com.amazonaws', name: 'aws-java-sdk-lambda', version: '1.11.327'
-    compile group: 'com.cloudant', name: 'cloudant-client', version: '2.17.0'
+    implementation group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.1.0'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.327'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-lambda', version: '1.11.327'
+    implementation group: 'com.cloudant', name: 'cloudant-client', version: '2.17.0'
 //    compile group: 'org.mongodb', name: 'mongo-java-driver', version: '3.12.8'
     //compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
-    testCompile group: 'junit', name: 'junit', version: '3.8.1'
-    compile fileTree(dir: 'externalJars', include: ['FTjFaaS.jar'])
+    testImplementation group: 'junit', name: 'junit', version: '3.8.1'
+    implementation fileTree(dir: 'externalJars', include: ['FTjFaaS.jar'])
     implementation fileTree(dir: 'externalJars', include: ['afclCore.jar'])
 }
 
@@ -90,9 +90,9 @@ dependencies {
 //}
 
 shadowJar {
-    baseName = 'enactment-engine-all'
-    classifier = null
-    version = null
+    archiveBaseName = 'enactment-engine-all'
+    archiveClassifier = null
+    archiveVersion = null
 }
 
 task standalone {
