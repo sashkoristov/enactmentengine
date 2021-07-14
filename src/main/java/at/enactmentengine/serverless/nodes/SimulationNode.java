@@ -565,6 +565,16 @@ public class SimulationNode extends Node {
         Provider provider = Provider.valueOf(elements.get(2));
         String functionName = elements.get(3);
 
+        ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
+        int concurrencyOverhead = 0;
+        try {
+            providerEntry.next();
+            concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+
+
         // if the deployment is null or deployment is already saved in the MD-DB,
         // simulate in the same region and with the same memory
         if (deployment == null || deploymentsAreTheSame(entry, memory, provider, region)) {
@@ -574,7 +584,13 @@ public class SimulationNode extends Node {
                 double cost = entry.getDouble("avgCost");
                 SimulationParameters.workflowCost += cost;
                 averageLoopCounter = entry.getInt("avgLoopCounter");
-                // TODO handle averageLoopCounter
+                if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
+                    rtt -= (long) concurrencyOverhead * averageLoopCounter;
+                }
+                if (loopCounter != -1 && concurrencyOverhead != 0) {
+                    rtt += (long) loopCounter * concurrencyOverhead;
+                }
+
                 result = new PairResult<>(rtt, cost);
             } catch (SQLException throwables) {
                 throwables.printStackTrace();
@@ -617,7 +633,13 @@ public class SimulationNode extends Node {
                         double cost = similarResult.getDouble("avgCost");
                         SimulationParameters.workflowCost += cost;
                         averageLoopCounter = similarResult.getInt("avgLoopCounter");
-                        // TODO handle averageLoopCounter
+                        if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
+                            rtt -= (long) concurrencyOverhead * averageLoopCounter;
+                        }
+                        if (loopCounter != -1 && concurrencyOverhead != 0) {
+                            rtt += (long) loopCounter * concurrencyOverhead;
+                        }
+
                         result = new PairResult<>(rtt, cost);
                     } else if (sameMemory != null) {
                         similar = false;

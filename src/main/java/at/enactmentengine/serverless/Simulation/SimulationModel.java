@@ -43,6 +43,11 @@ public class SimulationModel {
     private int memorySize;
 
     /**
+     * The memory of the functionDeployment.
+     */
+    private int fdMemorySize;
+
+    /**
      * The loopCounter of the simulationNode.
      */
     private int loopCounter;
@@ -57,6 +62,7 @@ public class SimulationModel {
         try {
             avgRTT = (long) functionDeployment.getDouble("avgRTT");
             avgLoopCounter = functionDeployment.getInt("avgLoopCounter");
+            fdMemorySize = functionDeployment.getInt("memorySize");
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -103,13 +109,19 @@ public class SimulationModel {
         int networkOverhead = 0;
         int handshake = 0;
         int authenticationOverhead = 0;
+        int concurrencyOverhead = 0;
 
         try {
             faasOverhead = mdProviderEntry.getInt("faasSystemOverheadms");
             cryptoOverhead = mdProviderEntry.getInt("cryptoOverheadms");
             networkOverhead = mdRegionEntry.getInt("networkOverheadms");
+            concurrencyOverhead = mdProviderEntry.getInt("concurrencyOverheadms");
         } catch (SQLException throwables) {
             throwables.printStackTrace();
+        }
+
+        if (avgLoopCounter != 0 && concurrencyOverhead != 0) {
+            concurrencyOverhead *= avgLoopCounter;
         }
 
         // TODO other providers?
@@ -118,8 +130,6 @@ public class SimulationModel {
 
             if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
                 authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
-                // TODO add x_cs, CSO, x_a, CO
-                return avgRTT - networkOverhead - authenticationOverhead - faasOverhead;
             } else {
                 // TODO throw exception
                 return -1;
@@ -129,8 +139,8 @@ public class SimulationModel {
         }
 
         if (faasOverhead != 0 && networkOverhead != 0) {
-            // TODO add CO
-            return avgRTT - networkOverhead - faasOverhead;
+            // TODO add x_cs, CSO, x_a
+            return avgRTT - networkOverhead - faasOverhead - authenticationOverhead - concurrencyOverhead;
         } else {
             // TODO throw exception
             return -1;
@@ -159,17 +169,23 @@ public class SimulationModel {
         int faasOverhead = 0;
         int cryptoOverhead = 0;
         int networkOverhead = 0;
+        int concurrencyOverhead = 0;
 
         try {
             faasOverhead = providerEntry.getInt("faasSystemOverheadms");
             cryptoOverhead = providerEntry.getInt("cryptoOverheadms");
             networkOverhead = regionEntry.getInt("networkOverheadms");
+            concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
 
         if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
             long rtt = executionTime + networkOverhead + faasOverhead;
+            // add the concurrencyOverhead depending on the loopCounter
+            if (loopCounter != -1 && concurrencyOverhead != 0) {
+                rtt += (long) loopCounter * concurrencyOverhead;
+            }
             //TODO add x_cs, CSO, x_a, CO
             //TODO check if the current function is invoked the first time or if new ones have to be created in parallelFor
 
@@ -186,10 +202,6 @@ public class SimulationModel {
 //            } else if (provider == Provider.GOOGLE) {
 //                handshake = 1;
 //            }
-
-            if (loopCounter != -1) {
-                //TODO read CO (=d) from DB and multiply it with the loopCounter
-            }
 
             return rtt;
         } else {
@@ -219,12 +231,20 @@ public class SimulationModel {
         from avgRTT subtract the values as in formula
         to remainder add the values as in formula
          */
-        long executionTime = getRawExecutionTime();
-        executionTime = applyDistribution(executionTime, success);
+        long rtt = 0;
+        double cost = 0;
+        // TODO check if memory is the same
+        if (memorySize == fdMemorySize) {
+            long executionTime = getRawExecutionTime();
+            executionTime = applyDistribution(executionTime, success);
 
-        double cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
-        SimulationParameters.workflowCost += cost;
-        long rtt = addOverheads(executionTime);
+            cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
+            SimulationParameters.workflowCost += cost;
+            rtt = addOverheads(executionTime);
+        } else {
+            // simulate different memory
+        }
+
 
         return new PairResult<>(rtt, cost);
     }
@@ -283,5 +303,13 @@ public class SimulationModel {
 
     public void setLoopCounter(int loopCounter) {
         this.loopCounter = loopCounter;
+    }
+
+    public int getFdMemorySize() {
+        return fdMemorySize;
+    }
+
+    public void setFdMemorySize(int fdMemorySize) {
+        this.fdMemorySize = fdMemorySize;
     }
 }
