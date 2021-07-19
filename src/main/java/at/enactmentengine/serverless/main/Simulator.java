@@ -20,6 +20,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+/**
+ * Main class for the simulation part of the enactment engine.
+ *
+ * based on {@link Executor}, modified by @author mikahautz
+ */
 public class Simulator {
 
     /**

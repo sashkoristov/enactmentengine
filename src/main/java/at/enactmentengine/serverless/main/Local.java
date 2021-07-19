@@ -3,6 +3,7 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.uibk.dps.databases.MongoDBAccess;
 import ch.qos.logback.classic.Level;
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,8 @@ import java.util.Map;
  * Main class of enactment engine which specifies the input file and starts the workflow on the machine on which it gets
  * started.
  * <p>
- * based on @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher
+ * based on @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher extended again as a part of the
+ * simulator by @author mikahautz
  */
 public class Local {
 
@@ -22,6 +24,11 @@ public class Local {
      * Logger for the local execution.
      */
     static final Logger logger = LoggerFactory.getLogger(Local.class);
+
+    /**
+     * Indicates whether the connection to the DB should be closed at the end.
+     */
+    private static boolean close = true;
 
     /**
      * Starting point of the local execution.
@@ -62,8 +69,24 @@ public class Local {
             e.printStackTrace();
         } finally {
             MongoDBAccess.addAllEntries();
-//        MariaDBAccess.doSth();
-            MongoDBAccess.close();
+            if (close) {
+                MongoDBAccess.close();
+            }
         }
+    }
+
+    /**
+     * Executes the main method and returns a list of all logs.
+     *
+     * @param args given arguments
+     *
+     * @return a list of all logs
+     */
+    public static List<Document> executeAndGetLogs(String[] args) {
+        close = false;
+        main(args);
+        List<Document> logs = MongoDBAccess.getAllEntries();
+        MongoDBAccess.close();
+        return logs;
     }
 }
