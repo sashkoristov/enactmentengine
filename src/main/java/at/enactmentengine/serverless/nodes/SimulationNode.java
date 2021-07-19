@@ -257,7 +257,7 @@ public class SimulationNode extends Node {
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
     private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) throws NoDatabaseEntryForIdException,
-            NotYetInvokedException, InvokationFailureException, LatestFinishingTimeException, LatestStartingTimeException, MaxRunningTimeException {
+            NotYetInvokedException, InvokationFailureException, LatestFinishingTimeException, LatestStartingTimeException, MaxRunningTimeException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
         // TODO simulate here
         String resourceLink = functionToSimulate.getUrl();
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result = null;
@@ -267,12 +267,7 @@ public class SimulationNode extends Node {
             // simulate with FT
             logger.info("Simulating function with fault tolerance...");
             // TODO create separate class?
-            try {
-                result = simulateFunctionFT(functionToSimulate);
-            } catch (LatestStartingTimeException | InvokationFailureException | LatestFinishingTimeException | MaxRunningTimeException e) {
-                e.printStackTrace();
-                throw e;
-            }
+            result = simulateFunctionFT(functionToSimulate);
 
         } else {
             long startTime = getStartingTime();
@@ -301,7 +296,7 @@ public class SimulationNode extends Node {
      * @throws LatestFinishingTimeException on latest finish time exceeded
      * @throws MaxRunningTimeException      on maximum runtime exceeded
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException, NoDatabaseEntryForIdException, NotYetInvokedException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException, NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> quadrupleResult;
 
         if (function != null) {
@@ -343,7 +338,7 @@ public class SimulationNode extends Node {
                     }
                     return quadrupleResult;
                 } else {
-                    throw new InvokationFailureException("Invocation has failed alter entire alternative strategy");
+                    throw new InvokationFailureException("Invocation has failed after entire alternative strategy");
                 }
             } else {
                 // no constraints. Just invoke in current thread. (we do not need to cancel)
@@ -367,7 +362,7 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFT(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFT(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
         long startTime = getStartingTime();
         String resourceLink = function.getUrl();
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink);
@@ -398,7 +393,7 @@ public class SimulationNode extends Node {
                     try {
                         // AlternativeStrategy has correct Result
                         return simulateAlternativeStrategy(function);
-                    } catch (AlternativeStrategyException e) {
+                    } catch (AlternativeStrategyException | at.uibk.dps.exceptions.RegionDetectionException e) {
                         return new QuadrupleResult<>(null, null, null, false);
                     }
                 } else {
@@ -425,7 +420,7 @@ public class SimulationNode extends Node {
      *
      * @throws Exception if the alternativeStrategies have been executed without success
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, AlternativeStrategyException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, AlternativeStrategyException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
 
         if (function.getFTSettings().getAltStrategy() != null) {
             int i = 0;
@@ -504,21 +499,18 @@ public class SimulationNode extends Node {
      *
      * @return true if they are the same, false otherwise
      */
-    private boolean deploymentsAreTheSame(ResultSet functionDeployment, int memorySize, Provider provider, String region) {
+    private boolean deploymentsAreTheSame(ResultSet functionDeployment, int memorySize, Provider provider, String region) throws SQLException, RegionDetectionException {
         // TODO also check for same name in DB if different ARN??
         String functionId = null;
         int fdMemorySize = 0;
         Provider fdProvider = null;
         String fdRegion = null;
 
-        try {
-            functionId = functionDeployment.getString("KMS_Arn");
-            fdMemorySize = functionDeployment.getInt("memorySize");
-            fdProvider = Utils.detectProvider(functionId);
-            fdRegion = Utils.detectRegion(functionId);
-        } catch (SQLException | RegionDetectionException throwables) {
-            throwables.printStackTrace();
-        }
+        functionId = functionDeployment.getString("KMS_Arn");
+        fdMemorySize = functionDeployment.getInt("memorySize");
+        fdProvider = Utils.detectProvider(functionId);
+        fdRegion = Utils.detectRegion(functionId);
+
         if (fdProvider != null && fdRegion != null && fdMemorySize != 0) {
             return fdMemorySize == memorySize && fdProvider == provider && fdRegion.equals(region);
         }
@@ -536,14 +528,11 @@ public class SimulationNode extends Node {
      *
      * @return entries with the same functionImplementationId
      */
-    private ResultSet sameImplementationStored(ResultSet functionDeployment, int memorySize, Provider provider, String region) {
+    private ResultSet sameImplementationStored(ResultSet functionDeployment, int memorySize, Provider provider, String region) throws SQLException {
         ResultSet entries = null;
-        try {
-            int functionImplementationId = functionDeployment.getInt("functionImplementation_id");
-            entries = MariaDBAccess.getDeploymentsWithImplementationId(functionImplementationId);
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
+        int functionImplementationId = functionDeployment.getInt("functionImplementation_id");
+        entries = MariaDBAccess.getDeploymentsWithImplementationId(functionImplementationId);
+
         return entries;
     }
 
@@ -555,101 +544,117 @@ public class SimulationNode extends Node {
      *
      * @return the RTT in ms
      */
-    private PairResult<Long, Double> calculateRoundTripTime(ResultSet entry, Boolean success) {
+    private PairResult<Long, Double> calculateRoundTripTime(ResultSet entry, Boolean success) throws SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
         //TODO
         PairResult<Long, Double> result = null;
         int averageLoopCounter = 0;
-        List<String> elements = extractValuesFromDeployment(deployment);
-        int memory = Integer.parseInt(elements.get(0));
-        String region = elements.get(1);
-        Provider provider = Provider.valueOf(elements.get(2));
-        String functionName = elements.get(3);
-
-        ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
+        List<String> elements = null;
+        int memory = 0;
+        String region = null;
+        Provider provider = null;
+        String functionName = null;
         int concurrencyOverhead = 0;
-        try {
+        int maxConcurrency = 0;
+
+        if (deployment != null) {
+            elements = extractValuesFromDeployment(deployment);
+            memory = Integer.parseInt(elements.get(0));
+            region = elements.get(1);
+            provider = Provider.valueOf(elements.get(2));
+            functionName = elements.get(3);
+
+            ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
             providerEntry.next();
             concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            maxConcurrency = providerEntry.getInt("maxConcurrency");
+        } else {
+            ResultSet providerEntry = MariaDBAccess.getProviderEntry(Utils.detectProvider(entry.getString("KMS_Arn")));
+            providerEntry.next();
+            concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
+            maxConcurrency = providerEntry.getInt("maxConcurrency");
         }
-
 
         // if the deployment is null or deployment is already saved in the MD-DB,
         // simulate in the same region and with the same memory
         if (deployment == null || deploymentsAreTheSame(entry, memory, provider, region)) {
             // simply read from the values from the DB without calculating them again
-            try {
-                long rtt = (long) entry.getDouble("avgRTT");
-                double cost = entry.getDouble("avgCost");
-                SimulationParameters.workflowCost += cost;
-                averageLoopCounter = entry.getInt("avgLoopCounter");
-                if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
-                    rtt -= (long) concurrencyOverhead * averageLoopCounter;
-                }
-                if (loopCounter != -1 && concurrencyOverhead != 0) {
+            long rtt = (long) entry.getDouble("avgRTT");
+            double cost = entry.getDouble("avgCost");
+            SimulationParameters.workflowCost += cost;
+            averageLoopCounter = entry.getInt("avgLoopCounter");
+            if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
+                rtt -= (long) concurrencyOverhead * averageLoopCounter;
+            }
+            if (loopCounter != -1 && concurrencyOverhead != 0) {
+                if (loopCounter > maxConcurrency) {
+                    // TODO add extra time
+                } else {
                     rtt += (long) loopCounter * concurrencyOverhead;
                 }
-
-                result = new PairResult<>(rtt, cost);
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
             }
+
+            rtt = SimulationModel.applyDistribution(rtt, success);
+
+            result = new PairResult<>(rtt, cost);
         } else {
             ResultSet similarDeployment = sameImplementationStored(entry, memory, provider, region);
             // indicates if a similar deployment was found
             boolean similar = false;
 
-            try {
-                if (similarDeployment != null) {
-                    Integer sameRegionAndMemory = null;
-                    Integer sameRegion = null;
-                    Integer sameMemory = null;
-                    ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
+            if (similarDeployment != null) {
+                Integer sameRegionAndMemory = null;
+                Integer sameRegion = null;
+                Integer sameMemory = null;
+                ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
 
-                    if (regionEntry.next()) {
-                        while (similarDeployment.next()) {
-                            similar = true;
+                if (regionEntry.next()) {
+                    while (similarDeployment.next()) {
+                        similar = true;
 
-                            int givenRegionID = regionEntry.getInt("id");
-                            int similarRegionID = similarDeployment.getInt("regionID");
-                            int similarMemorySize = similarDeployment.getInt("memorySize");
+                        int givenRegionID = regionEntry.getInt("id");
+                        int similarRegionID = similarDeployment.getInt("regionID");
+                        int similarMemorySize = similarDeployment.getInt("memorySize");
 
-                            if (givenRegionID == similarRegionID && memory == similarMemorySize) {
-                                sameRegionAndMemory = similarDeployment.getInt("id");
-                            } else if (givenRegionID == similarRegionID) {
-                                sameRegion = similarDeployment.getInt("id");
-                            } else if (memory == similarMemorySize) {
-                                sameMemory = similarDeployment.getInt("id");
-                            }
+                        if (givenRegionID == similarRegionID && memory == similarMemorySize) {
+                            sameRegionAndMemory = similarDeployment.getInt("id");
+                        } else if (givenRegionID == similarRegionID) {
+                            sameRegion = similarDeployment.getInt("id");
+                        } else if (memory == similarMemorySize) {
+                            sameMemory = similarDeployment.getInt("id");
                         }
-                    }
-                    ResultSet similarResult = null;
-                    if (sameRegionAndMemory != null) {
-                        similarResult = MariaDBAccess.getDeploymentById(sameRegionAndMemory);
-                        similarResult.next();
-                        // TODO
-                        long rtt = (long) similarResult.getDouble("avgRTT");
-                        double cost = similarResult.getDouble("avgCost");
-                        SimulationParameters.workflowCost += cost;
-                        averageLoopCounter = similarResult.getInt("avgLoopCounter");
-                        if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
-                            rtt -= (long) concurrencyOverhead * averageLoopCounter;
-                        }
-                        if (loopCounter != -1 && concurrencyOverhead != 0) {
-                            rtt += (long) loopCounter * concurrencyOverhead;
-                        }
-
-                        result = new PairResult<>(rtt, cost);
-                    } else if (sameMemory != null) {
-                        similar = false;
-                    } else if (sameRegion != null) {
-                        // TODO simulate different memory size
-                    } else {
-                        similar = false;
                     }
                 }
-            } catch (SQLException throwables) {
+                ResultSet similarResult = null;
+                if (sameRegionAndMemory != null) {
+                    similarResult = MariaDBAccess.getDeploymentById(sameRegionAndMemory);
+                    similarResult.next();
+                    // TODO
+                    long rtt = (long) similarResult.getDouble("avgRTT");
+                    double cost = similarResult.getDouble("avgCost");
+                    SimulationParameters.workflowCost += cost;
+                    averageLoopCounter = similarResult.getInt("avgLoopCounter");
+                    if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
+                        rtt -= (long) concurrencyOverhead * averageLoopCounter;
+                    }
+                    if (loopCounter != -1 && concurrencyOverhead != 0) {
+                        if (loopCounter > maxConcurrency) {
+                            // TODO add extra time
+                        } else {
+                            rtt += (long) loopCounter * concurrencyOverhead;
+                        }
+                    }
+                    rtt = SimulationModel.applyDistribution(rtt, success);
+                    result = new PairResult<>(rtt, cost);
+                } else if (sameMemory != null) {
+                    similarResult = MariaDBAccess.getDeploymentById(sameMemory);
+                    similarResult.next();
+                    SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
+                    result = model.simulateRoundTripTime(success);
+                } else if (sameRegion != null) {
+                    // TODO simulate different memory size
+                } else {
+                    similar = false;
+                }
             }
 
             if (!similar) {
@@ -752,16 +757,12 @@ public class SimulationNode extends Node {
      *
      * @return true if function simulation is successful, false otherwise
      */
-    private Boolean simulateOutcome(ResultSet entry) {
+    private Boolean simulateOutcome(ResultSet entry) throws SQLException {
         if (SimulationParameters.IGNORE_FT) {
             return true;
         }
         double successRate = 0;
-        try {
-            successRate = entry.getDouble("successRate");
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        }
+        successRate = entry.getDouble("successRate");
         // get a random double between 0 and 1
         Random random = new Random();
         double randomValue = random.nextDouble();
@@ -777,30 +778,27 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) throws NoDatabaseEntryForIdException, NotYetInvokedException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
         ResultSet entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
-        try {
-            if (!entry.next()) {
-                // TODO change message?
-                throw new NoDatabaseEntryForIdException("No entry for '" + resourceLink + "' found. Make sure the resource link is correct and the "
-                        + "function has been added to the database.");
-            }
 
-            // TODO check if invocations > 0, maybe perform manual update here?
-            if (entry.getInt("invocations") == 0) {
-                ManualUpdate.main(null);
-                entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
-                entry.next();
-                if (entry.getInt("invocations") == 0) {
-                    // TODO change message?
-                    throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet. It has to be executed "
-                            + "at least once.");
-                }
-            }
-
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        if (!entry.next()) {
+            // TODO change message?
+            throw new NoDatabaseEntryForIdException("No entry for '" + resourceLink + "' found. Make sure the resource link is correct and the "
+                    + "function has been added to the database.");
         }
+
+        // TODO check if invocations > 0, maybe perform manual update here?
+        if (entry.getInt("invocations") == 0) {
+            ManualUpdate.main(null);
+            entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
+            entry.next();
+            if (entry.getInt("invocations") == 0) {
+                // TODO change message?
+                throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet. It has to be executed "
+                        + "at least once.");
+            }
+        }
+
         Boolean success = simulateOutcome(entry);
         PairResult<Long, Double> result = calculateRoundTripTime(entry, success);
         return new QuadrupleResult<>(result.getRtt(), result.getCost(), getFunctionOutput(), success);
