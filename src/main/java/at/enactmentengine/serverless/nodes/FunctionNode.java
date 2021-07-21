@@ -180,15 +180,6 @@ public class FunctionNode extends Node {
         /* Log the function output */
         logFunctionOutput(pairResult.getRTT(), pairResult.getResult(), id);
 
-        /*
-         * Read the actual function outputs by their key and store them in
-         * functionOutputs
-         */
-        // TODO check for success
-        // boolean success = getValuesParsed(resultString, functionOutputs);
-
-        //MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, getName(), type, end - start, success, loopCounter, start, Type.EXEC);
-
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(functionOutputs);
@@ -307,7 +298,6 @@ public class FunctionNode extends Node {
                  * Read the actual function outputs by their key and store them in
                  * functionOutputs
                  */
-                // TODO check for success
                 success = getValuesParsed(resultString, functionOutputs);
             }
         } else {
@@ -320,7 +310,6 @@ public class FunctionNode extends Node {
              * Read the actual function outputs by their key and store them in
              * functionOutputs
              */
-            // TODO check for success
             success = getValuesParsed(resultString, functionOutputs);
             Event event = null;
             if (success) {
@@ -461,13 +450,9 @@ public class FunctionNode extends Node {
         String awsSessionToken = null;
         try {
             Properties propertiesFile = new Properties();
-//			propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
-
-
+//            propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
             propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
-
-            //FileUtils.readFileToByteArray(new File(workflow))
-
+            // FileUtils.readFileToByteArray(new File(workflow))
             awsAccessKey = propertiesFile.getProperty("aws_access_key");
             awsSecretKey = propertiesFile.getProperty("aws_secret_key");
             if (propertiesFile.containsKey("aws_session_token")) {

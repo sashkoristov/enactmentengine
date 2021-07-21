@@ -30,7 +30,7 @@ import java.util.Map;
 /**
  * Utility class for the enactment-engine.
  *
- * @author stefanpedratscher
+ * @author stefanpedratscher, extended by @author mikahautz
  */
 public class Utils {
 

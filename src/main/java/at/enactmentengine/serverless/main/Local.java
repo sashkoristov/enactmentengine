@@ -15,8 +15,8 @@ import java.util.Map;
  * Main class of enactment engine which specifies the input file and starts the workflow on the machine on which it gets
  * started.
  * <p>
- * based on @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher extended again as a part of the
- * simulator by @author mikahautz
+ * based on @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher; extended again as a part of
+ * the simulator by @author mikahautz
  */
 public class Local {
 
@@ -36,6 +36,7 @@ public class Local {
      * @param args workflow.yaml [input.json]
      */
     public static void main(String[] args) {
+        // sets the logging level to INFO only
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.INFO);
         /* Workflow executor */

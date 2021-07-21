@@ -2,16 +2,21 @@ package at.enactmentengine.serverless.Simulation;
 
 import at.enactmentengine.serverless.exception.MissingComputationalWorkException;
 import at.enactmentengine.serverless.exception.MissingSimulationParametersException;
+import at.enactmentengine.serverless.exception.RegionDetectionException;
 import at.enactmentengine.serverless.object.PairResult;
+import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.databases.MariaDBAccess;
-import at.uibk.dps.exceptions.RegionDetectionException;
 import at.uibk.dps.util.Provider;
-import at.uibk.dps.util.Utils;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Random;
 
+/**
+ * Class that handles the simulation of the round trip time of a function based on various parameters.
+ *
+ * @author mikahautz
+ */
 public class SimulationModel {
 
     /**
@@ -54,18 +59,37 @@ public class SimulationModel {
      */
     private int loopCounter;
 
+    /**
+     * Constructs the SimulationModel object.
+     *
+     * @param functionDeployment the database entry for the functionDeployment to simulate
+     * @param provider           the provider to simulate
+     * @param region             the region to simulate in
+     * @param memorySize         the memorySize to simulate for
+     * @param loopCounter        the current loopCounter of the function to simulate
+     *
+     * @throws SQLException if an error occurs when reading fields from the database entry
+     */
     public SimulationModel(ResultSet functionDeployment, Provider provider, String region, int memorySize, int loopCounter) throws SQLException {
         this.functionDeployment = functionDeployment;
         this.provider = provider;
         this.region = region;
         this.memorySize = memorySize;
         this.loopCounter = loopCounter;
-        // TODO get other fields??
         avgRTT = (long) functionDeployment.getDouble("avgRTT");
         avgLoopCounter = functionDeployment.getInt("avgLoopCounter");
         fdMemorySize = functionDeployment.getInt("memorySize");
     }
 
+    /**
+     * Applies normal distribution to the given execution time if the parameter success is true. If it is false, it
+     * randomly multiplies the execution time with a value between 0 and 1.
+     *
+     * @param executionTime to apply the distribution on
+     * @param success       whether the simulation is successful or not
+     *
+     * @return the execution time with the applied distribution
+     */
     public static long applyDistribution(long executionTime, boolean success) {
         if (success) {
             // calculate the time as usual
@@ -83,8 +107,12 @@ public class SimulationModel {
      * Subtracts the overheads from the RTT stored in the MD.
      *
      * @return the raw execution time of the function
+     *
+     * @throws SQLException                         if an error occurs when reading fields from the database entry
+     * @throws RegionDetectionException             if detecting the region from the resource link fails
+     * @throws MissingSimulationParametersException if not all required fields are filled in in the database
      */
-    private long getRawExecutionTime() throws SQLException, RegionDetectionException, MissingSimulationParametersException {
+    private long getRawExecutionTime() throws SQLException, MissingSimulationParametersException, RegionDetectionException {
         // if the field 'avgRuntime' has a value set, simply use it
         double avgRuntime = functionDeployment.getDouble("avgRuntime");
         if (avgRuntime > 1) {
@@ -92,11 +120,9 @@ public class SimulationModel {
         }
 
         // TODO add x_cs, CSO, x_a, CO
-        Provider mdProvider = null;
-        String mdRegion = null;
         String functionId = functionDeployment.getString("KMS_Arn");
-        mdProvider = Utils.detectProvider(functionId);
-        mdRegion = Utils.detectRegion(functionId);
+        Provider mdProvider = Utils.detectProvider(functionId);
+        String mdRegion = Utils.detectRegion(functionId);
 
         ResultSet mdProviderEntry = MariaDBAccess.getProviderEntry(mdProvider);
         ResultSet mdRegionEntry = MariaDBAccess.getRegionEntry(mdRegion, mdProvider);
@@ -114,23 +140,24 @@ public class SimulationModel {
             concurrencyOverhead *= avgLoopCounter;
         }
 
-        // TODO other providers?
         if (mdProvider == Provider.AWS) {
             handshake = 2;
 
-            if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
+            if (cryptoOverhead != 0 && networkOverhead != 0) {
                 authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
             } else {
                 throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet." +
-                        "Please make sure that for the provider " + provider.toString() + " the fields 'faasSystemOverheadms' and " +
+                        "Please make sure that for the provider " + provider.toString() + " the field " +
                         "'cryptoOverheadms' and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
             }
         } else if (mdProvider == Provider.GOOGLE) {
+            // TODO
             handshake = 1;
+        } else if (mdProvider == Provider.IBM) {
+            // TODO
         }
 
         if (faasOverhead != 0 && networkOverhead != 0) {
-            // TODO add x_cs, CSO, x_a
             return avgRTT - networkOverhead - faasOverhead - authenticationOverhead - concurrencyOverhead;
         } else {
             throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet. " +
@@ -145,10 +172,12 @@ public class SimulationModel {
      * @param executionTime to add the overheads to
      *
      * @return the overall round-trip time
+     *
+     * @throws SQLException                         if an error occurs when reading fields from the database entry
+     * @throws MissingSimulationParametersException if not all required fields are filled in in the database
      */
     private long addOverheads(long executionTime) throws SQLException, MissingSimulationParametersException {
         // O = xcs · CSO + NO + xa · AO + F O + CO
-        // TODO add x_cs, CSO, x_a, CO
 
         ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
         ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
@@ -166,10 +195,7 @@ public class SimulationModel {
             if (loopCounter != -1 && concurrencyOverhead != 0) {
                 rtt += (long) loopCounter * concurrencyOverhead;
             }
-            //TODO add x_cs, CSO, x_a, CO
-            //TODO check if the current function is invoked the first time or if new ones have to be created in parallelFor
 
-            //TODO authenticate for the first function of a provider (or always for AWS and IBM and never for google??)
             int handshake = 0;
             // TODO other providers?
             if (provider == Provider.AWS) {
@@ -191,6 +217,15 @@ public class SimulationModel {
         }
     }
 
+    /**
+     * Estimates the execution time based on the computational work and memory size.
+     *
+     * @return the estimated execution time
+     *
+     * @throws SQLException                      if an error occurs when reading fields from the database entry
+     * @throws MissingComputationalWorkException when the field computationWork for the functionImplementation is not
+     *                                           filled
+     */
     private long estimateExecutionTime() throws SQLException, MissingComputationalWorkException {
         int implementationId = functionDeployment.getInt("functionImplementation_id");
         ResultSet implementation = MariaDBAccess.getImplementationById(implementationId);
@@ -244,92 +279,35 @@ public class SimulationModel {
         return (long) (runtimeInSeconds * 1000);
     }
 
-    public PairResult<Long, Double> simulateRoundTripTime(boolean success) throws SQLException, RegionDetectionException, MissingComputationalWorkException, MissingSimulationParametersException {
-        /*
-        read from MD-DB the provider and region for the FD and the desired simulation
-            from provider get faasSystemOverheadms and cryptoOverheadms
-            from region get NO
-        from avgRTT subtract the values as in formula
-        to remainder add the values as in formula
-         */
-        long rtt = 0;
-        double cost = 0;
-        long executionTime = 0;
+    /**
+     * Simulates the round trip time based on the region and memory size.
+     *
+     * @param success whether the simulation is successful or not
+     *
+     * @return a PairResult consisting of the round trip time and the cost
+     *
+     * @throws SQLException                         if an error occurs when reading fields from the database entry
+     * @throws RegionDetectionException             if detecting the region from the resource link fails
+     * @throws MissingComputationalWorkException    when the field computationWork for the functionImplementation is not
+     *                                              filled
+     * @throws MissingSimulationParametersException if not all required fields are filled in in the database
+     */
+    public PairResult<Long, Double> simulateRoundTripTime(boolean success) throws SQLException, RegionDetectionException,
+            MissingComputationalWorkException, MissingSimulationParametersException {
+        long executionTime;
 
         if (memorySize == fdMemorySize) {
             executionTime = getRawExecutionTime();
         } else {
             executionTime = estimateExecutionTime();
         }
+
         executionTime = applyDistribution(executionTime, success);
-        cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
+        double cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
         SimulationParameters.workflowCost += cost;
-        rtt = addOverheads(executionTime);
+        long rtt = addOverheads(executionTime);
 
         return new PairResult<>(rtt, cost);
     }
 
-    public ResultSet getFunctionDeployment() {
-        return functionDeployment;
-    }
-
-    public void setFunctionDeployment(ResultSet functionDeployment) {
-        functionDeployment = functionDeployment;
-    }
-
-    public long getAvgRTT() {
-        return avgRTT;
-    }
-
-    public void setAvgRTT(long avgRTT) {
-        this.avgRTT = avgRTT;
-    }
-
-    public int getAvgLoopCounter() {
-        return avgLoopCounter;
-    }
-
-    public void setAvgLoopCounter(int avgLoopCounter) {
-        this.avgLoopCounter = avgLoopCounter;
-    }
-
-    public Provider getProvider() {
-        return provider;
-    }
-
-    public void setProvider(Provider provider) {
-        provider = provider;
-    }
-
-    public String getRegion() {
-        return region;
-    }
-
-    public void setRegion(String region) {
-        region = region;
-    }
-
-    public int getMemorySize() {
-        return memorySize;
-    }
-
-    public void setMemorySize(int memorySize) {
-        this.memorySize = memorySize;
-    }
-
-    public int getLoopCounter() {
-        return loopCounter;
-    }
-
-    public void setLoopCounter(int loopCounter) {
-        this.loopCounter = loopCounter;
-    }
-
-    public int getFdMemorySize() {
-        return fdMemorySize;
-    }
-
-    public void setFdMemorySize(int fdMemorySize) {
-        this.fdMemorySize = fdMemorySize;
-    }
 }
