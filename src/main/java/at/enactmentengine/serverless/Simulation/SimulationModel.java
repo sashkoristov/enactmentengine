@@ -1,5 +1,7 @@
 package at.enactmentengine.serverless.Simulation;
 
+import at.enactmentengine.serverless.exception.MissingComputationalWorkException;
+import at.enactmentengine.serverless.exception.MissingSimulationParametersException;
 import at.enactmentengine.serverless.object.PairResult;
 import at.uibk.dps.databases.MariaDBAccess;
 import at.uibk.dps.exceptions.RegionDetectionException;
@@ -82,7 +84,7 @@ public class SimulationModel {
      *
      * @return the raw execution time of the function
      */
-    private long getRawExecutionTime() throws SQLException, RegionDetectionException {
+    private long getRawExecutionTime() throws SQLException, RegionDetectionException, MissingSimulationParametersException {
         // if the field 'avgRuntime' has a value set, simply use it
         double avgRuntime = functionDeployment.getDouble("avgRuntime");
         if (avgRuntime > 1) {
@@ -119,8 +121,9 @@ public class SimulationModel {
             if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
                 authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
             } else {
-                // TODO throw exception
-                return -1;
+                throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet." +
+                        "Please make sure that for the provider " + provider.toString() + " the fields 'faasSystemOverheadms' and " +
+                        "'cryptoOverheadms' and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
             }
         } else if (mdProvider == Provider.GOOGLE) {
             handshake = 1;
@@ -130,8 +133,9 @@ public class SimulationModel {
             // TODO add x_cs, CSO, x_a
             return avgRTT - networkOverhead - faasOverhead - authenticationOverhead - concurrencyOverhead;
         } else {
-            // TODO throw exception
-            return -1;
+            throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet. " +
+                    "Please make sure that for the provider " + provider.toString() + " the field 'faasSystemOverheadms' " +
+                    "and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
         }
     }
 
@@ -142,7 +146,7 @@ public class SimulationModel {
      *
      * @return the overall round-trip time
      */
-    private long addOverheads(long executionTime) throws SQLException {
+    private long addOverheads(long executionTime) throws SQLException, MissingSimulationParametersException {
         // O = xcs · CSO + NO + xa · AO + F O + CO
         // TODO add x_cs, CSO, x_a, CO
 
@@ -155,17 +159,12 @@ public class SimulationModel {
         int cryptoOverhead = providerEntry.getInt("cryptoOverheadms");
         int networkOverhead = regionEntry.getInt("networkOverheadms");
         int concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
-        int maxConcurrency = providerEntry.getInt("maxConcurrency");
 
-        if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0 && maxConcurrency != 0) {
+        if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
             long rtt = executionTime + networkOverhead + faasOverhead;
             // add the concurrencyOverhead depending on the loopCounter
             if (loopCounter != -1 && concurrencyOverhead != 0) {
-                if (loopCounter > maxConcurrency) {
-                    // TODO add extra time
-                } else {
-                    rtt += (long) loopCounter * concurrencyOverhead;
-                }
+                rtt += (long) loopCounter * concurrencyOverhead;
             }
             //TODO add x_cs, CSO, x_a, CO
             //TODO check if the current function is invoked the first time or if new ones have to be created in parallelFor
@@ -186,12 +185,66 @@ public class SimulationModel {
 
             return rtt;
         } else {
-            // TODO throw exception
-            return -1;
+            throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet. " +
+                    "Please make sure that for the provider " + provider.toString() + " the fields 'faasSystemOverheadms' and " +
+                    "'cryptoOverheadms' and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
         }
     }
 
-    public PairResult<Long, Double> simulateRoundTripTime(boolean success) throws SQLException, RegionDetectionException {
+    private long estimateExecutionTime() throws SQLException, MissingComputationalWorkException {
+        int implementationId = functionDeployment.getInt("functionImplementation_id");
+        ResultSet implementation = MariaDBAccess.getImplementationById(implementationId);
+        implementation.next();
+        double instructions = implementation.getDouble("computationWork");
+        if (instructions == 0) {
+            throw new MissingComputationalWorkException("No computational work is given for the functionImplementation " +
+                    "with the id " + implementationId + ". Therefore simulating different memory sizes is not possible.");
+        }
+        ResultSet sameMemoryDeployment = MariaDBAccess.getDeploymentsWithImplementationIdAndMemorySize(implementationId, memorySize);
+        double speedup = 0;
+        if (sameMemoryDeployment.next()) {
+            speedup = sameMemoryDeployment.getDouble("speedup");
+        }
+        /* The speedup is always measured against the deployment with 128mb ram. If it is NULL, it is assumed
+         there is linear speedup relative to 128mb. (e.g. 256mb -> 2, 512mb -> 4, 1024mb -> 8, etc */
+        if (speedup == 0) {
+            speedup = memorySize / 128.0;
+        }
+        // get a random double between 0 and 1
+        Random random = new Random();
+        int randomValue = (int) (random.nextDouble() * 100);
+        int parallel = loopCounter == -1 ? 0 : 1;
+        ResultSet cpu = null;
+
+        switch (provider) {
+            case AWS:
+                cpu = MariaDBAccess.getCpuByProvider(provider, parallel, randomValue);
+                cpu.next();
+                break;
+            case GOOGLE:
+                ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
+                providerEntry.next();
+                int maxConcurrency = providerEntry.getInt("maxConcurrency");
+                // if the loopCounter is smaller than the concurrency limit, use the sequential CPU
+                if (loopCounter < maxConcurrency) {
+                    parallel = 0;
+                }
+                cpu = MariaDBAccess.getCpuByProvider(provider, parallel, randomValue);
+                cpu.next();
+                break;
+            case IBM:
+                cpu = MariaDBAccess.getCpuByProviderAndRegion(provider, region, parallel, randomValue);
+                cpu.next();
+                break;
+            default:
+                break;
+        }
+        double mips = cpu.getDouble("MIPS");
+        double runtimeInSeconds = instructions / mips / speedup;
+        return (long) (runtimeInSeconds * 1000);
+    }
+
+    public PairResult<Long, Double> simulateRoundTripTime(boolean success) throws SQLException, RegionDetectionException, MissingComputationalWorkException, MissingSimulationParametersException {
         /*
         read from MD-DB the provider and region for the FD and the desired simulation
             from provider get faasSystemOverheadms and cryptoOverheadms
@@ -201,18 +254,17 @@ public class SimulationModel {
          */
         long rtt = 0;
         double cost = 0;
-        // TODO check if memory is the same
+        long executionTime = 0;
+
         if (memorySize == fdMemorySize) {
-            long executionTime = getRawExecutionTime();
-            executionTime = applyDistribution(executionTime, success);
-
-            cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
-            SimulationParameters.workflowCost += cost;
-            rtt = addOverheads(executionTime);
+            executionTime = getRawExecutionTime();
         } else {
-            // TODO simulate different memory
+            executionTime = estimateExecutionTime();
         }
-
+        executionTime = applyDistribution(executionTime, success);
+        cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
+        SimulationParameters.workflowCost += cost;
+        rtt = addOverheads(executionTime);
 
         return new PairResult<>(rtt, cost);
     }

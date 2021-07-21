@@ -2,10 +2,7 @@ package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.Simulation.SimulationModel;
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
-import at.enactmentengine.serverless.exception.AlternativeStrategyException;
-import at.enactmentengine.serverless.exception.NoDatabaseEntryForIdException;
-import at.enactmentengine.serverless.exception.NotYetInvokedException;
-import at.enactmentengine.serverless.exception.RegionDetectionException;
+import at.enactmentengine.serverless.exception.*;
 import at.enactmentengine.serverless.object.PairResult;
 import at.enactmentengine.serverless.object.QuadrupleResult;
 import at.enactmentengine.serverless.object.Utils;
@@ -183,6 +180,20 @@ public class SimulationNode extends Node {
 
         /* Read the resource link of the base function */
         String resourceLink = Utils.getResourceLink(properties, this);
+        Provider provider = Utils.detectProvider(resourceLink);
+        Provider deploymentProvider = null;
+        if (deployment != null) {
+            List<String> elements = extractValuesFromDeployment(deployment);
+            deploymentProvider = Provider.valueOf(elements.get(2));
+        }
+        if ((provider != Provider.AWS && provider != Provider.GOOGLE && provider != Provider.IBM) ||
+                (deploymentProvider != null && deploymentProvider != Provider.AWS && deploymentProvider != Provider.GOOGLE &&
+                        deploymentProvider != Provider.IBM)) {
+            throw new Exception("Simulating is currently only supported for AWS, Google and IBM.");
+        }
+        if (deploymentProvider != null && provider != deploymentProvider) {
+            throw new Exception("Simulating across providers is currently not supported.");
+        }
         String loopId = "";
         if (inLoop()) {
             loopId = ", loopId=" + loopCounter;
@@ -257,7 +268,7 @@ public class SimulationNode extends Node {
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
     private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFunction(Function functionToSimulate) throws NoDatabaseEntryForIdException,
-            NotYetInvokedException, InvokationFailureException, LatestFinishingTimeException, LatestStartingTimeException, MaxRunningTimeException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
+            NotYetInvokedException, InvokationFailureException, LatestFinishingTimeException, LatestStartingTimeException, MaxRunningTimeException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException, MissingResourceLinkException, MissingComputationalWorkException, MissingSimulationParametersException, AlternativeStrategyException {
         // TODO simulate here
         String resourceLink = functionToSimulate.getUrl();
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result = null;
@@ -266,7 +277,6 @@ public class SimulationNode extends Node {
         if (functionToSimulate.hasConstraintSet() || functionToSimulate.hasFTSet()) {
             // simulate with FT
             logger.info("Simulating function with fault tolerance...");
-            // TODO create separate class?
             result = simulateFunctionFT(functionToSimulate);
 
         } else {
@@ -296,7 +306,7 @@ public class SimulationNode extends Node {
      * @throws LatestFinishingTimeException on latest finish time exceeded
      * @throws MaxRunningTimeException      on maximum runtime exceeded
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException, NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFunctionFT(Function function) throws LatestStartingTimeException, InvokationFailureException, LatestFinishingTimeException, MaxRunningTimeException, NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException, MissingResourceLinkException, MissingComputationalWorkException, AlternativeStrategyException, MissingSimulationParametersException {
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> quadrupleResult;
 
         if (function != null) {
@@ -362,7 +372,7 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFT(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFT(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException, MissingResourceLinkException, MissingComputationalWorkException, AlternativeStrategyException, MissingSimulationParametersException {
         long startTime = getStartingTime();
         String resourceLink = function.getUrl();
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink);
@@ -390,12 +400,8 @@ public class SimulationNode extends Node {
                 }
                 // Failed after all retries. Check for alternative Strategy
                 if (function.getFTSettings().hasAlternativeStartegy()) {
-                    try {
-                        // AlternativeStrategy has correct Result
-                        return simulateAlternativeStrategy(function);
-                    } catch (AlternativeStrategyException | at.uibk.dps.exceptions.RegionDetectionException e) {
-                        return new QuadrupleResult<>(null, null, null, false);
-                    }
+                    // AlternativeStrategy has correct Result
+                    return simulateAlternativeStrategy(function);
                 } else {
                     // no alternativeStrategy set so failure
                     return new QuadrupleResult<>(null, null, null, false);
@@ -420,7 +426,7 @@ public class SimulationNode extends Node {
      *
      * @throws Exception if the alternativeStrategies have been executed without success
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, AlternativeStrategyException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateAlternativeStrategy(Function function) throws NoDatabaseEntryForIdException, NotYetInvokedException, AlternativeStrategyException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException, MissingResourceLinkException, MissingComputationalWorkException, MissingSimulationParametersException {
 
         if (function.getFTSettings().getAltStrategy() != null) {
             int i = 0;
@@ -544,7 +550,7 @@ public class SimulationNode extends Node {
      *
      * @return the RTT in ms
      */
-    private PairResult<Long, Double> calculateRoundTripTime(ResultSet entry, Boolean success) throws SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
+    private PairResult<Long, Double> calculateRoundTripTime(ResultSet entry, Boolean success) throws SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException, MissingComputationalWorkException, MissingSimulationParametersException {
         //TODO
         PairResult<Long, Double> result = null;
         int averageLoopCounter = 0;
@@ -554,7 +560,6 @@ public class SimulationNode extends Node {
         Provider provider = null;
         String functionName = null;
         int concurrencyOverhead = 0;
-        int maxConcurrency = 0;
 
         if (deployment != null) {
             elements = extractValuesFromDeployment(deployment);
@@ -566,12 +571,10 @@ public class SimulationNode extends Node {
             ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
             providerEntry.next();
             concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
-            maxConcurrency = providerEntry.getInt("maxConcurrency");
         } else {
             ResultSet providerEntry = MariaDBAccess.getProviderEntry(Utils.detectProvider(entry.getString("KMS_Arn")));
             providerEntry.next();
             concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
-            maxConcurrency = providerEntry.getInt("maxConcurrency");
         }
 
         // if the deployment is null or deployment is already saved in the MD-DB,
@@ -586,11 +589,7 @@ public class SimulationNode extends Node {
                 rtt -= (long) concurrencyOverhead * averageLoopCounter;
             }
             if (loopCounter != -1 && concurrencyOverhead != 0) {
-                if (loopCounter > maxConcurrency) {
-                    // TODO add extra time
-                } else {
-                    rtt += (long) loopCounter * concurrencyOverhead;
-                }
+                rtt += (long) loopCounter * concurrencyOverhead;
             }
 
             rtt = SimulationModel.applyDistribution(rtt, success);
@@ -603,7 +602,7 @@ public class SimulationNode extends Node {
 
             if (similarDeployment != null) {
                 Integer sameRegionAndMemory = null;
-                Integer sameRegion = null;
+//                Integer sameRegion = null;
                 Integer sameMemory = null;
                 ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
 
@@ -617,8 +616,8 @@ public class SimulationNode extends Node {
 
                         if (givenRegionID == similarRegionID && memory == similarMemorySize) {
                             sameRegionAndMemory = similarDeployment.getInt("id");
-                        } else if (givenRegionID == similarRegionID) {
-                            sameRegion = similarDeployment.getInt("id");
+//                        } else if (givenRegionID == similarRegionID) {
+//                            sameRegion = similarDeployment.getInt("id");
                         } else if (memory == similarMemorySize) {
                             sameMemory = similarDeployment.getInt("id");
                         }
@@ -637,11 +636,7 @@ public class SimulationNode extends Node {
                         rtt -= (long) concurrencyOverhead * averageLoopCounter;
                     }
                     if (loopCounter != -1 && concurrencyOverhead != 0) {
-                        if (loopCounter > maxConcurrency) {
-                            // TODO add extra time
-                        } else {
-                            rtt += (long) loopCounter * concurrencyOverhead;
-                        }
+                        rtt += (long) loopCounter * concurrencyOverhead;
                     }
                     rtt = SimulationModel.applyDistribution(rtt, success);
                     result = new PairResult<>(rtt, cost);
@@ -650,8 +645,11 @@ public class SimulationNode extends Node {
                     similarResult.next();
                     SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
                     result = model.simulateRoundTripTime(success);
-                } else if (sameRegion != null) {
-                    // TODO simulate different memory size
+//                } else if (sameRegion != null) {
+//                    similarResult = MariaDBAccess.getDeploymentById(sameRegion);
+//                    similarResult.next();
+//                    SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
+//                    result = model.simulateRoundTripTime(success);
                 } else {
                     similar = false;
                 }
@@ -778,7 +776,7 @@ public class SimulationNode extends Node {
      *
      * @return a TripleResult containing the RTT, output and success of the simulated function
      */
-    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException {
+    private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> getSimulationResult(String resourceLink) throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException, at.uibk.dps.exceptions.RegionDetectionException, MissingComputationalWorkException, MissingSimulationParametersException {
         ResultSet entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
 
         if (!entry.next()) {
@@ -793,9 +791,14 @@ public class SimulationNode extends Node {
             entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
             entry.next();
             if (entry.getInt("invocations") == 0) {
-                // TODO change message?
-                throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet. It has to be executed "
-                        + "at least once.");
+                ResultSet implementation = MariaDBAccess.getImplementationById(entry.getInt("functionImplementation_id"));
+                implementation.next();
+                if (implementation.getDouble("computationWork") == 0) {
+                    // TODO change message?
+                    throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet and " +
+                            "no computation work is given for the function implementation. Either execute the function at least " +
+                            "once or enter the computation work (in million instructions).");
+                }
             }
         }
 
@@ -818,12 +821,21 @@ public class SimulationNode extends Node {
      *
      * @return the start time in milliseconds
      */
-    private long getStartingTime() {
+    private long getStartingTime() throws MissingResourceLinkException, SQLException {
         long startTime = 0;
         if (loopCounter == -1) {
             startTime = MongoDBAccess.getLastEndDateOverall();
         } else {
-            startTime = MongoDBAccess.getLastEndDateOutOfLoop();
+            String resourceLink = Utils.getResourceLink(properties, this);
+            Provider provider = Utils.detectProvider(resourceLink);
+            ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
+            providerEntry.next();
+            int maxConcurrency = providerEntry.getInt("maxConcurrency");
+            if (loopCounter > maxConcurrency - 1) {
+                startTime = MongoDBAccess.getFirstAvailableStartTime(resourceLink);
+            } else {
+                startTime = MongoDBAccess.getLastEndDateOutOfLoop();
+            }
         }
         if (startTime == 0) {
             startTime = System.currentTimeMillis();
