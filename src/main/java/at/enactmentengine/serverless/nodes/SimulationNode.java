@@ -187,13 +187,13 @@ public class SimulationNode extends Node {
         Provider provider = Utils.detectProvider(resourceLink);
         String region = Utils.detectRegion(resourceLink);
         Provider deploymentProvider = null;
-        String deploymentRegion = null;
+        String deploymentRegion;
         simInfo = " for provider '" + provider.toString() + "' in region '" + region + "'";
         if (deployment != null) {
             List<String> elements = extractValuesFromDeployment(deployment);
             deploymentRegion = elements.get(1);
             deploymentProvider = Provider.valueOf(elements.get(2));
-            simInfo = " for provider '" + deploymentProvider.toString() + "' in region '" + deploymentRegion + "'";
+            simInfo = " for provider '" + deploymentProvider + "' in region '" + deploymentRegion + "'";
         }
         // Check that the provider is either AWS, Google or IBM
         if ((provider != Provider.AWS && provider != Provider.GOOGLE && provider != Provider.IBM) ||
@@ -519,9 +519,9 @@ public class SimulationNode extends Node {
                 if (inLoop()) {
                     loopId = ", loopId=" + loopCounter;
                 }
+                j = 0;
                 // check if at least one function simulated successfully
                 if (result != null) {
-                    j = 0;
                     // go through the executed functions to log that they were "canceled"
                     for (Map.Entry<String, QuadrupleResult<Long, Double, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
                         elements = extractValuesFromDeployment(tempDeployments.get(j));
@@ -549,7 +549,6 @@ public class SimulationNode extends Node {
                             result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
                     return result;
                 } else {
-                    j = 0;
                     // no function was successful, log their failures
                     for (Map.Entry<String, QuadrupleResult<Long, Double, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
                         elements = extractValuesFromDeployment(tempDeployments.get(j));
