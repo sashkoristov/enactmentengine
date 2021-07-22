@@ -1,0 +1,17 @@
+---
+name: "StockPrediction"
+dataIns:
+workflowBody:
+  - function:
+      name: "Function1"
+      dataIns:
+      dataOuts:
+        - name: "outputA"
+          type: "collection"
+      properties:
+        - name: "resource"
+          value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
+dataOuts:
+  - name: "result"
+    type: "collection"
+    source: "Function1/outputA"
