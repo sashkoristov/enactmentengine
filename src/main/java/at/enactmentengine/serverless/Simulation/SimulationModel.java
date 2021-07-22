@@ -181,8 +181,12 @@ public class SimulationModel {
 
         ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
         ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
-        providerEntry.next();
-        regionEntry.next();
+        if (!providerEntry.next()) {
+            throw new MissingSimulationParametersException("No entry for provider '" + provider.toString() + "' found.");
+        }
+        if (!regionEntry.next()) {
+            throw new MissingSimulationParametersException("No entry for region '" + region + "' found.");
+        }
 
         int faasOverhead = providerEntry.getInt("faasSystemOverheadms");
         int cryptoOverhead = providerEntry.getInt("cryptoOverheadms");

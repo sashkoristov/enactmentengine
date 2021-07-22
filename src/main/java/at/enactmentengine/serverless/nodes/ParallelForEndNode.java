@@ -100,7 +100,7 @@ public class ParallelForEndNode extends Node {
 
         logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, outputValues);
         if (simulate) {
-            MongoDBAccess.saveLog(Event.PARALLEL_FOR_END, null, null, null, null,
+            MongoDBAccess.saveLog(Event.PARALLEL_FOR_END, null, null, null, null, null,
                     0L, true, -1, -1, MongoDBAccess.getLastEndDateOverall(), Type.SIM);
         }
 

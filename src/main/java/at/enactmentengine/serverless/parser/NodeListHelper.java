@@ -11,13 +11,16 @@ import org.apache.commons.lang3.NotImplementedException;
 /**
  * Helper class to create NodeLists out of function constructs
  *
- * @author stefanpedratscher
+ * @author stefanpedratscher, extended by @author mikahautz
  */
 class NodeListHelper {
 
-    int executionId;
+    /**
+     * Flag used to determine whether to simulate or execute.
+     */
+    private final boolean simulate;
 
-    private boolean simulate;
+    int executionId;
 
     /**
      * Default constructor for NodeList helper
@@ -46,11 +49,13 @@ class NodeListHelper {
     ListPair<Node, Node> toNodeList(Function function) {
         if (function instanceof AtomicFunction && simulate) {
             AtomicFunction tmp = (AtomicFunction) function;
-            SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getDeployment(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
+            SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getDeployment(),
+                    tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(simulationNode, simulationNode);
         } else if (function instanceof AtomicFunction) {
             AtomicFunction tmp = (AtomicFunction) function;
-            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
+            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getDeployment(),
+                    tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(functionNode, functionNode);
         } else if (function instanceof IfThenElse) {
             return toNodeListIf((IfThenElse) function);

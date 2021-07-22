@@ -52,6 +52,10 @@ public class FunctionNode extends Node {
      */
     private static Gateway gateway = new Gateway(Utils.PATH_TO_CREDENTIALS);
     /**
+     * The deployment of the Atomic Function.
+     */
+    private final String deployment;
+    /**
      * The execution id of the workflow (needed to log the execution).
      */
     private int executionId;
@@ -86,15 +90,17 @@ public class FunctionNode extends Node {
      *
      * @param name        of the base function.
      * @param type        of the base function (fType).
+     * @param deployment  of the base function.
      * @param properties  of the base function.
      * @param constraints of the base function.
      * @param input       to the base function.
      * @param output      of the base function.
      * @param executionId for the logging of the execution.
      */
-    public FunctionNode(String name, String type, List<PropertyConstraint> properties,
+    public FunctionNode(String name, String type, String deployment, List<PropertyConstraint> properties,
                         List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
         super(name, type);
+        this.deployment = deployment;
         this.output = output;
         this.properties = properties;
         this.constraints = constraints;
@@ -171,6 +177,9 @@ public class FunctionNode extends Node {
 
         /* Parse function with optional constraints and properties */
         Function functionToInvoke = Utils.parseFTConstraints(resourceLink, actualFunctionInputs, constraints, type, name, loopCounter);
+        if (functionToInvoke != null) {
+            functionToInvoke.setDeployment(deployment);
+        }
 
         /* Invoke function and measure duration */
         long start = System.currentTimeMillis();
@@ -317,7 +326,7 @@ public class FunctionNode extends Node {
             } else {
                 event = Event.FUNCTION_FAILED;
             }
-            MongoDBAccess.saveLog(event, resourceLink, getName(), type, resultString, pairResult.getRTT(), success, loopCounter, maxLoopCounter, start, Type.EXEC);
+            MongoDBAccess.saveLog(event, resourceLink, deployment, name, type, resultString, pairResult.getRTT(), success, loopCounter, maxLoopCounter, start, Type.EXEC);
         }
         return pairResult;
     }

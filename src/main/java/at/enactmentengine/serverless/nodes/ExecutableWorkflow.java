@@ -102,7 +102,7 @@ public class ExecutableWorkflow {
         }
 
         long start = System.currentTimeMillis();
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, 0L, true, -1, -1, start, Type.EXEC);
+        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, null, 0L, true, -1, -1, start, Type.EXEC);
         /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 
