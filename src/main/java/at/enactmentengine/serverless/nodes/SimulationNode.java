@@ -665,7 +665,7 @@ public class SimulationNode extends Node {
                 } else if (sameMemory != null) {
                     // always prefer the given entry if they have the same memory size
                     if (memory == entry.getInt("memorySize")) {
-                        similarResult = entry;
+                        sameMemory = entry.getInt("id");
                     }
                     similarResult = MariaDBAccess.getDeploymentById(sameMemory);
                     similarResult.next();
