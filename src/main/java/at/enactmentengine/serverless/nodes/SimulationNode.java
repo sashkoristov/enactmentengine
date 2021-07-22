@@ -45,7 +45,6 @@ public class SimulationNode extends Node {
      * The number of executed functions.
      */
     private static int counter = 0;
-
     /**
      * The deployment of the Atomic Function.
      */
@@ -58,6 +57,10 @@ public class SimulationNode extends Node {
      * The properties of the simulation node.
      */
     private final List<PropertyConstraint> properties;
+    /**
+     * The id of the current function.
+     */
+    private int id;
     /**
      * The execution id of the workflow (needed to log the execution).
      */
@@ -76,6 +79,11 @@ public class SimulationNode extends Node {
      * The result of the simulation node.
      */
     private Map<String, Object> result;
+
+    /**
+     * String containing some info that is used for logging.
+     */
+    private String simInfo;
 
     /**
      * Constructor for a simulation node.
@@ -122,7 +130,9 @@ public class SimulationNode extends Node {
         for (int i = 0; i < parts.length - 3; i++) {
             stringBuilder.append(parts[i]).append("_");
         }
-        stringBuilder.setLength(stringBuilder.length() - 1);
+        if (stringBuilder.length() > 1) {
+            stringBuilder.setLength(stringBuilder.length() - 1);
+        }
         result.add(stringBuilder.toString());
 
         return result;
@@ -168,7 +178,6 @@ public class SimulationNode extends Node {
     public Boolean call() throws Exception {
 
         /* The identifier for the current function */
-        int id;
         synchronized (this) {
             id = counter++;
         }
@@ -179,7 +188,7 @@ public class SimulationNode extends Node {
         String region = Utils.detectRegion(resourceLink);
         Provider deploymentProvider = null;
         String deploymentRegion = null;
-        String simInfo = " for provider '" + provider.toString() + "' in region '" + region + "'";
+        simInfo = " for provider '" + provider.toString() + "' in region '" + region + "'";
         if (deployment != null) {
             List<String> elements = extractValuesFromDeployment(deployment);
             deploymentRegion = elements.get(1);
@@ -201,7 +210,8 @@ public class SimulationNode extends Node {
         if (inLoop()) {
             loopId = ", loopId=" + loopCounter;
         }
-        logger.info("Simulating function " + name + " at resource: " + resourceLink + simInfo + ", id=" + id + loopId);
+        simInfo += ", id=" + id + loopId;
+        logger.info("Simulating function " + name + " at resource: " + resourceLink + simInfo);
 
         /* Parse function with optional constraints and properties */
         Function functionToInvoke = Utils.parseFTConstraints(resourceLink, null, constraints, type, name, loopCounter);
@@ -289,9 +299,9 @@ public class SimulationNode extends Node {
             long startTime = getStartingTime();
             result = getSimulationResult(resourceLink, functionToSimulate.getDeployment());
             if (result.isSuccess()) {
-                logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
+                logger.info("Simulating function {} took {}ms" + simInfo + ".", resourceLink, result.getRTT());
             } else {
-                logger.info("Simulating function {} failed.", resourceLink);
+                logger.info("Simulating function {} failed" + simInfo + ".", resourceLink);
             }
             MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), null,
                     result.getRTT(), result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
@@ -409,7 +419,7 @@ public class SimulationNode extends Node {
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink, function.getDeployment());
 
         if (!result.isSuccess()) {
-            logger.info("Simulating function {} failed.", resourceLink);
+            logger.info("Simulating function {} failed" + simInfo + ".", resourceLink);
             MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, function.getDeployment(), getName(), function.getType(), null, result.getRTT(),
                     result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
             if (function.hasFTSet()) {
@@ -420,12 +430,12 @@ public class SimulationNode extends Node {
                     startTime += result.getRTT();
                     result = getSimulationResult(resourceLink, function.getDeployment());
                     if (result.isSuccess()) {
-                        logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
+                        logger.info("Simulating function {} took {}ms" + simInfo + ".", resourceLink, result.getRTT());
                         MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, function.getDeployment(), getName(), function.getType(), null, result.getRTT(),
                                 result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
                         return result;
                     }
-                    logger.info("Simulating function {} failed.", resourceLink);
+                    logger.info("Simulating function {} failed" + simInfo + ".", resourceLink);
                     MongoDBAccess.saveLog(Event.FUNCTION_FAILED, resourceLink, function.getDeployment(), getName(), function.getType(), null, result.getRTT(),
                             result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
                 }
@@ -442,7 +452,7 @@ public class SimulationNode extends Node {
                 return result;
             }
         }
-        logger.info("Simulating function {} took {}ms.", resourceLink, result.getRTT());
+        logger.info("Simulating function {} took {}ms" + simInfo + ".", resourceLink, result.getRTT());
         MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, function.getDeployment(), getName(), function.getType(), null, result.getRTT(),
                 result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
         return result;
@@ -503,27 +513,38 @@ public class SimulationNode extends Node {
                     j++;
                 }
 
+                List<String> elements;
+                String alternateInfo;
+                String loopId = "";
+                if (inLoop()) {
+                    loopId = ", loopId=" + loopCounter;
+                }
                 // check if at least one function simulated successfully
                 if (result != null) {
                     j = 0;
                     // go through the executed functions to log that they were "canceled"
                     for (Map.Entry<String, QuadrupleResult<Long, Double, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
+                        elements = extractValuesFromDeployment(tempDeployments.get(j));
+                        alternateInfo = " for provider '" + elements.get(2) + "' in region '" + elements.get(1) + "', id=" + id + loopId;
+
                         if (!set.getKey().equals(url) && (set.getValue().getRTT() >= result.getRTT())) {
                             // they were "canceled" after the fastest function finished, therefore the RTT of the
                             // result is the RTT of the canceled function
-                            logger.info("Canceled simulation of function {} after {}ms.", set.getKey(), result.getRTT());
+                            logger.info("Canceled simulation of function {} after {}ms" + alternateInfo + ".", set.getKey(), result.getRTT());
                             MongoDBAccess.saveLog(Event.FUNCTION_CANCELED, set.getKey(), tempDeployments.get(j), getName(), function.getType(), null,
                                     result.getRTT(), result.getCost(), false, loopCounter, maxLoopCounter, startTime, Type.SIM);
                         } else if (!set.getValue().isSuccess()) {
                             // if a function was unsuccessful AND it ran shorter than the fastest successful one
-                            logger.info("Simulating function {} failed.", set.getKey());
+                            logger.info("Simulating function {} failed" + alternateInfo + ".", set.getKey());
                             MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), tempDeployments.get(j), getName(), function.getType(), null,
                                     set.getValue().getRTT(), set.getValue().getCost(), set.getValue().isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
                         }
                         j++;
                     }
+                    elements = extractValuesFromDeployment(depl);
+                    alternateInfo = " for provider '" + elements.get(2) + "' in region '" + elements.get(1) + "', id=" + id + loopId;
                     // log the fastest successful function
-                    logger.info("Simulating function {} took {}ms.", url, result.getRTT());
+                    logger.info("Simulating function {} took {}ms" + alternateInfo + ".", url, result.getRTT());
                     MongoDBAccess.saveLog(Event.FUNCTION_END, url, depl, getName(), function.getType(), null, result.getRTT(),
                             result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
                     return result;
@@ -531,7 +552,10 @@ public class SimulationNode extends Node {
                     j = 0;
                     // no function was successful, log their failures
                     for (Map.Entry<String, QuadrupleResult<Long, Double, Map<String, Object>, Boolean>> set : tempResults.entrySet()) {
-                        logger.info("Simulating function {} failed.", set.getKey());
+                        elements = extractValuesFromDeployment(tempDeployments.get(j));
+                        alternateInfo = " for provider '" + elements.get(2) + "' in region '" + elements.get(1) + "', id=" + id + loopId;
+
+                        logger.info("Simulating function {} failed" + alternateInfo + ".", set.getKey());
                         MongoDBAccess.saveLog(Event.FUNCTION_FAILED, set.getKey(), tempDeployments.get(j), getName(), function.getType(), null,
                                 set.getValue().getRTT(), set.getValue().getCost(), set.getValue().isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
                         j++;
