@@ -6,8 +6,10 @@ workflowBody:
       name: "Function1"
       dataIns:
       dataOuts:
-        - name: "outputA"
-          type: "collection"
+        - name: "statusCode"
+          type: "string"
+        - name: "body"
+          type: "string"
       properties:
         - name: "resource"
           value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
