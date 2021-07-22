@@ -217,7 +217,14 @@ public class Utils {
                 String possibleResources = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
                 while (possibleResources.contains(";")) {
                     String funcString = possibleResources.substring(0, possibleResources.indexOf(";"));
+                    String deploymentString = null;
+                    // id and deployment are divided by two #
+                    if (funcString.contains("##")) {
+                        deploymentString = funcString.substring(funcString.indexOf("##") + 2);
+                        funcString = funcString.substring(0, funcString.indexOf("##"));
+                    }
                     Function tmpFunc = new Function(funcString, name, type, loopCounter, functionInputs);
+                    tmpFunc.setDeployment(deploymentString);
                     possibleResources = possibleResources.substring(possibleResources.indexOf(";") + 1);
 
                     alternativePlan.add(tmpFunc);
