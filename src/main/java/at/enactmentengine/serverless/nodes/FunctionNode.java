@@ -330,9 +330,34 @@ public class FunctionNode extends Node {
 			}
 		} else {
 			/* Invoke the function without fault tolerance */
-			resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
+			/* check if async invocation or not */
+			if(isAsync(this.properties)) {
+				System.out.println("async invocation function node");
+				long s = System.currentTimeMillis();
+				resultString = gateway.invokeAsyncFunciton(resourceLink, functionInputs).toString();
+				long e = System.currentTimeMillis();
+				System.out.println("time: "+(e-s));
+
+			}
+			else {
+				System.out.println("sync invocation function node");
+				long s = System.currentTimeMillis();
+				resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
+				long e = System.currentTimeMillis();
+				System.out.println("time: "+(e-s));
+			}
 		}
 		return resultString;
+	}
+
+	private boolean isAsync(List<PropertyConstraint> properties)
+	{
+		for (PropertyConstraint propertyConstraint: properties) {
+			if(propertyConstraint.getName().equals("invoke-type")
+					&& propertyConstraint.getValue().equals("ASYNC"))
+				return true;
+		}
+		return false;
 	}
 
 	/**
