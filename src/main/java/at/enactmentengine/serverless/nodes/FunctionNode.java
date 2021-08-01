@@ -155,6 +155,9 @@ public class FunctionNode extends Node {
 			functionOutputs.put(name + "/running",running);
 			functionOutputs.put(name + "/failed", failed);
 
+			System.out.println("Running functions:" + running);
+			System.out.println("Finished functions:" + finished);
+			System.out.println("failed functions:" + failed);
 			/* Pass the output to the next node */
 			for (Node node : children) {
 				node.passResult(functionOutputs);
