@@ -41,13 +41,14 @@ public class AsyncHandler{
             try {
                 String awsName = getAwsFunctionName(functionName, this.parent);
                 if(awsName != null){
-                    this.handle(awsName);
+                    this.handle(awsName,functionName);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+
     private String getAwsFunctionName(String workflowFunctionName, List<Node> parents){
         String arn = getAwsArn(workflowFunctionName,parents);
         if(arn == null){
@@ -56,6 +57,7 @@ public class AsyncHandler{
         String[] strings = arn.split(":");
         return strings[strings.length-1];
     }
+
     private String getAwsArn(String workflowFunctionName, List<Node> parents){
         //iterates over every parent
         for (Node parentNode:parents) {
@@ -78,19 +80,20 @@ public class AsyncHandler{
 
         return null;
     }
-    private void handle(String function) throws IOException {
-        String queryId = makeLogQuery(function);
+
+    private void handle(String awsName, String workflowName) throws IOException {
+        String queryId = makeLogQuery(awsName);
         String returnString = retrieveLogData(queryId);
-        checkFunction(returnString,function);
+        checkFunction(returnString,awsName,workflowName);
     }
 
     /**
      * checks if a function is running, failed or finished
      *
      * @param returnString the log data for the function
-     * @param function the function we check
+     * @param awsName the function we check
      */
-    private void checkFunction(String returnString,String function){
+    private void checkFunction(String returnString,String awsName,String workflowName){
         JSONParser jsonParser = new JSONParser();
         JSONObject jsonObject = new JSONObject();
         try {
@@ -109,7 +112,7 @@ public class AsyncHandler{
                     String value = (String)object.get("value");
                     String field = (String)object.get("field");
                     if (field.equals("@message") && value.startsWith("START")) {
-                        this.running.add(function);
+                        this.running.add(workflowName+","+awsName);
                         break outerLoop;
                     } else if (field.equals("@message") && value.startsWith("END")) {
                         //iterates over rows in log
@@ -121,11 +124,11 @@ public class AsyncHandler{
                                 value = (String)object.get("value");
                                 field = (String)object.get("field");
                                 if (field.equals("@message") && value.startsWith("[ERROR]")) {
-                                    this.failed.add(function);
+                                    this.failed.add(workflowName+","+awsName);
                                     break outerLoop;
                                 }
                                 if (field.equals("@message") && value.startsWith("START")) {
-                                    this.finished.add(function);
+                                    this.finished.add(workflowName+","+awsName);
                                     break outerLoop;
                                 }
                             }
