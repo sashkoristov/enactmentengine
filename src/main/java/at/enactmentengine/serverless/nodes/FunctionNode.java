@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.Handler.AsyncHandler;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 //import at.enactmentengine.serverless.main.LambdaHandler;
@@ -137,98 +138,122 @@ public class FunctionNode extends Node {
 		synchronized (this) {
 			id = counter++;
 		}
+		Map<String, Object> functionOutputs;
 
-		/* Read the resource link of the base function */
-		String resourceLink = getResourceLink();
-		logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
-				+ "ms], id=" + id);
+		//check if the its async handler
+		if(isAsyncHandler())
+		{
+			functionOutputs= new HashMap<>();
 
-		/* Actual values of the function input */
-		Map<String, Object> actualFunctionInputs = new HashMap<>();
+			AsyncHandler asyncHandler = new AsyncHandler(isAsync(),this.input);
+			asyncHandler.run();
 
-		/* Output values of the base function */
-		Map<String, Object> functionOutputs = new HashMap<>();
+			ArrayList<String> finished = asyncHandler.getFinished();
+			ArrayList<String> running = asyncHandler.getRunning();
+			ArrayList<String> failed = asyncHandler.getFailed();
+			functionOutputs.put(name + "/finished", finished);
+			functionOutputs.put(name + "/running",running);
+			functionOutputs.put(name + "/failed", failed);
 
-		try {
-			/* Check if an input is specified */
-			if (input != null) {
+			/* Pass the output to the next node */
+			for (Node node : children) {
+				node.passResult(functionOutputs);
+				node.call();
+			}
+		}
+		// else handle according to old system
+		else {
+			/* Read the resource link of the base function */
+			String resourceLink = getResourceLink();
+			logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
+					+ "ms], id=" + id);
 
-				/* Iterate over all specified inputs */
-				for (DataIns data : input) {
+			/* Actual values of the function input */
+			Map<String, Object> actualFunctionInputs = new HashMap<>();
 
-					/* Check if actual data contains the specified source */
-					if (dataValues.containsKey(data.getSource())) {
+			/* Output values of the base function */
+			functionOutputs = new HashMap<>();
 
-						/* Check if the element should be passed to the output */
-						if (data.getPassing() != null && data.getPassing()) {
-							functionOutputs.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+			try {
+				/* Check if an input is specified */
+				if (input != null) {
+
+					/* Iterate over all specified inputs */
+					for (DataIns data : input) {
+
+						/* Check if actual data contains the specified source */
+						if (dataValues.containsKey(data.getSource())) {
+
+							/* Check if the element should be passed to the output */
+							if (data.getPassing() != null && data.getPassing()) {
+								functionOutputs.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+							} else {
+								actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
+							}
 						} else {
-							actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
+							throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
+									+ " needs " + data.getSource() + " !");
 						}
-					} else {
-						throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
-								+ " needs " + data.getSource() + " !");
 					}
 				}
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+				return false;
 			}
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-			return false;
+
+			/* Simulate Availability if specified TODO is this really needed? */
+			if (Utils.SIMULATE_AVAILABILITY) {
+				SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+				double simAvail = db.getSimulatedAvail(resourceLink);
+				actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
+			}
+
+			/* Log the function input */
+			logFunctionInput(actualFunctionInputs, id);
+
+			/* Parse function with optional constraints and properties */
+			Function functionToInvoke = parseFTConstraints(resourceLink, actualFunctionInputs);
+
+			/* Invoke function and measure duration */
+			long start = System.currentTimeMillis();
+			String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs);
+			long end = System.currentTimeMillis();
+
+			/* Log the function output */
+			logFunctionOutput(start, end, resultString, id);
+
+			/*
+			 * Read the actual function outputs by their key and store them in
+			 * functionOutputs
+			 */
+			// TODO check for success
+			boolean success = getValuesParsed(resultString, functionOutputs);
+			/* Pass the output to the next node */
+			for (Node node : children) {
+				node.passResult(functionOutputs);
+				node.call();
+			}
+			/* Set the result of the function node */
+			result = functionOutputs;
+
+			/*
+			 * Check if the execution identifier is specified (check if execution should be
+			 * stored in the database)
+			 */
+			if (executionId != -1) {
+
+				/* Create a function invocation object */
+				Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
+						Utils.detectRegion(resourceLink),
+						new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+						new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
+						checkResultSuccess(resultString).toString(), null, executionId);
+
+				/* Store the invocation in the database */
+				storeInDBFunctionInvocation(functionInvocation);
+			}
 		}
 
-		/* Simulate Availability if specified TODO is this really needed? */
-		if (Utils.SIMULATE_AVAILABILITY) {
-			SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
-			double simAvail = db.getSimulatedAvail(resourceLink);
-			actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
-		}
-
-		/* Log the function input */
-		logFunctionInput(actualFunctionInputs, id);
-
-		/* Parse function with optional constraints and properties */
-		Function functionToInvoke = parseFTConstraints(resourceLink, actualFunctionInputs);
-
-		/* Invoke function and measure duration */
-		long start = System.currentTimeMillis();
-		String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs);
-		long end = System.currentTimeMillis();
-
-		/* Log the function output */
-		logFunctionOutput(start, end, resultString, id);
-
-		/*
-		 * Read the actual function outputs by their key and store them in
-		 * functionOutputs
-		 */
-		// TODO check for success
-		boolean success = getValuesParsed(resultString, functionOutputs);
-
-		/* Pass the output to the next node */
-		for (Node node : children) {
-			node.passResult(functionOutputs);
-			node.call();
-		}
-
-		/* Set the result of the function node */
-		result = functionOutputs;
-
-		/*
-		 * Check if the execution identifier is specified (check if execution should be
-		 * stored in the database)
-		 */
-		if (executionId != -1) {
-
-			/* Create a function invocation object */
-			Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
-					Utils.detectRegion(resourceLink),
-					new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-					new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-					checkResultSuccess(resultString).toString(), null, executionId);
-
-			/* Store the invocation in the database */
-			storeInDBFunctionInvocation(functionInvocation);
-		}
 		return true;
 	}
 
@@ -293,7 +318,7 @@ public class FunctionNode extends Node {
 	 */
 	private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs)
 			throws MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException,
-			InvokationFailureException, IOException {
+			InvokationFailureException, IOException, InterruptedException {
 		String resultString;
 
 		/* Check if function should be invoked with fault tolerance settings */
@@ -302,19 +327,14 @@ public class FunctionNode extends Node {
 			/* Invoke the function with fault tolerance */
 			FaultToleranceEngine ftEngine = null;
 
-			if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null){
-				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(),getAWSAccount(), getIBMAccount());
+			if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null) {
+				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount(), getIBMAccount());
 
-			}
-			else if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null){
+			} else if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null) {
 				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
-			}
-
-			else if(getGoogleAccount()!= null && getAzureAccount() != null && getAWSAccount() != null ){
+			} else if (getGoogleAccount() != null && getAzureAccount() != null && getAWSAccount() != null) {
 				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount());
-			}
-
-			else if(getAzureAccount() != null && getGoogleAccount() != null) {
+			} else if (getAzureAccount() != null && getGoogleAccount() != null) {
 				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount());
 			} else if (getIBMAccount() != null && getAWSAccount() != null) {
 				ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
@@ -331,28 +351,34 @@ public class FunctionNode extends Node {
 		} else {
 			/* Invoke the function without fault tolerance */
 			/* check if async invocation or not */
-			if(isAsync(this.properties)) {
+			if (isAsync()) {
 				System.out.println("async invocation function node");
 				long s = System.currentTimeMillis();
 				resultString = gateway.invokeAsyncFunciton(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
-				System.out.println("time: "+(e-s));
+				System.out.println("time: " + (e - s));
 
-			}
-			else {
+			} else {
 				System.out.println("sync invocation function node");
 				long s = System.currentTimeMillis();
 				resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
-				System.out.println("time: "+(e-s));
+				System.out.println("time: " + (e - s));
 			}
 		}
 		return resultString;
+
 	}
 
-	private boolean isAsync(List<PropertyConstraint> properties)
+	private boolean isAsyncHandler()
 	{
-		for (PropertyConstraint propertyConstraint: properties) {
+		//FIXME ? do we want a specific name check to
+		return this.type.equals("build-in:asyncHandler");
+	}
+
+	private boolean isAsync()
+	{
+		for (PropertyConstraint propertyConstraint: this.properties) {
 			if(propertyConstraint.getName().equals("invoke-type")
 					&& propertyConstraint.getValue().equals("ASYNC"))
 				return true;
