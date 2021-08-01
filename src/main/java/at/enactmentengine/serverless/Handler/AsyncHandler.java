@@ -102,22 +102,29 @@ public class AsyncHandler{
             //iterates over rows from log
             outerLoop:
             for (Object lastResult: results) {
-                JSONObject[] array = (JSONObject[]) lastResult;
+                //JSONObject[] array = (JSONObject[]) lastResult;
                 //iterates over items in row
-                for (JSONObject object : array) {
-                    if (object.get("field") == "@message" && ((String) object.get("value")).startsWith("START")) {
+                for (Object o: (JSONArray)lastResult) {
+                    JSONObject object = (JSONObject) o;
+                    String value = (String)object.get("value");
+                    String field = (String)object.get("field");
+                    if (field.equals("@message") && value.startsWith("START")) {
                         this.running.add(function);
                         break outerLoop;
-                    } else if (object.get("field") == "@message" && ((String) object.get("value")).startsWith("END")) {
+                    } else if (field.equals("@message") && value.startsWith("END")) {
                         //iterates over rows in log
-                        for (Object entries : results) {
+                        for (Object e : results) {
                             //iterates over items in row
-                            for (JSONObject entry : (JSONObject[]) entries) {
-                                if (object.get("field") == "@message" && ((String) object.get("value")).startsWith("[ERROR]")) {
+                            JSONArray entries = (JSONArray) e;
+                            for (Object entry : entries) {
+                                object = (JSONObject)entry;
+                                value = (String)object.get("value");
+                                field = (String)object.get("field");
+                                if (field.equals("@message") && value.startsWith("[ERROR]")) {
                                     this.failed.add(function);
                                     break outerLoop;
                                 }
-                                if (object.get("field") == "@message" && ((String) object.get("value")).startsWith("START")) {
+                                if (field.equals("@message") && value.startsWith("START")) {
                                     this.finished.add(function);
                                     break outerLoop;
                                 }
