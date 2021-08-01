@@ -1,6 +1,9 @@
 package at.enactmentengine.serverless.Handler;
 
+import at.enactmentengine.serverless.nodes.FunctionNode;
+import at.enactmentengine.serverless.nodes.Node;
 import at.uibk.dps.afcl.functions.objects.DataIns;
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -10,40 +13,71 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.*;
 
 public class AsyncHandler{
 
     private boolean isAsync;
-    private List<DataIns> functions;
-
+    private String[] functions;
+    private List<Node> parent;
     private ArrayList<String> running;
     private ArrayList<String> failed;
     private ArrayList<String> finished;
     private long time;
 
-    public AsyncHandler(boolean isAsync, List<DataIns> functions)
+    public AsyncHandler(boolean isAsync, List<DataIns> functions, List<Node> parents)
     {
         this.isAsync = isAsync;
-        this.functions = functions;
+        this.functions = functions.get(0).getValue().split(("((, )|,)"));
         this.failed = new ArrayList<>();
-
+        this.parent = parents;
         this.running = new ArrayList<>();
         this.finished = new ArrayList<>();
     }
 
     public void run() {
 
-        for (DataIns function: this.functions) {
+        for (String functionName: this.functions) {
             try {
-                this.handle(function.getName());
+                String awsName = getAwsFunctionName(functionName, this.parent);
+                if(awsName != null){
+                    this.handle(awsName);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
+    private String getAwsFunctionName(String workflowFunctionName, List<Node> parents){
+        String arn = getAwsArn(workflowFunctionName,parents);
+        if(arn == null){
+            return null;
+        }
+        String[] strings = arn.split(":");
+        return strings[strings.length-1];
+    }
+    private String getAwsArn(String workflowFunctionName, List<Node> parents){
+        //iterates over every parent
+        for (Node parentNode:parents) {
+            Node currentNode = parentNode;
+            if (currentNode.getName().equals(workflowFunctionName)) {
+                for (PropertyConstraint property : ((FunctionNode) currentNode).getProperties()) {
+                    if (property.getName().equals("resource")) {
+                        return property.getValue();
+                    }
+                }
+            }
+            // if the the node has parents we call it recursive
+            if (currentNode.getParents() != null) {
+                String parentArn = getAwsArn(workflowFunctionName,currentNode.getParents());
+                if(parentArn != null){
+                    return parentArn;
+                }
+            }
+        }
 
+        return null;
+    }
     private void handle(String function) throws IOException {
         String queryId = makeLogQuery(function);
         String returnString = retrieveLogData(queryId);
