@@ -145,7 +145,7 @@ public class FunctionNode extends Node {
 		{
 			functionOutputs= new HashMap<>();
 
-			AsyncHandler asyncHandler = new AsyncHandler(isAsync(),this.input);
+			AsyncHandler asyncHandler = new AsyncHandler(isAsync(),this.input,this.parents);
 			asyncHandler.run();
 
 			ArrayList<String> finished = asyncHandler.getFinished();
@@ -776,4 +776,7 @@ public class FunctionNode extends Node {
 		return new GoogleFunctionAccount(google_key);
 	}
 
+	public List<PropertyConstraint> getProperties() {
+		return properties;
+	}
 }

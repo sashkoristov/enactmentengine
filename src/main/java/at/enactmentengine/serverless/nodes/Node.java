@@ -77,6 +77,9 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         parents.add(node);
     }
 
+    public List<Node> getParents(){
+        return this.parents;
+    }
     /** Getter and Setter */
 
     public String getName() {
