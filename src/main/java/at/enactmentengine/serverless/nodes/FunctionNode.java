@@ -145,19 +145,20 @@ public class FunctionNode extends Node {
 		{
 			functionOutputs= new HashMap<>();
 
+			long start = System.currentTimeMillis();
 			AsyncHandler asyncHandler = new AsyncHandler(isAsync(),this.input,this.parents);
 			asyncHandler.run();
+			long end = System.currentTimeMillis();
 
-			ArrayList<String> finished = asyncHandler.getFinished();
-			ArrayList<String> running = asyncHandler.getRunning();
-			ArrayList<String> failed = asyncHandler.getFailed();
-			functionOutputs.put(name + "/finished", finished);
-			functionOutputs.put(name + "/running",running);
-			functionOutputs.put(name + "/failed", failed);
+			ArrayList<String> returnString = new ArrayList<>();
+			returnString.add("Finished functions:" + asyncHandler.getFinished());
+			returnString.add("Running functions:" + asyncHandler.getRunning());
+			returnString.add("Failed functions:" + asyncHandler.getFailed());
 
-			System.out.println("Running functions:" + running);
-			System.out.println("Finished functions:" + finished);
-			System.out.println("failed functions:" + failed);
+			String resultString = returnString.toString();
+			logFunctionOutput(start, end, resultString, id);
+
+			functionOutputs.put("handlerOutput", resultString);
 			/* Pass the output to the next node */
 			for (Node node : children) {
 				node.passResult(functionOutputs);
@@ -781,5 +782,9 @@ public class FunctionNode extends Node {
 
 	public List<PropertyConstraint> getProperties() {
 		return properties;
+	}
+
+	public List<PropertyConstraint> getConstraints() {
+		return constraints;
 	}
 }
