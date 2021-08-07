@@ -1,24 +1,29 @@
 package at.enactmentengine.serverless.Handler;
 
-import at.enactmentengine.serverless.nodes.FunctionNode;
-import at.enactmentengine.serverless.nodes.Node;
+import at.enactmentengine.serverless.nodes.*;
+import at.enactmentengine.serverless.object.FunctionAttributes;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.sql.Array;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.Thread.sleep;
 
 public class AsyncHandler{
 
     private boolean isAsync;
-    private String[] functions;
+    private ArrayList<String> functions;
     private List<Node> parent;
     private ArrayList<String> running;
     private ArrayList<String> failed;
@@ -28,20 +33,40 @@ public class AsyncHandler{
     public AsyncHandler(boolean isAsync, List<DataIns> functions, List<Node> parents)
     {
         this.isAsync = isAsync;
-        this.functions = functions.get(0).getValue().split(("((, )|,)"));
+        this.functions = new ArrayList<>(Arrays.asList(functions.get(0).getValue().split(("((, )|,)"))));
         this.failed = new ArrayList<>();
         this.parent = parents;
         this.running = new ArrayList<>();
         this.finished = new ArrayList<>();
     }
 
-    public void run() {
-
-        for (String functionName: this.functions) {
+    public void run()  {
+        ArrayList<String> runningFunctions = this.functions;
+        ArrayList<String> ftjfaasFailed= new ArrayList<>();
+        do {
+            runHelper(runningFunctions);
+            runningFunctions = this.running;
+            this.running = new ArrayList<>();
+            //todo run ft for failed once
+            System.out.println("hello");
+            if(isAsync || runningFunctions.size()!=0){
+                break;
+            }
             try {
-                String awsName = getAwsFunctionName(functionName, this.parent);
-                if(awsName != null){
-                    this.handle(awsName,functionName);
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }   while(true);
+        this.running = runningFunctions;
+    }
+
+    private void runHelper(ArrayList<String> functions){
+        for (String functionName : functions) {
+            try {
+                FunctionAttributes functionAttributes = getAwsFunctionName(functionName, this.parent);
+                if (functionAttributes.getAwsName() != null) {
+                    this.handle(functionAttributes.getAwsName(), functionName);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -49,51 +74,61 @@ public class AsyncHandler{
         }
     }
 
-    private String getAwsFunctionName(String workflowFunctionName, List<Node> parents){
-        String arn = getAwsArn(workflowFunctionName,parents);
-        if(arn == null){
-            return null;
-        }
-        String[] strings = arn.split(":");
-        return strings[strings.length-1];
+    private FunctionAttributes getAwsFunctionName(String workflowFunctionName, List<Node> parents){
+        FunctionAttributes functionAttributes = new FunctionAttributes();
+        functionAttributes = getAwsArn(workflowFunctionName,parents,functionAttributes);
+
+        return functionAttributes;
     }
 
-    private String getAwsArn(String workflowFunctionName, List<Node> parents){
+    private FunctionAttributes getAwsArn(String workflowFunctionName, List<Node> parents, FunctionAttributes functionAttributes){
         //iterates over every parent
-        for (Node parentNode:parents) {
-            Node currentNode = parentNode;
+
+        for (Node currentNode:parents) {
+            if(currentNode.getClass().equals(ParallelEndNode.class) || currentNode.getClass().equals(ParallelForEndNode.class)){
+                functionAttributes.increaseCounter();
+            }
+            if(currentNode.getClass().equals(ParallelStartNode.class) || currentNode.getClass().equals(ParallelForStartNode.class)){
+                functionAttributes.decreaseCounter();
+            }
             if (currentNode.getName().equals(workflowFunctionName)) {
                 for (PropertyConstraint property : ((FunctionNode) currentNode).getProperties()) {
                     if (property.getName().equals("resource")) {
-                        return property.getValue();
+                        String arn = property.getValue();
+                        String[] strings = arn.split(":");
+                        functionAttributes.setAwsName(strings[strings.length-1]);
                     }
                 }
+                functionAttributes.setConstraints(((FunctionNode) currentNode).getConstraints());
+
+                return functionAttributes;
             }
             // if the the node has parents we call it recursive
             if (currentNode.getParents() != null) {
-                String parentArn = getAwsArn(workflowFunctionName,currentNode.getParents());
-                if(parentArn != null){
-                    return parentArn;
+                functionAttributes = getAwsArn(workflowFunctionName,currentNode.getParents(),functionAttributes);
+                if(functionAttributes.getAwsName()!= null) {
+                    return functionAttributes;
                 }
             }
         }
 
-        return null;
+        return functionAttributes;
     }
 
     private void handle(String awsName, String workflowName) throws IOException {
         String queryId = makeLogQuery(awsName);
         String returnString = retrieveLogData(queryId);
-        checkFunction(returnString,awsName,workflowName);
+        //System.out.println(returnString);
+        checkFunction(returnString,workflowName);
     }
 
     /**
      * checks if a function is running, failed or finished
      *
      * @param returnString the log data for the function
-     * @param awsName the function we check
+     * @param workflowName the function we check
      */
-    private void checkFunction(String returnString,String awsName,String workflowName){
+    private void checkFunction(String returnString,String workflowName){
         JSONParser jsonParser = new JSONParser();
         JSONObject jsonObject = new JSONObject();
         try {
@@ -112,7 +147,7 @@ public class AsyncHandler{
                     String value = (String)object.get("value");
                     String field = (String)object.get("field");
                     if (field.equals("@message") && value.startsWith("START")) {
-                        this.running.add(workflowName+","+awsName);
+                        this.running.add(workflowName);
                         break outerLoop;
                     } else if (field.equals("@message") && value.startsWith("END")) {
                         //iterates over rows in log
@@ -124,11 +159,11 @@ public class AsyncHandler{
                                 value = (String)object.get("value");
                                 field = (String)object.get("field");
                                 if (field.equals("@message") && value.startsWith("[ERROR]")) {
-                                    this.failed.add(workflowName+","+awsName);
+                                    this.failed.add(workflowName);
                                     break outerLoop;
                                 }
                                 if (field.equals("@message") && value.startsWith("START")) {
-                                    this.finished.add(workflowName+","+awsName);
+                                    this.finished.add(workflowName);
                                     break outerLoop;
                                 }
                             }
@@ -161,19 +196,19 @@ public class AsyncHandler{
             // Read the output from the command
             BufferedReader stdInput = new BufferedReader(new
                     InputStreamReader(proc.getInputStream()));
-            System.out.println("Here is the standard output of the command:\n");
+            //System.out.println("Here is the standard output of the command:\n");
             String s = null;
 
             while ((s = stdInput.readLine()) != null) {
-                System.out.println(s);
+                //System.out.println(s);
                 returnString += s;
             }
             // Read any errors from the attempted command
             BufferedReader stdError = new BufferedReader(new
                     InputStreamReader(proc.getErrorStream()));
-            System.out.println("Here is the standard error of the command (if any):\n");
+            //System.out.println("Here is the standard error of the command (if any):\n");
             while ((s = stdError.readLine()) != null) {
-                System.out.println(s);
+                //System.out.println(s);
             }
         } catch (Exception e) {
             //print exception
@@ -199,9 +234,9 @@ public class AsyncHandler{
         long inputEndTime = calendar.getTimeInMillis() ;
         long inputStartTime = calendar.getTimeInMillis() - 86400000L;
 
-        System.out.println(inputStartTime);
-        System.out.println(inputEndTime);
-        System.out.println(function);
+        //System.out.println(inputStartTime);
+        //System.out.println(inputEndTime);
+        //System.out.println(function);
 
         // create terminal command and execute it ----------------------------------------------------------------------
         String command = "aws logs start-query --log-group-name \"/aws/lambda/"
@@ -216,20 +251,20 @@ public class AsyncHandler{
             // Read the output from the command
             BufferedReader stdInput = new BufferedReader(new
                     InputStreamReader(proc.getInputStream()));
-            System.out.println("Here is the standard output of the command:\n");
+            //System.out.println("Here is the standard output of the command:\n");
             String s = null;
 
             while ((s = stdInput.readLine()) != null) {
-                System.out.println(s);
+                //System.out.println(s);
                 returnString += s;
             }
 
             // Read any errors from the attempted command
             BufferedReader stdError = new BufferedReader(new
                     InputStreamReader(proc.getErrorStream()));
-            System.out.println("Here is the standard error of the command (if any):\n");
+            //System.out.println("Here is the standard error of the command (if any):\n");
             while ((s = stdError.readLine()) != null) {
-                System.out.println(s);
+                //System.out.println(s);
             }
 
         } catch (Exception e) {
