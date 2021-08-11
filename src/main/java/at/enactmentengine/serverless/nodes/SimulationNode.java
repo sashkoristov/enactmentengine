@@ -112,7 +112,7 @@ public class SimulationNode extends Node {
     }
 
     /**
-     * Extracts the memory size, region and function name of the deployment string.
+     * Extracts the memory size, region, provider and function name of the deployment string.
      *
      * @param deployment to extract the values from
      *
@@ -298,12 +298,15 @@ public class SimulationNode extends Node {
         } else {
             long startTime = getStartingTime();
             result = getSimulationResult(resourceLink, functionToSimulate.getDeployment());
+            Event event = null;
             if (result.isSuccess()) {
+                event = Event.FUNCTION_END;
                 logger.info("Simulating function {} took {}ms{}.", resourceLink, result.getRTT(), simInfo);
             } else {
+                event = Event.FUNCTION_FAILED;
                 logger.info("Simulating function {} failed{}.", resourceLink, simInfo);
             }
-            MongoDBAccess.saveLog(Event.FUNCTION_END, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), null,
+            MongoDBAccess.saveLog(event, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), null,
                     result.getRTT(), result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
         }
 
@@ -380,7 +383,7 @@ public class SimulationNode extends Node {
                     throw new InvokationFailureException("Invocation has failed after entire alternative strategy");
                 }
             } else {
-                // no constraints. Just invoke in current thread. (we do not need to cancel)
+                // no constraints
                 quadrupleResult = simulateFT(function);
                 if (!quadrupleResult.isSuccess()) {
                     throw new InvokationFailureException("Invocation has failed");
@@ -615,7 +618,7 @@ public class SimulationNode extends Node {
      * @param success          if the simulation is success or not
      * @param deploymentString the deployment string of the function
      *
-     * @return the RTT in ms
+     * @return the RTT in ms and cost
      *
      * @throws SQLException                         if an error occurs when reading fields from a database entry
      * @throws RegionDetectionException             if detecting the region from the resource link fails
@@ -631,21 +634,19 @@ public class SimulationNode extends Node {
         String region = null;
         Provider provider = null;
         int concurrencyOverhead;
+        ResultSet providerEntry;
 
         if (deploymentString != null) {
             elements = extractValuesFromDeployment(deploymentString);
             memory = Integer.parseInt(elements.get(0));
             region = elements.get(1);
             provider = Provider.valueOf(elements.get(2));
-
-            ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
-            providerEntry.next();
-            concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
+            providerEntry = MariaDBAccess.getProviderEntry(provider);
         } else {
-            ResultSet providerEntry = MariaDBAccess.getProviderEntry(Utils.detectProvider(entry.getString("KMS_Arn")));
-            providerEntry.next();
-            concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
+            providerEntry = MariaDBAccess.getProviderEntry(Utils.detectProvider(entry.getString("KMS_Arn")));
         }
+        providerEntry.next();
+        concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
 
         // if the deployment is null or deployment is already saved in the MD-DB,
         // simulate in the same region and with the same memory
@@ -738,7 +739,6 @@ public class SimulationNode extends Node {
 
         rtt = SimulationModel.applyDistribution(rtt, success);
         SimulationParameters.workflowCost += cost;
-
         return new PairResult<>(rtt, cost);
     }
 
@@ -769,7 +769,7 @@ public class SimulationNode extends Node {
 
     /**
      * Adapted from FunctionNode's method getValuesParsed to parse output values. The default values for the output are:
-     * Number: 1 String: "" Collection: [] Boolean: False
+     * Number: 1, String: "", Collection: [], Boolean: False
      *
      * @param out        the DataOutsAtomic
      * @param constraint the constraint of a DataOutsAtomic
@@ -875,6 +875,7 @@ public class SimulationNode extends Node {
         }
 
         if (entry.getInt("invocations") == 0) {
+            logger.info("Refreshing database to check for an invocation for '" + resourceLink + "'. This could take a moment.");
             ManualUpdate.main(null);
             entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
             entry.next();

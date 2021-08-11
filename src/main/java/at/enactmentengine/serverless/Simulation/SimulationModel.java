@@ -203,7 +203,7 @@ public class SimulationModel {
             int handshake = 0;
             // TODO other providers?
             if (provider == Provider.AWS) {
-                handshake = 2;
+                handshake = 3;
 
                 int authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
                 // if authentication is required, add it to the RTT

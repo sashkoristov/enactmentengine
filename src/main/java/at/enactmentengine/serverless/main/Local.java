@@ -1,6 +1,7 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.uibk.dps.cronjob.ManualUpdate;
 import at.uibk.dps.databases.MongoDBAccess;
 import ch.qos.logback.classic.Level;
 import org.bson.Document;
@@ -61,6 +62,13 @@ public class Local {
             boolean export = parameterList.contains("--export");
             if (export) {
                 length -= 1;
+            }
+            boolean update = parameterList.contains("--update");
+            if (update) {
+                length -= 1;
+                logger.info("Updating database. This could take a moment...");
+                ManualUpdate.main(null);
+                logger.info("Updating complete!");
             }
 
             if (length > 2 && args[2].equals("--simulate")) {
@@ -150,6 +158,9 @@ public class Local {
                 header.setLength(header.length() - 1);
                 header.append("\n");
                 writer.write(header.toString());
+            } else if (i == 0) {
+                // if it is the first iteration and the file already contains some values, insert an empty line as divider
+                writer.write("\n");
             }
             // remove the last char (= ",") and append a newline
             sb.setLength(sb.length() - 1);
