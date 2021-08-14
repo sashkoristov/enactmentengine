@@ -16,6 +16,9 @@ workflowBody:
           value: "ASYNC"
         - name: "resource"
           value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
+      constraints:
+        - name: "FT-AltPlan-0"
+          value: "1;arn:aws:lambda:us-east-2:717556240325:function:testasdfasdf;"
   - function:
       name: "asyncShit"
       type: "build-in:asyncHandler"
@@ -29,18 +32,4 @@ workflowBody:
       properties:
         - name: "invoke-type"
           value: "SYNC"
-  - function:
-      name: "Function2"
-      type: "function"
-      dataIns:
-      dataOuts:
-        - name: "statusCode"
-          type: "string"
-        - name: "response"
-          type: "string"
-      properties:
-        - name: "invoke-type"
-          value: "SYNC"
-        - name: "resource"
-          value: "arn:aws:lambda:us-east-2:717556240325:function:testasdfasdf"
 dataOuts:
