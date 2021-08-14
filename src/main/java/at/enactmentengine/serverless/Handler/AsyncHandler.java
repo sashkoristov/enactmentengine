@@ -81,6 +81,11 @@ public class AsyncHandler{
 
     private void runFT(FunctionAttributes functionAttributes)
     {
+        if(functionAttributes.getParallelCounter()!=0){
+            this.failed.remove(functionAttributes.getName());
+            this.failed.add(functionAttributes.getName()+"(cannot support FT in parallel)");
+            return;
+        }
         if(!functionAttributes.getFunction().hasFTSet()){
             return;
         }
