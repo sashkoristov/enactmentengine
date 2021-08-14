@@ -146,7 +146,8 @@ public class FunctionNode extends Node {
 			functionOutputs= new HashMap<>();
 
 			long start = System.currentTimeMillis();
-			AsyncHandler asyncHandler = new AsyncHandler(isAsync(),this.input,this.parents);
+			AsyncHandler asyncHandler = new AsyncHandler(isAsync(),this.input,this.parents,this.dataValues);
+			asyncHandler.setAccounts(getAWSAccount(),getIBMAccount(),getGoogleAccount(),getAzureAccount());
 			asyncHandler.run();
 			long end = System.currentTimeMillis();
 
@@ -326,7 +327,7 @@ public class FunctionNode extends Node {
 		String resultString;
 
 		/* Check if function should be invoked with fault tolerance settings */
-		if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
+		if (!isAsync() && functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
 
 			/* Invoke the function with fault tolerance */
 			FaultToleranceEngine ftEngine = null;
@@ -589,7 +590,7 @@ public class FunctionNode extends Node {
 	 *
 	 * @return function object with correctly set ft values.
 	 */
-	private Function parseFTConstraints(String resourceLink, Map<String, Object> functionInputs) {
+	public Function parseFTConstraints(String resourceLink, Map<String, Object> functionInputs) {
 
 		/* Keeps track of all constraint settings */
 		List<PropertyConstraint> cList = new LinkedList<>();
@@ -786,5 +787,13 @@ public class FunctionNode extends Node {
 
 	public List<PropertyConstraint> getConstraints() {
 		return constraints;
+	}
+
+	public List<DataIns> getInput() {
+		return input;
+	}
+
+	public List<DataOutsAtomic> getOutput() {
+		return output;
 	}
 }
