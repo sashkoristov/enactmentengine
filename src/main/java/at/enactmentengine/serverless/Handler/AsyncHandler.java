@@ -1,18 +1,27 @@
 package at.enactmentengine.serverless.Handler;
 
+import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.*;
 import at.enactmentengine.serverless.object.FunctionAttributes;
+import at.enactmentengine.serverless.object.Utils;
+import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.exception.CancelInvokeException;
+import at.uibk.dps.exception.InvokationFailureException;
+import at.uibk.dps.function.AlternativeStrategy;
+import at.uibk.dps.function.ConstraintSettings;
+import at.uibk.dps.function.FaultToleranceSettings;
+import at.uibk.dps.function.Function;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.Array;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
@@ -29,9 +38,15 @@ public class AsyncHandler{
     private ArrayList<String> failed;
     private ArrayList<String> finished;
     private long time;
+    private AWSAccount awsAccount;
+    private IBMAccount ibmAccount;
+    private GoogleFunctionAccount googleFunctionAccount;
+    private AzureAccount azureAccount;
+    private Map<String, Object> dataValues;
 
-    public AsyncHandler(boolean isAsync, List<DataIns> functions, List<Node> parents)
+    public AsyncHandler(boolean isAsync, List<DataIns> functions, List<Node> parents,Map<String, Object> dataValues)
     {
+        this.dataValues = dataValues;
         this.isAsync = isAsync;
         this.functions = new ArrayList<>(Arrays.asList(functions.get(0).getValue().split(("((, )|,)"))));
         this.failed = new ArrayList<>();
@@ -44,16 +59,19 @@ public class AsyncHandler{
         ArrayList<String> runningFunctions = this.functions;
         ArrayList<String> ftjfaasFailed= new ArrayList<>();
         do {
+            long timeStart = System.currentTimeMillis();
             runHelper(runningFunctions);
+            long timeEnd = System.currentTimeMillis();
             runningFunctions = this.running;
             this.running = new ArrayList<>();
             //todo run ft for failed once
             System.out.println("hello");
-            if(isAsync || runningFunctions.size()!=0){
+
+            if(isAsync || runningFunctions.size()==0){
                 break;
             }
             try {
-                TimeUnit.SECONDS.sleep(5);
+                TimeUnit.MILLISECONDS.sleep(500000-(timeStart+timeEnd)/1000000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -61,12 +79,37 @@ public class AsyncHandler{
         this.running = runningFunctions;
     }
 
+    private void runFT(FunctionAttributes functionAttributes)
+    {
+        if(!functionAttributes.getFunction().hasFTSet()){
+            return;
+        }
+        if (functionAttributes.getFunction().getFTSettings().hasAlternativeStartegy()) {
+            try {
+                String result = this.invokeAlternativeStategy(functionAttributes.getFunction());
+            } catch (Exception e) {
+                return;
+            }
+            this.failed.remove(functionAttributes.getName());
+            this.finished.add(functionAttributes.getName()+"(with FT)");
+        }
+    }
     private void runHelper(ArrayList<String> functions){
         for (String functionName : functions) {
             try {
-                FunctionAttributes functionAttributes = getAwsFunctionName(functionName, this.parent);
+                FunctionAttributes functionAttributes = getFunctionAttributesHelper(functionName, this.parent);
+                if(!functionAttributes.isAsync()){
+                    this.finished.add(functionAttributes.getName());
+                    continue;
+                }
                 if (functionAttributes.getAwsName() != null) {
+                    int size = this.failed.size();
                     this.handle(functionAttributes.getAwsName(), functionName);
+                    if(this.failed.size()>size){
+                        if(functionAttributes.getFunction().hasFTSet()) {
+                            runFT(functionAttributes);
+                        }
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -74,14 +117,120 @@ public class AsyncHandler{
         }
     }
 
-    private FunctionAttributes getAwsFunctionName(String workflowFunctionName, List<Node> parents){
+    private String invokeAlternativeStategy(Function function) throws Exception {
+        if (function.getFTSettings().getAltStrategy() == null) {
+            throw new Exception("No alternative Strategy defined");
+        } else {
+            int i = 0;
+            Iterator var3 = function.getFTSettings().getAltStrategy().iterator();
+
+            while(var3.hasNext()) {
+                List<Function> alternativePlan = (List)var3.next();
+                ++i;
+
+                try {
+                    String result = this.parallelInvoke(alternativePlan);
+                    return result;
+                } catch (CancelInvokeException var6) {
+                    throw var6;
+                } catch (Exception var7) {
+                }
+            }
+
+            throw new Exception("Failed after entire Alternative Strategy");
+        }
+    }
+    private String parallelInvoke(List<Function> functionList) throws CancelInvokeException, InvokationFailureException {
+        boolean running = true;
+        List<InvokationThread> workerList = new ArrayList(functionList.size());
+        if (functionList != null && functionList.size() > 0) {
+            Iterator var4 = functionList.iterator();
+
+            while(var4.hasNext()) {
+                Function functionToBeInvoked = (Function)var4.next();
+                InvokationThread invocationThread = null;
+                if (this.awsAccount != null && this.ibmAccount != null && this.googleFunctionAccount != null && this.azureAccount != null) {
+                    invocationThread = new InvokationThread(this.googleFunctionAccount, this.azureAccount, this.awsAccount, this.ibmAccount, functionToBeInvoked);
+                } else if (this.awsAccount != null && this.googleFunctionAccount != null && this.azureAccount != null) {
+                    invocationThread = new InvokationThread(this.googleFunctionAccount, this.azureAccount, this.awsAccount, functionToBeInvoked);
+                } else if (this.azureAccount != null && this.googleFunctionAccount != null && this.ibmAccount != null) {
+                    invocationThread = new InvokationThread(this.googleFunctionAccount, this.azureAccount, this.ibmAccount, functionToBeInvoked);
+                } else if (this.azureAccount != null && this.googleFunctionAccount != null) {
+                    invocationThread = new InvokationThread(this.googleFunctionAccount, this.azureAccount, functionToBeInvoked);
+                } else {
+                    //invocationThread = new InvokationThread(this.awsAccount, this.ibmAccount, functionToBeInvoked);
+                }
+
+                Thread thread = new Thread(invocationThread);
+                thread.start();
+                workerList.add(invocationThread);
+            }
+
+            do {
+                if (!running) {
+                    throw new InvokationFailureException("Failed");
+                }
+
+                int indexOfSucessfull = this.successfullThread(workerList);
+                if (indexOfSucessfull != -1) {
+                    String correctResult = ((InvokationThread)workerList.get(indexOfSucessfull)).getResult();
+                    this.terminateAll(workerList);
+                    return correctResult;
+                }
+
+                if (this.allThreadsDone(workerList) && this.successfullThread(workerList) == -1) {
+                    running = false;
+                    throw new InvokationFailureException("All Threads Failed");
+                }
+
+                try {
+                    Thread.sleep(50L);
+                } catch (InterruptedException var8) {
+                }
+            } while(true);
+        } else {
+            throw new InvokationFailureException("FunctionList is empty or null!");
+        }
+    }
+    private int successfullThread(List<InvokationThread> workerList) {
+        int numThreads = workerList.size();
+
+        for(int index = 0; index < numThreads; ++index) {
+            if (((InvokationThread)workerList.get(index)).isFinished() && ((InvokationThread)workerList.get(index)).getResult() != null) {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+    private void terminateAll(List<InvokationThread> workerList) {
+        Iterator var2 = workerList.iterator();
+
+        while(var2.hasNext()) {
+            InvokationThread thread = (InvokationThread)var2.next();
+            thread.stop();
+        }
+
+    }
+    private boolean allThreadsDone(List<InvokationThread> workerList) {
+        int numThreads = workerList.size();
+
+        for(int index = 0; index < numThreads; ++index) {
+            if (!((InvokationThread)workerList.get(index)).isFinished()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+    private FunctionAttributes getFunctionAttributesHelper(String workflowFunctionName, List<Node> parents){
         FunctionAttributes functionAttributes = new FunctionAttributes();
-        functionAttributes = getAwsArn(workflowFunctionName,parents,functionAttributes);
+        functionAttributes = getFunctionAttributes(workflowFunctionName,parents,functionAttributes);
 
         return functionAttributes;
     }
 
-    private FunctionAttributes getAwsArn(String workflowFunctionName, List<Node> parents, FunctionAttributes functionAttributes){
+    private FunctionAttributes getFunctionAttributes(String workflowFunctionName, List<Node> parents, FunctionAttributes functionAttributes){
         //iterates over every parent
 
         for (Node currentNode:parents) {
@@ -92,20 +241,44 @@ public class AsyncHandler{
                 functionAttributes.decreaseCounter();
             }
             if (currentNode.getName().equals(workflowFunctionName)) {
-                for (PropertyConstraint property : ((FunctionNode) currentNode).getProperties()) {
+                String arn = "";
+                FunctionNode currentFunction = ((FunctionNode) currentNode);
+                for (PropertyConstraint property : currentFunction.getProperties()) {
                     if (property.getName().equals("resource")) {
-                        String arn = property.getValue();
+                        arn = property.getValue();
                         String[] strings = arn.split(":");
                         functionAttributes.setAwsName(strings[strings.length-1]);
+                        functionAttributes.setName(workflowFunctionName);
+                    }
+                    if(property.getName().equals("invoke-type")){
+                        functionAttributes.setAsync(Objects.equals(property.getValue(), "ASYNC"));
                     }
                 }
-                functionAttributes.setConstraints(((FunctionNode) currentNode).getConstraints());
+                //get ft shit
+                Map<String, Object> actualFunctionInputs = new HashMap<>();
+                /* Iterate over all specified inputs */
+                if(currentFunction.getInput()!= null){
+                    for (DataIns data : currentFunction.getInput()) {
+                        /* Check if the element should be passed to the output */
+                        if (data.getPassing() != null && data.getPassing()) {
+                        } else {
+                            actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                        }
+                    }
+                }
+                /* Simulate Availability if specified TODO is this really needed? */
+                if (Utils.SIMULATE_AVAILABILITY) {
+                    SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+                    double simAvail = db.getSimulatedAvail(arn);
+                    actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
+                }
+                functionAttributes.setFunction(parseFTConstraints(currentFunction.getConstraints(),"function",actualFunctionInputs,arn));
 
                 return functionAttributes;
             }
-            // if the the node has parents we call it recursive
+            // if the node has parents we call it recursive
             if (currentNode.getParents() != null) {
-                functionAttributes = getAwsArn(workflowFunctionName,currentNode.getParents(),functionAttributes);
+                functionAttributes = getFunctionAttributes(workflowFunctionName,currentNode.getParents(),functionAttributes);
                 if(functionAttributes.getAwsName()!= null) {
                     return functionAttributes;
                 }
@@ -113,6 +286,121 @@ public class AsyncHandler{
         }
 
         return functionAttributes;
+    }
+
+    /**
+     * Add availability value to the function input. TODO is this really needed?
+     *
+     * @param simAvail       the simulated availability from the database.
+     * @param functionInputs the actual function input.
+     * @return the new function input.
+     */
+    private Map<String, Object> checkFunctionSimAvail(double simAvail, Map<String, Object> functionInputs) {
+
+        /* Check if this functions avail should be simulated */
+        if (simAvail != 1) {
+            functionInputs.put("availability", simAvail);
+        }
+        return functionInputs;
+    }
+
+    public Function parseFTConstraints(List<PropertyConstraint> constraints, String type, Map<String,Object> functionInputs, String resourceLink){
+        /* Keeps track of all constraint settings */
+        List<PropertyConstraint> cList = new LinkedList<>();
+
+        /* Keeps track of all fault tolerance settings */
+        List<PropertyConstraint> ftList = new LinkedList<>();
+
+        /* Check if there are constraints set */
+        if (constraints == null) {
+            return null;
+        }
+
+        /* Iterate over constraints and look for according settings */
+        for (PropertyConstraint constraint : constraints) {
+            if (constraint.getName().startsWith("FT-")) {
+                ftList.add(constraint);
+            } else if (constraint.getName().startsWith("C-")) {
+                cList.add(constraint);
+            }
+        }
+
+        /* Parse fault tolerance settings */
+        FaultToleranceSettings ftSettings = getFaultToleranceSettings(ftList, functionInputs,type);
+
+        /* Parse constraint settings */
+        ConstraintSettings cSettings = getConstraintSettings(cList);
+
+        return new Function(resourceLink, type, functionInputs, ftSettings.isEmpty() ? null : ftSettings,
+                cSettings.isEmpty() ? null : cSettings);
+    }
+    /**
+     * Look for fault tolerance settings.
+     *
+     * @param ftList         all fault tolerance settings.
+     * @param functionInputs the input of the base function.
+     *
+     * @return fault tolerance settings.
+     */
+    private FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList,
+                                                             Map<String, Object> functionInputs,String type) {
+
+        /* Set the default fault tolerance settings to zero retries */
+        FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
+
+        /* Create a lis for the alternative strategy */
+        List<List<Function>> alternativeStrategy = new LinkedList<>();
+
+        /* Iterate over all fault tolerance constraints and check for supported ones */
+        for (PropertyConstraint ftConstraint : ftList) {
+            if (ftConstraint.getName().compareTo("FT-Retries") == 0) {
+
+                /*
+                 * Set the given number of retries a base function should be repeated if a
+                 * failure happens
+                 */
+                ftSettings.setRetries(Integer.valueOf(ftConstraint.getValue()));
+            } else if (ftConstraint.getName().startsWith("FT-AltPlan-")) {
+
+                /* Pack all alternative function into an alternative plan */
+                List<Function> alternativePlan = new LinkedList<>();
+                String possibleResources = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
+                while (possibleResources.contains(";")) {
+                    String funcString = possibleResources.substring(0, possibleResources.indexOf(";"));
+                    Function tmpFunc = new Function(funcString, type, functionInputs);
+                    possibleResources = possibleResources.substring(possibleResources.indexOf(";") + 1);
+
+                    alternativePlan.add(tmpFunc);
+                }
+                alternativeStrategy.add(alternativePlan);
+            }
+        }
+        ftSettings.setAltStrategy(new AlternativeStrategy(alternativeStrategy));
+        return ftSettings;
+    }
+    /**
+     * Look for constraint settings.
+     *
+     * @param cList all constraint settings.
+     *
+     * @return constraint settings.
+     */
+    private ConstraintSettings getConstraintSettings(List<PropertyConstraint> cList) {
+
+        /* Set the default constraint settings */
+        ConstraintSettings cSettings = new ConstraintSettings(null, null, 0);
+
+        /* Iterate over all constraint settings and check for supported ones */
+        for (PropertyConstraint cConstraint : cList) {
+            if (cConstraint.getName().compareTo("C-latestStartingTime") == 0) {
+                cSettings.setLatestStartingTime(Timestamp.valueOf(cConstraint.getValue()));
+            } else if (cConstraint.getName().compareTo("C-latestFinishingTime") == 0) {
+                cSettings.setLatestFinishingTime(Timestamp.valueOf(cConstraint.getValue()));
+            } else if (cConstraint.getName().compareTo("C-maxRunningTime") == 0) {
+                cSettings.setMaxRunningTime(Integer.valueOf(cConstraint.getValue()));
+            }
+        }
+        return cSettings;
     }
 
     private void handle(String awsName, String workflowName) throws IOException {
@@ -276,6 +564,12 @@ public class AsyncHandler{
 
     }
 
+    public void setAccounts(AWSAccount awsAccount, IBMAccount ibmAccount, GoogleFunctionAccount googleFunctionAccount, AzureAccount azureAccount){
+        this.awsAccount= awsAccount;
+        this.ibmAccount = ibmAccount;
+        this.googleFunctionAccount= googleFunctionAccount;
+        this.azureAccount= azureAccount;
+    }
     // getter
     public ArrayList<String> getFailed() {
         return this.failed;
@@ -285,5 +579,20 @@ public class AsyncHandler{
     }
     public ArrayList<String> getRunning() {
         return this.running;
+    }
+    public ArrayList<String> getFunctions() {
+        return functions;
+    }
+    public AWSAccount getAWSAccount() {
+        return awsAccount;
+    }
+    public AzureAccount getAzureAccount() {
+        return azureAccount;
+    }
+    public GoogleFunctionAccount getGoogleAccount() {
+        return googleFunctionAccount;
+    }
+    public IBMAccount getIBMAccount() {
+        return ibmAccount;
     }
 }
