@@ -88,6 +88,8 @@ public class AsyncHandler{
             try {
                 String result = this.invokeAlternativeStategy(functionAttributes.getFunction());
             } catch (Exception e) {
+                this.failed.remove(functionAttributes.getName());
+                this.failed.add(functionAttributes.getName()+"(FT failed too)");
                 return;
             }
             this.failed.remove(functionAttributes.getName());

@@ -32,4 +32,18 @@ workflowBody:
       properties:
         - name: "invoke-type"
           value: "SYNC"
+  - function:
+      name: "Function1"
+      type: "function"
+      dataIns:
+      dataOuts:
+        - name: "statusCode"
+          type: "string"
+        - name: "response"
+          type: "string"
+      properties:
+        - name: "invoke-type"
+          value: "ASYNC"
+        - name: "resource"
+          value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
 dataOuts:
