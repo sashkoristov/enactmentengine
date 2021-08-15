@@ -1,6 +1,5 @@
 package at.enactmentengine.serverless.Handler;
 
-import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.nodes.*;
 import at.enactmentengine.serverless.object.FunctionAttributes;
 import at.enactmentengine.serverless.object.Utils;
@@ -111,7 +110,7 @@ public class AsyncHandler{
                 }
                 if (functionAttributes.getAwsName() != null) {
                     int size = this.failed.size();
-                    this.handle(functionAttributes.getAwsName(), functionName);
+                    this.handleAwsFunction(functionAttributes.getAwsName(), functionName);
                     if(this.failed.size()>size){
                         if(functionAttributes.getFunction().hasFTSet()) {
                             runFT(functionAttributes);
@@ -410,11 +409,11 @@ public class AsyncHandler{
         return cSettings;
     }
 
-    private void handle(String awsName, String workflowName) throws IOException {
-        String queryId = makeLogQuery(awsName);
-        String returnString = retrieveLogData(queryId);
+    private void handleAwsFunction(String awsName, String workflowName) throws IOException {
+        String queryId = makeAwsLogQuery(awsName);
+        String returnString = retrieveAwsLogData(queryId);
         //System.out.println(returnString);
-        checkFunction(returnString,workflowName);
+        checkAwsFunction(returnString,workflowName);
     }
 
     /**
@@ -423,7 +422,7 @@ public class AsyncHandler{
      * @param returnString the log data for the function
      * @param workflowName the function we check
      */
-    private void checkFunction(String returnString,String workflowName){
+    private void checkAwsFunction(String returnString, String workflowName){
         JSONParser jsonParser = new JSONParser();
         JSONObject jsonObject = new JSONObject();
         try {
@@ -479,7 +478,7 @@ public class AsyncHandler{
      *
      * @return the data in string form
      */
-    private String retrieveLogData(String queryId){
+    private String retrieveAwsLogData(String queryId){
         //assample the terminal command
         String command = "aws logs get-query-results --query-id " + queryId;
         String[] exec = new String[]{"/bin/bash", "-c", command};
@@ -519,7 +518,7 @@ public class AsyncHandler{
      *
      * @return the query id from the executed query
      */
-    private String makeLogQuery(String function) {
+    private String makeAwsLogQuery(String function) {
         //create timestamp for start and end time
         Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
         calendar.clear();
