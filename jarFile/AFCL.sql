@@ -1,6 +1,6 @@
 -- --------------------------------------------------------
 -- Host:                         10.0.0.62
--- Server version:               10.3.24-MariaDB - Source distribution
+-- Server version:               10.3.27-MariaDB - Source distribution
 -- Server OS:                    Linux
 -- HeidiSQL Version:             11.2.0.6213
 -- --------------------------------------------------------
@@ -16,6 +16,32 @@
 -- Dumping database structure for afcl
 CREATE DATABASE IF NOT EXISTS `afcl` /*!40100 DEFAULT CHARACTER SET latin1 */;
 USE `afcl`;
+
+-- Dumping structure for table afcl.cpu
+CREATE TABLE IF NOT EXISTS `cpu` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `provider` smallint(6) NOT NULL,
+  `region` int(11) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `parallel` tinyint(1) DEFAULT NULL,
+  `MIPS` double NOT NULL,
+  `from_percentage` int(11) NOT NULL,
+  `to_percentage` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `provider` (`provider`),
+  KEY `region` (`region`),
+  CONSTRAINT `cpu_ibfk_1` FOREIGN KEY (`provider`) REFERENCES `provider` (`id`),
+  CONSTRAINT `cpu_ibfk_2` FOREIGN KEY (`region`) REFERENCES `region` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+
+-- Dumping data for table afcl.cpu: ~4 rows (approximately)
+/*!40000 ALTER TABLE `cpu` DISABLE KEYS */;
+REPLACE INTO `cpu` (`id`, `provider`, `region`, `name`, `parallel`, `MIPS`, `from_percentage`, `to_percentage`) VALUES
+	(1, 1, NULL, 'Intel Xeon E5-2670 v2 @ 2.50GHz', 0, 0.47, 0, 100),
+	(2, 3, NULL, NULL, 0, 5.52, 0, 100),
+	(3, 3, NULL, NULL, 1, 0.49, 0, 75),
+	(4, 3, NULL, NULL, 1, 5.52, 75, 100);
+/*!40000 ALTER TABLE `cpu` ENABLE KEYS */;
 
 -- Dumping structure for table afcl.fcdeployment
 CREATE TABLE IF NOT EXISTS `fcdeployment` (
@@ -211,6 +237,8 @@ CREATE TABLE IF NOT EXISTS `functiondeployment` (
   `computationalSpeed` double DEFAULT NULL,
   `memorySpeed` double DEFAULT NULL,
   `ioSpeed` double DEFAULT NULL,
+  `speedup` double DEFAULT 2,
+  `avgLoopCounter` int(11) DEFAULT 0,
   `invocations` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UK_si8kq5j31b1h3ixxiqjoein15` (`name`),
@@ -249,7 +277,7 @@ CREATE TABLE IF NOT EXISTS `functionimplementation` (
   `avgRTT` double DEFAULT NULL,
   `avgCost` double DEFAULT NULL,
   `successRate` double DEFAULT NULL,
-  `computationWork` double DEFAULT NULL,
+  `computationWork` double DEFAULT NULL COMMENT 'in million instructions',
   `memoryWork` double DEFAULT NULL,
   `ioWork` double DEFAULT NULL,
   `invocations` int(11) NOT NULL DEFAULT 0,
@@ -431,19 +459,20 @@ CREATE TABLE IF NOT EXISTS `provider` (
   `maxDurationSec` smallint(6) DEFAULT NULL,
   `maxDataInputMB` smallint(6) DEFAULT NULL,
   `maxDataOutputMB` smallint(6) DEFAULT NULL,
-  `concurrencyOverheadms` smallint(6) DEFAULT NULL,
+  `concurrencyOverheadms` double DEFAULT NULL,
   `faasSystemOverheadms` smallint(6) DEFAULT NULL,
+  `cryptoOverheadms` smallint(6) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1 COMMENT='Table for all providers';
 
 -- Dumping data for table afcl.provider: ~5 rows (approximately)
 /*!40000 ALTER TABLE `provider` DISABLE KEYS */;
-REPLACE INTO `provider` (`id`, `name`, `invocationCost`, `durationGBpsCost`, `durationGHzpsCost`, `unitTimems`, `maxConcurrency`, `maxThroughput`, `maxDurationSec`, `maxDataInputMB`, `maxDataOutputMB`, `concurrencyOverheadms`, `faasSystemOverheadms`) VALUES
-	(1, 'AWS', 0.0000002, 0.0000166667, 0, 1, 1000, NULL, 900, 6, 6, NULL, NULL),
-	(2, 'IBM', 0, 0.000017, 0, 100, 100, NULL, 600, 5, 5, NULL, NULL),
-	(3, 'Google', 0.0000004, 0.0000025, 0.00001, 100, 100, NULL, 540, 10, 10, NULL, NULL),
-	(4, 'Microsoft', 0, 0, 0, 100, 2, NULL, NULL, NULL, NULL, NULL, NULL),
-	(5, 'Alibaba', 0.0000002, 0.00001668, 0, 100, 300, NULL, 600, 6, 6, NULL, NULL);
+REPLACE INTO `provider` (`id`, `name`, `invocationCost`, `durationGBpsCost`, `durationGHzpsCost`, `unitTimems`, `maxConcurrency`, `maxThroughput`, `maxDurationSec`, `maxDataInputMB`, `maxDataOutputMB`, `concurrencyOverheadms`, `faasSystemOverheadms`, `cryptoOverheadms`) VALUES
+	(1, 'AWS', 0.0000002, 0.0000166667, 0, 1, 1000, NULL, 900, 6, 6, 2.7, 30, 57),
+	(2, 'IBM', 0, 0.000017, 0, 100, 100, NULL, 600, 5, 5, NULL, NULL, NULL),
+	(3, 'Google', 0.0000004, 0.0000025, 0.00001, 100, 100, NULL, 540, 10, 10, NULL, NULL, NULL),
+	(4, 'Microsoft', 0, 0, 0, 100, 2, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(5, 'Alibaba', 0.0000002, 0.00001668, 0, 100, 300, NULL, 600, 6, 6, NULL, NULL, NULL);
 /*!40000 ALTER TABLE `provider` ENABLE KEYS */;
 
 -- Dumping structure for table afcl.region
@@ -470,29 +499,29 @@ CREATE TABLE IF NOT EXISTS `region` (
 -- Dumping data for table afcl.region: ~49 rows (approximately)
 /*!40000 ALTER TABLE `region` DISABLE KEYS */;
 REPLACE INTO `region` (`id`, `region`, `availability`, `provider`, `providerID`, `location`, `networkOverheadms`, `overheadLoadms`, `overheadBurstms`, `invocationDelayLoadms`, `invocationDelayBurstms`, `concurrencyOverheadms`, `faasSystemOverheadms`) VALUES
-	(1, 'ap-northeast-1', 0.9995, 'AWS', 1, 'Tokyo', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(1, 'ap-northeast-1', 0.9995, 'AWS', 1, 'Tokyo', 253, NULL, NULL, NULL, NULL, NULL, NULL),
 	(2, 'ap-northeast-2', 0.9995, 'AWS', 1, 'Seoul', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(3, 'ap-northeast-3', 0.9995, 'AWS', 1, 'Osaka-Local', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(4, 'ap-south-1', 0.9995, 'AWS', 1, 'Mumbai', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(5, 'ap-southeast-1', 0.9995, 'AWS', 1, 'Singapore', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(5, 'ap-southeast-1', 0.9995, 'AWS', 1, 'Singapore', 277, NULL, NULL, NULL, NULL, NULL, NULL),
 	(6, 'ap-southeast-2', 0.9995, 'AWS', 1, 'Sydney', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(7, 'ca-central-1', 0.9995, 'AWS', 1, 'Canada (Central)', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(8, 'eu-central-1', 0.9995, 'AWS', 1, 'Frankfurt', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(7, 'ca-central-1', 0.9995, 'AWS', 1, 'Canada (Central)', 104, NULL, NULL, NULL, NULL, NULL, NULL),
+	(8, 'eu-central-1', 0.9995, 'AWS', 1, 'Frankfurt', 11, NULL, NULL, NULL, NULL, NULL, NULL),
 	(9, 'eu-north-1', 0.9995, 'AWS', 1, 'Stockholm', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(10, 'eu-west-1', 0.9995, 'AWS', 1, 'Ireland', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(11, 'eu-west-2', 0.9995, 'AWS', 1, 'London', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(12, 'eu-west-3', 0.9995, 'AWS', 1, 'Paris', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(10, 'eu-west-1', 0.9995, 'AWS', 1, 'Ireland', 31, NULL, NULL, NULL, NULL, NULL, NULL),
+	(11, 'eu-west-2', 0.9995, 'AWS', 1, 'London', 22, NULL, NULL, NULL, NULL, NULL, NULL),
+	(12, 'eu-west-3', 0.9995, 'AWS', 1, 'Paris', 19, NULL, NULL, NULL, NULL, NULL, NULL),
 	(13, 'me-south-1', 0.9995, 'AWS', 1, 'Bahrain', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(14, 'sa-east-1', 0.9995, 'AWS', 1, 'São Paulo', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(15, 'us-east-1', 0.9995, 'AWS', 1, 'N. Virginia', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(16, 'us-east-2', 0.9995, 'AWS', 1, 'Ohio', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(17, 'us-west-1', 0.9995, 'AWS', 1, 'N. California', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(18, 'us-west-2', 0.9995, 'AWS', 1, 'Oregon', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(15, 'us-east-1', 0.9995, 'AWS', 1, 'N. Virginia', 109, NULL, NULL, NULL, NULL, NULL, NULL),
+	(16, 'us-east-2', 0.9995, 'AWS', 1, 'Ohio', 111, NULL, NULL, NULL, NULL, NULL, NULL),
+	(17, 'us-west-1', 0.9995, 'AWS', 1, 'N. California', 167, NULL, NULL, NULL, NULL, NULL, NULL),
+	(18, 'us-west-2', 0.9995, 'AWS', 1, 'Oregon', 176, NULL, NULL, NULL, NULL, NULL, NULL),
 	(19, 'af-south-1', 0.9995, 'AWS', 1, 'Cape Town', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(20, 'ap-east-1', 0.9995, 'AWS', 1, 'Hong Kong', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(21, 'cn-north-1', 0.9995, 'AWS', 1, 'Beijing', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(22, 'cn-northwest-1', 0.9995, 'AWS', 1, 'Ningxia', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-	(23, 'eu-south-1', 0.9995, 'AWS', 1, 'Milan', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+	(23, 'eu-south-1', 0.9995, 'AWS', 1, 'Milan', 18, NULL, NULL, NULL, NULL, NULL, NULL),
 	(24, 'us-gov-east-1', 0.9995, 'AWS', 1, 'US-East', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(25, 'us-gov-west-1', 0.9995, 'AWS', 1, 'US', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 	(26, 'us-south', NULL, 'IBM', 2, 'Dallas', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
