@@ -48,10 +48,11 @@ public class Simulator {
      * @param workflow      path to workflow yaml file which should be executed.
      * @param workflowInput path to input json file which should be used as workflow input.
      * @param executionId   the unique identifier for each execution.
+     * @param start         the start time
      *
      * @return the result of the workflow.
      */
-    Map<String, Object> simulateWorkflow(String workflow, String workflowInput, int executionId) {
+    Map<String, Object> simulateWorkflow(String workflow, String workflowInput, int executionId, long start) {
         Map<String, Object> workflowResult = null;
 
         try {
@@ -59,7 +60,7 @@ public class Simulator {
             workflowResult = simulateWorkflow(
                     workflow == null ? null : FileUtils.readFileToByteArray(new File(workflow)),
                     workflowInput == null ? null : FileUtils.readFileToByteArray(new File(workflowInput)),
-                    executionId);
+                    executionId, start);
         } catch (IOException e) {
             LOGGER.error(e.getMessage(), e);
         }
@@ -73,14 +74,11 @@ public class Simulator {
      * @param workflow      byte[] of the workflow yaml file which should be executed.
      * @param workflowInput byte[] of the input json file which should be used as workflow input.
      * @param executionId   the unique identifier for each execution.
+     * @param start         the start time
      *
      * @return the result of the workflow.
      */
-    Map<String, Object> simulateWorkflow(byte[] workflow, byte[] workflowInput, int executionId) {
-
-        /* Measure start time of the workflow execution */
-        long start = System.currentTimeMillis();
-        MongoDBAccess.saveLog(Event.WORKFLOW_START, null, null, null, null, null, 0L, true, -1, -1, start, Type.SIM);
+    Map<String, Object> simulateWorkflow(byte[] workflow, byte[] workflowInput, int executionId, long start) {
 
         /* Disable hostname verification (enable OpenWhisk connections) */
         final Properties props = System.getProperties();

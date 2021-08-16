@@ -3,7 +3,9 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.uibk.dps.cronjob.ManualUpdate;
 import at.uibk.dps.databases.MongoDBAccess;
+import at.uibk.dps.util.Type;
 import ch.qos.logback.classic.Level;
+import org.apache.commons.io.FileUtils;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,11 @@ public class Local {
             List<String> parameterList = Arrays.asList(args);
             boolean simulate = parameterList.contains("--simulate");
             if (simulate) {
+                length -= 1;
                 SimulationParameters.IGNORE_FT = parameterList.contains("--ignore-FT") || parameterList.contains("--ignore-ft");
+                if (SimulationParameters.IGNORE_FT) {
+                    length -= 1;
+                }
             }
             boolean export = parameterList.contains("--export");
             if (export) {
@@ -71,16 +77,32 @@ public class Local {
                 logger.info("Updating complete!");
             }
 
-            if (length > 2 && args[2].equals("--simulate")) {
-                result = simulator.simulateWorkflow(args[0], args[1], -1);
-            } else if (length > 1 && args[1].equals("--simulate")) {
-                result = simulator.simulateWorkflow(args[0], null, -1);
+            String workflowContent = null;
+            String workflowInput = null;
+            if (length > 0) {
+                workflowContent = FileUtils.readFileToString(new File(args[0]));
+            }
+            if (length > 1) {
+                workflowInput = FileUtils.readFileToString(new File(args[1]));
+            }
+
+            /* Measure start time of the workflow execution */
+            long start = System.currentTimeMillis();
+
+            if (length > 1 && simulate) {
+                MongoDBAccess.saveLogWorkflowStart(Type.SIM, workflowContent, workflowInput, start);
+                result = simulator.simulateWorkflow(args[0], args[1], -1, start);
+            } else if (length > 0 && simulate) {
+                MongoDBAccess.saveLogWorkflowStart(Type.SIM, workflowContent, null, start);
+                result = simulator.simulateWorkflow(args[0], null, -1, start);
             } else if (length > 1) {
-                result = executor.executeWorkflow(args[0], args[1], -1);
+                MongoDBAccess.saveLogWorkflowStart(Type.EXEC, workflowContent, workflowInput, start);
+                result = executor.executeWorkflow(args[0], args[1], -1, start);
             } else if (length > 0) {
-                result = executor.executeWorkflow(args[0], null, -1);
+                MongoDBAccess.saveLogWorkflowStart(Type.EXEC, workflowContent, null, start);
+                result = executor.executeWorkflow(args[0], null, -1, start);
             } else {
-                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json] [--simulate] [--ignore-FT]");
+                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json] [--simulate] [--ignore-FT] [--update] [--export]");
             }
             if (!simulate) {
                 logger.info("Result: {}", result);
