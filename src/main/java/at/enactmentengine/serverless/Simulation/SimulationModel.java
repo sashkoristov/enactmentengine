@@ -140,8 +140,9 @@ public class SimulationModel {
             concurrencyOverhead *= avgLoopCounter;
         }
 
-        if (mdProvider == Provider.AWS) {
-            handshake = 2;
+        // TODO other provider?
+        if (mdProvider == Provider.AWS || mdProvider == Provider.IBM) {
+            handshake = 3;
 
             if (cryptoOverhead != 0 && networkOverhead != 0) {
                 authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
@@ -150,11 +151,6 @@ public class SimulationModel {
                         "Please make sure that for the provider " + provider.toString() + " the field " +
                         "'cryptoOverheadms' and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
             }
-        } else if (mdProvider == Provider.GOOGLE) {
-            // TODO
-            handshake = 1;
-        } else if (mdProvider == Provider.IBM) {
-            // TODO
         }
 
         if (faasOverhead != 0 && networkOverhead != 0) {
@@ -202,16 +198,13 @@ public class SimulationModel {
 
             int handshake = 0;
             // TODO other providers?
-            if (provider == Provider.AWS) {
+            if (provider == Provider.AWS || provider == Provider.IBM) {
                 handshake = 3;
 
                 int authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
                 // if authentication is required, add it to the RTT
                 rtt += authenticationOverhead;
             }
-//            } else if (provider == Provider.GOOGLE) {
-//                handshake = 1;
-//            }
 
             return rtt;
         } else {
