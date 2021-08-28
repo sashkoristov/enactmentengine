@@ -359,7 +359,7 @@ public class FunctionNode extends Node {
 			if (isAsync()) {
 				System.out.println("async invocation function node");
 				long s = System.currentTimeMillis();
-				resultString = gateway.invokeAsyncFunciton(resourceLink, functionInputs).toString();
+				resultString = gateway.invokeAsyncFunction(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
 				System.out.println("time: " + (e - s));
 
