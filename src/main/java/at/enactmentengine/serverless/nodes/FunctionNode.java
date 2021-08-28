@@ -140,7 +140,7 @@ public class FunctionNode extends Node {
 		}
 		Map<String, Object> functionOutputs;
 
-		//check if the its async handler
+		//check if it is the async handler
 		if(isAsyncHandler())
 		{
 			functionOutputs= new HashMap<>();
@@ -151,6 +151,7 @@ public class FunctionNode extends Node {
 			asyncHandler.run();
 			long end = System.currentTimeMillis();
 
+			//parse the output
 			ArrayList<String> returnString = new ArrayList<>();
 			returnString.add("Finished functions:" + asyncHandler.getFinished());
 			returnString.add("Running functions:" + asyncHandler.getRunning());
@@ -326,7 +327,7 @@ public class FunctionNode extends Node {
 			InvokationFailureException, IOException, InterruptedException {
 		String resultString;
 
-		/* Check if function should be invoked with fault tolerance settings */
+		/* Check if function should be invoked with fault tolerance settings, skip if its is invoked async */
 		if (!isAsync() && functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
 
 			/* Invoke the function with fault tolerance */
@@ -357,14 +358,12 @@ public class FunctionNode extends Node {
 			/* Invoke the function without fault tolerance */
 			/* check if async invocation or not */
 			if (isAsync()) {
-				System.out.println("async invocation function node");
 				long s = System.currentTimeMillis();
 				resultString = gateway.invokeAsyncFunction(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
 				System.out.println("time: " + (e - s));
 
 			} else {
-				System.out.println("sync invocation function node");
 				long s = System.currentTimeMillis();
 				resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
@@ -375,12 +374,21 @@ public class FunctionNode extends Node {
 
 	}
 
+	/**
+	 * checks if the function is the async handler
+	 *
+	 * @return true if it's the async handler, else false
+	 */
 	private boolean isAsyncHandler()
 	{
-		//FIXME ? do we want a specific name check to
 		return this.type.equals("build-in:asyncHandler");
 	}
 
+	/**
+	 * checks if the function is called in async
+	 *
+	 * @return if the invoke-type is ASYNC true else false
+	 */
 	private boolean isAsync()
 	{
 		for (PropertyConstraint propertyConstraint: this.properties) {
