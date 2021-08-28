@@ -7,6 +7,10 @@ import at.uibk.dps.function.Function;
 
 import java.util.List;
 
+/**
+ * class for the evaluation in async handler
+ * this is specified for the aws use case
+ */
 public class FunctionAttributes {
     private String name;
     private String awsName;
