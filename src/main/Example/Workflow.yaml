@@ -1,24 +1,30 @@
 ---
 name: "Example"
 dataIns:
+- name: "filename"
+  type: "string"
+  source: "filename"
 workflowBody:
   - function:
       name: "Function1"
       type: "function"
       dataIns:
+        - name: "filename"
+          type: "string"
+          source: "Example/filename"
       dataOuts:
         - name: "statusCode"
           type: "string"
-        - name: "response"
+        - name: "body"
           type: "string"
       properties:
         - name: "invoke-type"
           value: "ASYNC"
         - name: "resource"
-          value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
+          value: "arn:aws:lambda:us-east-2:717556240325:function:failing"
       constraints:
         - name: "FT-AltPlan-0"
-          value: "1;arn:aws:lambda:us-east-2:717556240325:function:testasdfasdf;"
+          value: "1;arn:aws:lambda:us-east-2:717556240325:function:asdfasdf;"
   - function:
       name: "asyncShit"
       type: "build-in:asyncHandler"
@@ -32,18 +38,4 @@ workflowBody:
       properties:
         - name: "invoke-type"
           value: "SYNC"
-  - function:
-      name: "Function1"
-      type: "function"
-      dataIns:
-      dataOuts:
-        - name: "statusCode"
-          type: "string"
-        - name: "response"
-          type: "string"
-      properties:
-        - name: "invoke-type"
-          value: "ASYNC"
-        - name: "resource"
-          value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
 dataOuts:
