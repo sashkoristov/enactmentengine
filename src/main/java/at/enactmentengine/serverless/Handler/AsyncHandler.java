@@ -185,6 +185,7 @@ public class AsyncHandler{
                 try {
                     Thread.sleep(50L);
                 } catch (InterruptedException var8) {
+                    int a=1;
                 }
             } while(true);
         } else {
@@ -261,6 +262,7 @@ public class AsyncHandler{
             if (currentNode.getName().equals(workflowFunctionName)) {
                 String arn = "";
                 FunctionNode currentFunction = ((FunctionNode) currentNode);
+                functionAttributes.setDataValues(currentFunction.getDataValues());
                 for (PropertyConstraint property : currentFunction.getProperties()) {
                     if (property.getName().equals("resource")) {
                         arn = property.getValue();
@@ -280,7 +282,11 @@ public class AsyncHandler{
                         /* Check if the element should be passed to the output */
                         if (data.getPassing() != null && data.getPassing()) {
                         } else {
-                            actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                            if(functionAttributes.getDataValues().containsKey(data.getSource()))
+                                actualFunctionInputs.put(data.getName(), functionAttributes.getDataValues().get(data.getSource()));
+                            else if(!currentFunction.getDataValues().containsKey(data.getName())) {
+                                actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
+                            }
                         }
                     }
                 }

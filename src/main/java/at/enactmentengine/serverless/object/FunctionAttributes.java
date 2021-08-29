@@ -5,7 +5,9 @@ import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.function.FaultToleranceSettings;
 import at.uibk.dps.function.Function;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * class for the evaluation in async handler
@@ -18,6 +20,7 @@ public class FunctionAttributes {
     private int parallelCounter;
     private int functionInput;
     private boolean isAsync;
+    private Map<String, Object> dataValues;
 
     public void increaseCounter(){
         this.parallelCounter++;
@@ -62,5 +65,11 @@ public class FunctionAttributes {
     }
     public boolean isAsync() {
         return isAsync;
+    }
+    public Map<String, Object> getDataValues() {
+        return dataValues;
+    }
+    public void setDataValues(Map<String, Object> dataValues) {
+        this.dataValues = dataValues;
     }
 }
