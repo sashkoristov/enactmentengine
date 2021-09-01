@@ -19,9 +19,9 @@ workflowBody:
           type: "string"
       properties:
         - name: "invoke-type"
-          value: "ASYNC"
+          value: "SYNC"
         - name: "resource"
-          value: "arn:aws:lambda:us-east-2:717556240325:function:failing"
+          value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
       constraints:
         - name: "FT-AltPlan-0"
           value: "1;arn:aws:lambda:us-east-2:717556240325:function:asdfasdf;"
@@ -32,10 +32,30 @@ workflowBody:
         - name: "functions"
           type: "collection"
           value: "Function1"
+        - name: "filename"
+          type: "string"
+          source: "Function1/filename"
       dataOuts:
         - name: "handlerOutput"
           type: "string"
       properties:
         - name: "invoke-type"
+          value: "ASYNC"
+  - function:
+      name: "Function12"
+      type: "function"
+      dataIns:
+        - name: "filename"
+          type: "string"
+          source: "asyncShit/filename"
+      dataOuts:
+        - name: "statusCode"
+          type: "string"
+        - name: "body"
+          type: "string"
+      properties:
+        - name: "invoke-type"
           value: "SYNC"
+        - name: "resource"
+          value: "arn:aws:lambda:us-east-2:717556240325:function:testasdf"
 dataOuts:
