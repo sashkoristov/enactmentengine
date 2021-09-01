@@ -161,9 +161,23 @@ public class FunctionNode extends Node {
 			logFunctionOutput(start, end, resultString, id);
 
 			functionOutputs.put("handlerOutput", resultString);
+
+			/* pass on function inputs*/
+			HashMap<String, Object> functionInputs = new HashMap<>();
+			for(DataIns data: this.input) {
+				if ((data.getName().equals("functions") && data.getType().equals("collection"))
+				|| (data.getPassing() != null && data.getPassing())) {
+					functionInputs.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
+				} else {
+					functionInputs.put(name + "/" +data.getName(), dataValues.get(data.getSource()));
+				}
+			}
+			HashMap<String,Object> passedValues = new HashMap<>();
+			passedValues.putAll(functionInputs);
 			/* Pass the output to the next node */
+			passedValues.putAll(functionOutputs);
 			for (Node node : children) {
-				node.passResult(functionOutputs);
+				node.passResult(passedValues);
 				node.call();
 			}
 		}
@@ -234,13 +248,15 @@ public class FunctionNode extends Node {
 			 */
 			// TODO check for success
 			boolean success = getValuesParsed(resultString, functionOutputs);
+
+			HashMap<String,Object> passedValues = new HashMap<>();
+			/* pass input to next node*/
 			HashMap<String, Object> functionInputs = new HashMap<>();
 			for(Map.Entry<String, Object> entry :actualFunctionInputs.entrySet()){
 				functionInputs.put(name+"/"+entry.getKey(),entry.getValue());
 			}
-			/* Pass the output to the next node */
-			HashMap<String,Object> passedValues = new HashMap<>();
 			passedValues.putAll(functionInputs);
+			/* Pass the output to the next node */
 			passedValues.putAll(functionOutputs);
 			for (Node node : children) {
 				node.passResult(passedValues);
