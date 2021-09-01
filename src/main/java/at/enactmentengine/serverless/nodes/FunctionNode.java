@@ -234,9 +234,16 @@ public class FunctionNode extends Node {
 			 */
 			// TODO check for success
 			boolean success = getValuesParsed(resultString, functionOutputs);
+			HashMap<String, Object> functionInputs = new HashMap<>();
+			for(Map.Entry<String, Object> entry :actualFunctionInputs.entrySet()){
+				functionInputs.put(name+"/"+entry.getKey(),entry.getValue());
+			}
 			/* Pass the output to the next node */
+			HashMap<String,Object> passedValues = new HashMap<>();
+			passedValues.putAll(functionInputs);
+			passedValues.putAll(functionOutputs);
 			for (Node node : children) {
-				node.passResult(functionOutputs);
+				node.passResult(passedValues);
 				node.call();
 			}
 			/* Set the result of the function node */
