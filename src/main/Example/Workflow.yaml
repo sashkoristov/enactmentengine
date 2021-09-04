@@ -1,61 +1,78 @@
 ---
 name: "Example"
 dataIns:
-- name: "filename"
-  type: "string"
-  source: "filename"
+- name: "parameters"
+  type: "collection"
+  source: "parameters"
 workflowBody:
   - function:
-      name: "Function1"
+      name: "Helper"
       type: "function"
       dataIns:
-        - name: "filename"
-          type: "string"
-          source: "Example/filename"
-      dataOuts:
-        - name: "statusCode"
-          type: "string"
-        - name: "body"
-          type: "string"
-      properties:
-        - name: "invoke-type"
-          value: "SYNC"
-        - name: "resource"
-          value: "arn:aws:lambda:us-east-2:717556240325:function:asdfasdf"
-      constraints:
-        - name: "FT-AltPlan-0"
-          value: "1;arn:aws:lambda:us-east-2:717556240325:function:asdfasdf;"
-  - function:
-      name: "asyncShit"
-      type: "build-in:asyncHandler"
-      dataIns:
-        - name: "functions"
+        - name: "parameters"
           type: "collection"
-          value: "Function1"
-        - name: "filename"
-          type: "string"
-          source: "Function1/filename"
+          source: "Example/parameters"
       dataOuts:
-        - name: "handlerOutput"
-          type: "string"
+        - name: "sum"
+          type: "number"
+        - name: "list"
+          type: "collection"
       properties:
-        - name: "invoke-type"
-          value: "ASYNC"
+        - name: "resource"
+          value: "arn:aws:lambda:us-east-1:180575510797:function:helperFunction"
   - function:
-      name: "Function12"
+      name: "FirstStep"
       type: "function"
       dataIns:
-        - name: "filename"
-          type: "string"
-          source: "asyncShit/filename"
+        - name: "list"
+          type: "collection"
+          source: "Helper/list"
+        - name: "sum"
+          type: "number"
+          source: "Helper/sum"
+      dataOuts:
+        - name: "newData"
+          type: "number"
+        - name: "oldData"
+          type: "number"
+      properties:
+        - name: "resource"
+          value: "arn:aws:lambda:us-east-1:180575510797:function:preCalculation"
+  - function:
+      name: "SaveData"
+      type: "function"
+      dataIns:
+        - name: "newData"
+          type: "number"
+          source: "FirstStep/newData"
+        - name: "oldData"
+          type: "number"
+          source: "FirstStep/oldData"
       dataOuts:
         - name: "statusCode"
-          type: "string"
-        - name: "body"
           type: "string"
       properties:
         - name: "invoke-type"
           value: "SYNC"
         - name: "resource"
-          value: "arn:aws:lambda:us-east-2:717556240325:function:testasdf"
+          value: "arn:aws:lambda:us-east-1:180575510797:function:saveData"
+  - function:
+      name: "UserOutput"
+      type: "function"
+      dataIns:
+        - name: "newData"
+          type: "number"
+          source: "SaveData/newData"
+        - name: "oldData"
+          type: "number"
+          source: "SaveData/oldData"
+      dataOuts:
+        - name: "output"
+          type: "string"
+      properties:
+        - name: "resource"
+          value: "arn:aws:lambda:us-east-1:180575510797:function:UserOutput"
 dataOuts:
+- name: "output"
+  type: "string"
+  source: "UserOutput/output"
