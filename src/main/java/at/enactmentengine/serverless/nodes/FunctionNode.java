@@ -384,13 +384,11 @@ public class FunctionNode extends Node {
 				long s = System.currentTimeMillis();
 				resultString = gateway.invokeAsyncFunction(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
-				System.out.println("time: " + (e - s));
 
 			} else {
 				long s = System.currentTimeMillis();
 				resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
 				long e = System.currentTimeMillis();
-				System.out.println("time: " + (e - s));
 			}
 		}
 		return resultString;

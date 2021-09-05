@@ -105,7 +105,7 @@ public class AsyncHandler{
                     int size = this.failed.size();
                     this.handleAwsFunction(functionAttributes.getAwsName(), functionName);
                     if(this.failed.size()>size){
-                        if(functionAttributes.getFunction().hasFTSet()) {
+                        if(functionAttributes.getFunction() != null && functionAttributes.getFunction().hasFTSet()) {
                             runFT(functionAttributes);
                         }
                     }
@@ -322,6 +322,10 @@ public class AsyncHandler{
      */
     private void handleAwsFunction(String awsName, String workflowName) throws IOException {
         String queryId = makeAwsLogQuery(awsName);
+        if(queryId.contains("error")){
+            this.failed.add(workflowName+"(handler had error "+queryId+")");
+            return;
+        }
         String returnString = retrieveAwsLogData(queryId);
         checkAwsFunction(returnString,workflowName);
     }
@@ -444,6 +448,7 @@ public class AsyncHandler{
                 + inputEndTime + " --query-string \"fields @timestamp,@message,@type\"";
         String[] exec = {"/bin/bash", "-c", command};
         String returnString = "";
+        String errorString = "";
         try {
             //execute the command
             Process proc = Runtime.getRuntime().exec(exec);
@@ -464,7 +469,7 @@ public class AsyncHandler{
                     InputStreamReader(proc.getErrorStream()));
             //System.out.println("Here is the standard error of the command (if any):\n");
             while ((s = stdError.readLine()) != null) {
-                //System.out.println(s);
+                errorString += s;
             }
 
         } catch (Exception e) {
@@ -472,6 +477,9 @@ public class AsyncHandler{
             System.out.println("Exception:\n" + e);
         }
         //get the query id from the returnValue
+        if(!errorString.equals("")){
+            return "error: "+errorString;
+        }
         return returnString.split("queryId\": \"")[1].split("\"}")[0];
 
     }
