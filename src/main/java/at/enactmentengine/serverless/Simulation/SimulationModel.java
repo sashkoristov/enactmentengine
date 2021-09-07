@@ -142,7 +142,11 @@ public class SimulationModel {
 
         // TODO other provider?
         if (mdProvider == Provider.AWS || mdProvider == Provider.IBM) {
-            handshake = 3;
+            if (mdProvider == Provider.AWS) {
+                handshake = 3;
+            } else {
+                handshake = 2;
+            }
 
             if (cryptoOverhead != 0 && networkOverhead != 0) {
                 authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
@@ -199,7 +203,11 @@ public class SimulationModel {
             int handshake = 0;
             // TODO other providers?
             if (provider == Provider.AWS || provider == Provider.IBM) {
-                handshake = 3;
+                if (provider == Provider.AWS) {
+                    handshake = 3;
+                } else {
+                    handshake = 2;
+                }
 
                 int authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
                 // if authentication is required, add it to the RTT
