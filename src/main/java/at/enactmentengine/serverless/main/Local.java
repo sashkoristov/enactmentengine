@@ -6,6 +6,7 @@ import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Type;
 import ch.qos.logback.classic.Level;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,9 +114,13 @@ public class Local {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            MongoDBAccess.addAllEntries();
-            if (close) {
-                MongoDBAccess.close();
+            try {
+                MongoDBAccess.addAllEntries();
+                if (close) {
+                    MongoDBAccess.close();
+                }
+            } catch (IOException e) {
+                logger.info("No mongoDatabase.properties file found. Logs will not be stored in a database.");
             }
         }
     }
@@ -171,7 +176,7 @@ public class Local {
                     sb.append(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(date));
                 } else if (entry.getValue() != null) {
                     // if the entry is not null, append it to the string-builder
-                    sb.append(entry.getValue().toString());
+                    sb.append(StringEscapeUtils.escapeJava(entry.getValue().toString()));
                 }
                 sb.append(",");
             }
