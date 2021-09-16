@@ -148,11 +148,12 @@ public class SimulationModel {
                 handshake = 2;
             }
 
-            if (networkOverhead != 0) {
+            if (cryptoOverhead != 0 && networkOverhead != 0) {
                 authenticationOverhead = cryptoOverhead + handshake * networkOverhead;
             } else {
                 throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet." +
-                        "Please make sure that for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
+                        "Please make sure that for the provider " + provider.toString() + " the field " +
+                        "'cryptoOverheadms' and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
             }
         }
 
@@ -192,7 +193,7 @@ public class SimulationModel {
         int networkOverhead = regionEntry.getInt("networkOverheadms");
         int concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
 
-        if (faasOverhead != 0 && networkOverhead != 0) {
+        if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
             long rtt = executionTime + networkOverhead + faasOverhead;
             // add the concurrencyOverhead depending on the loopCounter
             if (loopCounter != -1 && concurrencyOverhead != 0) {
@@ -216,8 +217,8 @@ public class SimulationModel {
             return rtt;
         } else {
             throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet. " +
-                    "Please make sure that for the provider " + provider.toString() + " the field 'faasSystemOverheadms' " +
-                    "and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
+                    "Please make sure that for the provider " + provider.toString() + " the fields 'faasSystemOverheadms' and " +
+                    "'cryptoOverheadms' and for the region " + region + " the field 'networkOverheadms' is filled in correctly.");
         }
     }
 
