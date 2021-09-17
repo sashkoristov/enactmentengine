@@ -113,6 +113,7 @@ public class IfStartNode extends Node {
         if (getLoopCounter() != -1) {
             node.setLoopCounter(loopCounter);
             node.setMaxLoopCounter(maxLoopCounter);
+            node.setConcurrencyLimit(concurrencyLimit);
         }
         node.call();
 

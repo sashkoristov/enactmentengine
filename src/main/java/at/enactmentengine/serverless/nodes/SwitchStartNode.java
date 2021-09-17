@@ -62,6 +62,7 @@ public class SwitchStartNode extends Node {
                 if (getLoopCounter() != -1) {
                     children.get(i).setLoopCounter(loopCounter);
                     children.get(i).setMaxLoopCounter(maxLoopCounter);
+                    children.get(i).setConcurrencyLimit(concurrencyLimit);
                 }
                 children.get(i).call();
                 return true;
@@ -71,6 +72,7 @@ public class SwitchStartNode extends Node {
                 if (getLoopCounter() != -1) {
                     children.get(children.size() - 1).setLoopCounter(loopCounter);
                     children.get(children.size() - 1).setMaxLoopCounter(maxLoopCounter);
+                    children.get(children.size() - 1).setConcurrencyLimit(concurrencyLimit);
                 }
                 children.get(children.size() - 1).call();
                 return true;

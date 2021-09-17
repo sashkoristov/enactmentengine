@@ -49,6 +49,11 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
     protected int maxLoopCounter = -1;
 
     /**
+     * The concurrency limit of a parallelFor loop.
+     */
+    protected int concurrencyLimit = -1;
+
+    /**
      * Default constructor for a node.
      *
      * @param name of the node.
@@ -119,9 +124,17 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         this.loopCounter = loopCounter;
     }
 
-    public int getMaxLoopCounter() { return maxLoopCounter; }
+    public int getMaxLoopCounter() {return maxLoopCounter;}
 
-    public void setMaxLoopCounter(int maxLoopCounter) { this.maxLoopCounter = maxLoopCounter; }
+    public void setMaxLoopCounter(int maxLoopCounter) {this.maxLoopCounter = maxLoopCounter;}
+
+    public int getConcurrencyLimit() {
+        return concurrencyLimit;
+    }
+
+    public void setConcurrencyLimit(int concurrencyLimit) {
+        this.concurrencyLimit = concurrencyLimit;
+    }
 
     /**
      * Clone the whole node.

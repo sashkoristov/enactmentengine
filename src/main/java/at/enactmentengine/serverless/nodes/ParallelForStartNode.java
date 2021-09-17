@@ -219,12 +219,22 @@ public class ParallelForStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
         List<Map<String, Object>> outValuesForChildren = transferOutVals(children.size(), outValues);
 
+        int customConcurrencyLimit = -1;
+        if (constraints != null && !constraints.isEmpty()) {
+            for (PropertyConstraint pc : constraints) {
+                if (pc.getName().equals("concurrency")) {
+                    customConcurrencyLimit = Integer.parseInt(pc.getValue());
+                }
+            }
+        }
+
         /* Iterate over all children */
         for (int i = 0; i < children.size(); i++) {
 
             Node node = children.get(i);
             node.setLoopCounter(i);
             node.setMaxLoopCounter(counterEnd - 1);
+            node.setConcurrencyLimit(customConcurrencyLimit);
 //            for (int j = 0; j < node.getChildren().size(); j++) {
 //                setLoopCounter(node.children.get(j), i);
 //            }
