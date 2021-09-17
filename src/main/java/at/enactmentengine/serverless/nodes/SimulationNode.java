@@ -914,6 +914,16 @@ public class SimulationNode extends Node {
      */
     private long getStartingTime() throws MissingResourceLinkException, SQLException {
         long startTime;
+        boolean customConcurrencyLimit = false;
+        if (constraints != null && !constraints.isEmpty()) {
+            for (PropertyConstraint pc : constraints) {
+                if (pc.getName().equals("concurrency")) {
+                    if (loopCounter > Integer.parseInt(pc.getValue()) - 1) {
+                        customConcurrencyLimit = true;
+                    }
+                }
+            }
+        }
         if (loopCounter == -1) {
             startTime = MongoDBAccess.getLastEndDateOverall();
         } else {
@@ -922,7 +932,7 @@ public class SimulationNode extends Node {
             ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
             providerEntry.next();
             int maxConcurrency = providerEntry.getInt("maxConcurrency");
-            if (loopCounter > maxConcurrency - 1) {
+            if (loopCounter > maxConcurrency - 1 || customConcurrencyLimit) {
                 startTime = MongoDBAccess.getFirstAvailableStartTime(resourceLink);
             } else {
                 startTime = MongoDBAccess.getLastEndDateOutOfLoop();
