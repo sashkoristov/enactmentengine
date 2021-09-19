@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.uibk.dps.afcl.functions.objects.DataOuts;
 import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Event;
@@ -9,9 +10,7 @@ import com.google.gson.JsonArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Control node which manages the tasks at the end of a parallel for loop.
@@ -52,6 +51,11 @@ public class ParallelForEndNode extends Node {
     private boolean simulate;
 
     /**
+     * Keeps count of all finish times of the functions that have the current node as child.
+     */
+    private List<Long> allFinishTimes = Collections.synchronizedList(new ArrayList<>());
+
+    /**
      * Default constructor for a parallel-for-end node
      *
      * @param name   of the parallel-for node.
@@ -74,6 +78,7 @@ public class ParallelForEndNode extends Node {
         /* Check if all functions in the parallel-for are finished */
         synchronized (this) {
             if (++finishedParents != numberOfParents) {
+                SimulationParameters.setIterationFinishTimes(allFinishTimes);
                 return false;
             }
         }
@@ -100,6 +105,7 @@ public class ParallelForEndNode extends Node {
 
         logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, outputValues);
         if (simulate) {
+            SimulationParameters.reset();
             MongoDBAccess.saveLog(Event.PARALLEL_FOR_END, null, null, null, null, null,
                     0L, true, -1, -1, MongoDBAccess.getLastEndDateOverall(), Type.SIM);
         }
@@ -207,7 +213,7 @@ public class ParallelForEndNode extends Node {
         return getResult();
     }
 
-    public void setParallelForResult(Map<String, Object> parallelForResult) { this.parallelForResult = parallelForResult; }
+    public void setParallelForResult(Map<String, Object> parallelForResult) {this.parallelForResult = parallelForResult;}
 
     public List<DataOuts> getOutput() {
         return output;
@@ -217,4 +223,11 @@ public class ParallelForEndNode extends Node {
         this.output = output;
     }
 
+    public List<Long> getAllFinishTimes() {
+        return allFinishTimes;
+    }
+
+    public synchronized void addAllFinishTimes(Long time) {
+        allFinishTimes.add(time);
+    }
 }

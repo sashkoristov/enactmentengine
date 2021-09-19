@@ -29,6 +29,11 @@ public class ParallelStartNode extends Node {
      * The maximum number of threads running in parallel
      */
     private static final int MAX_NUMBER_THREADS = 1000;
+
+    /**
+     * Specifies if its parent is a parallelFor and counts how many SimulationNodes are children of this node.
+     */
+    public long isAfterParallelForNode = -1;
     /**
      * The input defined within the workflow file.
      */
@@ -37,8 +42,8 @@ public class ParallelStartNode extends Node {
     /**
      * Default constructor for the parallel-start node.
      *
-     * @param name of the parallel-start node.
-     * @param type of the parallel-start node.
+     * @param name         of the parallel-start node.
+     * @param type         of the parallel-start node.
      * @param definedInput input defined in the workflow file.
      */
     public ParallelStartNode(String name, String type, List<DataIns> definedInput) {
@@ -75,16 +80,36 @@ public class ParallelStartNode extends Node {
         ExecutorService exec = Executors
                 .newFixedThreadPool(children.size() > MAX_NUMBER_THREADS ? MAX_NUMBER_THREADS : children.size());
 
+        long simNodes = 0;
         /* Pass data to all children and execute them */
         List<Future<Boolean>> futures = new ArrayList<>();
         for (Node node : children) {
+            if (node instanceof SimulationNode) {
+                simNodes++;
+            }
             node.passResult(outValues);
             if (getLoopCounter() != -1) {
                 node.setLoopCounter(loopCounter);
                 node.setMaxLoopCounter(maxLoopCounter);
                 node.setConcurrencyLimit(concurrencyLimit);
+                node.setStartTime(startTime);
             }
             futures.add(exec.submit(node));
+        }
+
+        // specify how many functions are directly after a nested construct (needed if concurrency limit is exceeded)
+        if (isAfterParallelForNode != -1) {
+            for (Node node : children) {
+                if (node instanceof IfStartNode) {
+                    ((IfStartNode) node).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                } else if (node instanceof ParallelStartNode) {
+                    ((ParallelStartNode) node).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                } else if (node instanceof SwitchStartNode) {
+                    ((SwitchStartNode) node).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                } else if (node instanceof SimulationNode) {
+                    ((SimulationNode) node).setAmountParallelFunctions(isAfterParallelForNode + simNodes);
+                }
+            }
         }
 
         /* Wait for all children to finish */

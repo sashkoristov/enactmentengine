@@ -19,6 +19,10 @@ import java.util.Map;
  */
 public class SwitchStartNode extends Node {
     static final Logger logger = LoggerFactory.getLogger(SwitchStartNode.class);
+    /**
+     * Specifies if its parent is a parallelFor and counts how many SimulationNodes are children of this node.
+     */
+    public long isAfterParallelForNode = -1;
     private List<DataIns> dataIns;
     private List<Case> cases;
     private DataEval dataEval;
@@ -52,6 +56,7 @@ public class SwitchStartNode extends Node {
 
         logger.info("Executing {} SwitchStartNodeOld", name);
 
+        long simNodes = 0;
         Object switchValue = parseSwitchCondition();
         // goes through all cases and executes a case if the switch value matches this
         // case
@@ -59,25 +64,61 @@ public class SwitchStartNode extends Node {
             if (caseMatches(cases.get(i).getValue(), switchValue)) {
                 logger.info("Switch case {} fulfilled with value {}", cases.get(i).getValue(), switchValue);
                 children.get(i).passResult(switchInputValues);
+                if (children.get(i) instanceof SimulationNode) {
+                    simNodes++;
+                }
                 if (getLoopCounter() != -1) {
                     children.get(i).setLoopCounter(loopCounter);
                     children.get(i).setMaxLoopCounter(maxLoopCounter);
                     children.get(i).setConcurrencyLimit(concurrencyLimit);
+                    children.get(i).setStartTime(startTime);
                 }
                 children.get(i).call();
                 return true;
             } else if (children.size() > cases.size()) {
+                if (children.get(i) instanceof SimulationNode) {
+                    simNodes++;
+                }
                 logger.info("Switch default case is executed.");
                 children.get(children.size() - 1).passResult(switchInputValues);
                 if (getLoopCounter() != -1) {
                     children.get(children.size() - 1).setLoopCounter(loopCounter);
                     children.get(children.size() - 1).setMaxLoopCounter(maxLoopCounter);
                     children.get(children.size() - 1).setConcurrencyLimit(concurrencyLimit);
+                    children.get(children.size() - 1).setStartTime(startTime);
                 }
                 children.get(children.size() - 1).call();
                 return true;
             }
         }
+
+        // specify how many functions are directly after a nested construct (needed if concurrency limit is exceeded)
+        if (isAfterParallelForNode != -1) {
+            for (int i = 0; i < cases.size(); i++) {
+                if (caseMatches(cases.get(i).getValue(), switchValue)) {
+                    if (children.get(i) instanceof IfStartNode) {
+                        ((IfStartNode) children.get(i)).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                    } else if (children.get(i) instanceof ParallelStartNode) {
+                        ((ParallelStartNode) children.get(i)).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                    } else if (children.get(i) instanceof SwitchStartNode) {
+                        ((SwitchStartNode) children.get(i)).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                    } else if (children.get(i) instanceof SimulationNode) {
+                        ((SimulationNode) children.get(i)).setAmountParallelFunctions(isAfterParallelForNode + simNodes);
+                    }
+                } else if (children.size() > cases.size()) {
+                    if (children.get(children.size() - 1) instanceof IfStartNode) {
+                        ((IfStartNode) children.get(i)).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                    } else if (children.get(children.size() - 1) instanceof ParallelStartNode) {
+                        ((ParallelStartNode) children.get(i)).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                    } else if (children.get(children.size() - 1) instanceof SwitchStartNode) {
+                        ((SwitchStartNode) children.get(i)).isAfterParallelForNode = isAfterParallelForNode + simNodes;
+                    } else if (children.get(children.size() - 1) instanceof SimulationNode) {
+                        ((SimulationNode) children.get(i)).setAmountParallelFunctions(isAfterParallelForNode + simNodes);
+                    }
+                }
+            }
+        }
+
         throw new NoSwitchCaseFulfilledException(
                 "No matching switch case found for value " + switchValue + " in node " + name);
     }

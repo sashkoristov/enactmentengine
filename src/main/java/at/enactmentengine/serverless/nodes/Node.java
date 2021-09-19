@@ -54,6 +54,11 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
     protected int concurrencyLimit = -1;
 
     /**
+     * The starting time for a function within a parallelFor used in simulation.
+     */
+    protected long startTime = 0;
+
+    /**
      * Default constructor for a node.
      *
      * @param name of the node.
@@ -134,6 +139,21 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
 
     public void setConcurrencyLimit(int concurrencyLimit) {
         this.concurrencyLimit = concurrencyLimit;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public synchronized void setStartTime(long startTime) {
+        if (this instanceof ParallelForEndNode) {
+            ((ParallelForEndNode) this).addAllFinishTimes(startTime);
+        }
+        if (this.startTime == 0) {
+            this.startTime = startTime;
+        } else if (startTime > this.startTime) {
+            this.startTime = startTime;
+        }
     }
 
     /**

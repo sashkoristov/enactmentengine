@@ -85,6 +85,8 @@ public class SimulationNode extends Node {
      */
     private String simInfo;
 
+    private long amountParallelFunctions = -1;
+
     /**
      * Constructor for a simulation node.
      *
@@ -236,6 +238,7 @@ public class SimulationNode extends Node {
                 node.setLoopCounter(loopCounter);
                 node.setMaxLoopCounter(maxLoopCounter);
                 node.setConcurrencyLimit(concurrencyLimit);
+                node.setStartTime(startTime + simResult.getRTT());
             }
             node.call();
         }
@@ -297,7 +300,7 @@ public class SimulationNode extends Node {
             result = simulateFunctionFT(functionToSimulate);
 
         } else {
-            long startTime = getStartingTime();
+            startTime = startTime == 0 ? getStartingTime() : startTime;
             result = getSimulationResult(resourceLink, functionToSimulate.getDeployment());
             Event event = null;
             if (result.isSuccess()) {
@@ -344,7 +347,7 @@ public class SimulationNode extends Node {
 
         if (function != null) {
             if (function.hasConstraintSet()) {
-                Timestamp timeAtStart = new Timestamp(getStartingTime());
+                Timestamp timeAtStart = new Timestamp(startTime == 0 ? getStartingTime() : startTime);
                 if (function.getConstraints().hasLatestStartingTime()) {
                     if (timeAtStart.after(function.getConstraints().getLatestStartingTime())) {
                         throw new LatestStartingTimeException("latestStartingTime constraint missed!");
@@ -418,7 +421,7 @@ public class SimulationNode extends Node {
     private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> simulateFT(Function function)
             throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException,
             MissingResourceLinkException, MissingComputationalWorkException, AlternativeStrategyException, MissingSimulationParametersException {
-        long startTime = getStartingTime();
+        startTime = startTime == 0 ? getStartingTime() : startTime;
         String resourceLink = function.getUrl();
         QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result = getSimulationResult(resourceLink, function.getDeployment());
 
@@ -490,7 +493,7 @@ public class SimulationNode extends Node {
                 HashMap<String, QuadrupleResult<Long, Double, Map<String, Object>, Boolean>> tempResults = new HashMap<>();
                 List<String> tempDeployments = new ArrayList<>();
                 QuadrupleResult<Long, Double, Map<String, Object>, Boolean> result;
-                long startTime = getStartingTime();
+                startTime = startTime == 0 ? getStartingTime() : startTime;
                 int j = 0;
                 logger.info("##############  Trying Alternative Plan " + i + "  ##############");
                 for (Function alternativeFunction : alternativePlan) {
@@ -914,10 +917,10 @@ public class SimulationNode extends Node {
      * @throws SQLException                 if an error occurs when reading fields from a database entry
      */
     private long getStartingTime() throws MissingResourceLinkException, SQLException {
-        long startTime;
+        long start;
 
         if (loopCounter == -1) {
-            startTime = MongoDBAccess.getLastEndDateOverall();
+            start = MongoDBAccess.getLastEndDateOverall();
         } else {
             String resourceLink = Utils.getResourceLink(properties, this);
             Provider provider = Utils.detectProvider(resourceLink);
@@ -925,14 +928,34 @@ public class SimulationNode extends Node {
             providerEntry.next();
             int maxConcurrency = providerEntry.getInt("maxConcurrency");
             if (loopCounter > maxConcurrency - 1 || (concurrencyLimit != -1 && loopCounter > concurrencyLimit - 1)) {
-                startTime = MongoDBAccess.getFirstAvailableStartTime(resourceLink);
+                start = -1;
+                while (start == -1) {
+                    start = SimulationParameters.getStartTime(amountParallelFunctions, loopCounter, null);
+                    if (startTime != 0) {
+                        start = startTime;
+                    }
+                    // wait to give other threads to opportunity to access the synchronized method
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             } else {
-                startTime = MongoDBAccess.getLastEndDateOutOfLoop();
+                start = MongoDBAccess.getLastEndDateOutOfLoop();
             }
         }
-        if (startTime == 0) {
-            startTime = System.currentTimeMillis();
+        if (start == 0) {
+            start = System.currentTimeMillis();
         }
-        return startTime;
+        return start;
+    }
+
+    public long getAmountParallelFunctions() {
+        return amountParallelFunctions;
+    }
+
+    public synchronized void setAmountParallelFunctions(long amountParallelFunctions) {
+        this.amountParallelFunctions = amountParallelFunctions;
     }
 }

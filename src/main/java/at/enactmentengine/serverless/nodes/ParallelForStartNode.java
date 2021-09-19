@@ -219,14 +219,7 @@ public class ParallelForStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
         List<Map<String, Object>> outValuesForChildren = transferOutVals(children.size(), outValues);
 
-        int customConcurrencyLimit = -1;
-        if (constraints != null && !constraints.isEmpty()) {
-            for (PropertyConstraint pc : constraints) {
-                if (pc.getName().equals("concurrency")) {
-                    customConcurrencyLimit = Integer.parseInt(pc.getValue());
-                }
-            }
-        }
+        int customConcurrencyLimit = maxNumberThreads == 1000 ? -1 : maxNumberThreads;
 
         /* Iterate over all children */
         for (int i = 0; i < children.size(); i++) {
@@ -235,9 +228,15 @@ public class ParallelForStartNode extends Node {
             node.setLoopCounter(i);
             node.setMaxLoopCounter(counterEnd - 1);
             node.setConcurrencyLimit(customConcurrencyLimit);
-//            for (int j = 0; j < node.getChildren().size(); j++) {
-//                setLoopCounter(node.children.get(j), i);
-//            }
+            node.setStartTime(startTime);
+            // if another construct is following directly afterwards, set the field to 0 (needed if concurrency limit is exceeded)
+            if (node instanceof IfStartNode) {
+                ((IfStartNode) node).isAfterParallelForNode = 0;
+            } else if (node instanceof ParallelStartNode) {
+                ((ParallelStartNode) node).isAfterParallelForNode = 0;
+            } else if (node instanceof SwitchStartNode) {
+                ((SwitchStartNode) node).isAfterParallelForNode = 0;
+            }
 
             /* Pass results to the children (if there is an output value left) */
             if (i < outValuesForChildren.size()) {

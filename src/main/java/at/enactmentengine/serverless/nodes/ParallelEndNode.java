@@ -103,6 +103,7 @@ public class ParallelEndNode extends Node {
                 node.setLoopCounter(loopCounter);
                 node.setMaxLoopCounter(maxLoopCounter);
                 node.setConcurrencyLimit(concurrencyLimit);
+                node.setStartTime(startTime);
             }
             node.call();
         }
