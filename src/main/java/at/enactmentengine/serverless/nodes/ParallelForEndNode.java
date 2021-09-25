@@ -107,7 +107,7 @@ public class ParallelForEndNode extends Node {
         if (simulate) {
             SimulationParameters.reset();
             MongoDBAccess.saveLog(Event.PARALLEL_FOR_END, null, null, null, null, null,
-                    0L, true, -1, -1, MongoDBAccess.getLastEndDateOverall(), Type.SIM);
+                    0L, true, -1, -1, startTime, Type.SIM);
         }
 
         /* Pass results to every child */
