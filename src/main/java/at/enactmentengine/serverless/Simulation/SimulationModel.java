@@ -158,7 +158,7 @@ public class SimulationModel {
         }
 
         if (faasOverhead != 0 && networkOverhead != 0) {
-            return avgRTT - networkOverhead - faasOverhead - authenticationOverhead - concurrencyOverhead;
+            return Math.max(avgRTT - networkOverhead - faasOverhead - authenticationOverhead - concurrencyOverhead, 0);
         } else {
             throw new MissingSimulationParametersException("Some fields in the metadata database are not filled in yet. " +
                     "Please make sure that for the provider " + provider.toString() + " the field 'faasSystemOverheadms' " +
