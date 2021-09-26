@@ -495,7 +495,7 @@ public class AsyncHandler{
         // if the function is in a parallel section we do not support FT
         if(functionAttributes.getParallelCounter()!=0){
             this.failed.remove(functionAttributes.getName());
-            this.failed.add(functionAttributes.getName()+"(cannot support FT in parallel)");
+            this.failed.add(functionAttributes.getName()+"(cannot support FT in compound)");
             return;
         }
         //if the function has not FT we return
