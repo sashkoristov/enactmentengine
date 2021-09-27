@@ -31,7 +31,9 @@ public final class SimulationParameters {
     }
 
     public static synchronized void setIterationFinishTimes(List<Long> iterationFinishTimes) {
-        SimulationParameters.iterationFinishTimes.add(iterationFinishTimes.get(iterationFinishTimes.size() - 1));
+        if (iterationFinishTimes.size() > 0) {
+            SimulationParameters.iterationFinishTimes.add(iterationFinishTimes.get(iterationFinishTimes.size() - 1));
+        }
     }
 
     /**

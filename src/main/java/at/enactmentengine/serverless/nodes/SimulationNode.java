@@ -85,6 +85,9 @@ public class SimulationNode extends Node {
      */
     private String simInfo;
 
+    /**
+     * Counts the amount of functions that are executed in parallel in a parallel section.
+     */
     private long amountParallelFunctions = -1;
 
     /**
