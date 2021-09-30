@@ -175,8 +175,14 @@ public class Local {
                     Date date = (Date) entry.getValue();
                     sb.append(new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").format(date));
                 } else if (entry.getValue() != null) {
-                    // if the entry is not null, append it to the string-builder
-                    sb.append(StringEscapeUtils.escapeJava(entry.getValue().toString()));
+                    if (entry.getValue().toString().contains(",")) {
+                        // if the entry is not null, append it to the string-builder
+                        sb.append("\"" + StringEscapeUtils.escapeJava(entry.getValue().toString()).replace("\"", "\"\"") + "\"");
+                    } else {
+                        // if the entry is not null, append it to the string-builder
+                        sb.append(StringEscapeUtils.escapeJava(entry.getValue().toString()));
+                    }
+
                 }
                 sb.append(",");
             }
