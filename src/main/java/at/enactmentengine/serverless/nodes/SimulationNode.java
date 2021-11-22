@@ -246,24 +246,6 @@ public class SimulationNode extends Node {
             node.call();
         }
 
-        // TODO
-        /*
-         * Check if the execution identifier is specified (check if execution should be
-         * stored in the database)
-         */
-//        if (executionId != -1) {
-//
-//            /* Create a function invocation object */
-//            Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
-//                    Utils.detectRegion(resourceLink),
-//                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-//                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-//                    Utils.checkResultSuccess(simResult.getOutput()).toString(), null, executionId);
-//
-//            /* Store the invocation in the database */
-//            Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
-//        }
-
         return true;
     }
 
@@ -667,7 +649,6 @@ public class SimulationNode extends Node {
 
             if (similarDeployment != null) {
                 Integer sameRegionAndMemory = null;
-//                Integer sameRegion = null;
                 Integer sameMemory = null;
                 ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
 
@@ -681,8 +662,6 @@ public class SimulationNode extends Node {
 
                         if (givenRegionID == similarRegionID && memory == similarMemorySize) {
                             sameRegionAndMemory = similarDeployment.getInt("id");
-//                        } else if (givenRegionID == similarRegionID) {
-//                            sameRegion = similarDeployment.getInt("id");
                         } else if (memory == similarMemorySize) {
                             sameMemory = similarDeployment.getInt("id");
                         }
@@ -702,11 +681,6 @@ public class SimulationNode extends Node {
                     similarResult.next();
                     SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
                     result = model.simulateRoundTripTime(success);
-//                } else if (sameRegion != null) {
-//                    similarResult = MariaDBAccess.getDeploymentById(sameRegion);
-//                    similarResult.next();
-//                    SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
-//                    result = model.simulateRoundTripTime(success);
                 } else {
                     similar = false;
                 }
@@ -756,7 +730,6 @@ public class SimulationNode extends Node {
      * @return the output of the function
      */
     private Map<String, Object> getFunctionOutput() {
-        // TODO read default values from a config file?
         HashMap<String, Object> outputs = new HashMap<>();
         for (DataOutsAtomic out : output) {
             if (out.getProperties() != null && !out.getProperties().isEmpty()) {

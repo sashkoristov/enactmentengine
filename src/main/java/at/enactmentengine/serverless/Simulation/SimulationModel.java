@@ -119,7 +119,6 @@ public class SimulationModel {
             return (long) avgRuntime;
         }
 
-        // TODO add x_cs, CSO, x_a, CO
         String functionId = functionDeployment.getString("KMS_Arn");
         Provider mdProvider = Utils.detectProvider(functionId);
         String mdRegion = Utils.detectRegion(functionId);
@@ -140,7 +139,6 @@ public class SimulationModel {
             concurrencyOverhead *= avgLoopCounter;
         }
 
-        // TODO other provider?
         if (mdProvider == Provider.AWS || mdProvider == Provider.IBM) {
             if (mdProvider == Provider.AWS) {
                 handshake = 3;
@@ -201,7 +199,6 @@ public class SimulationModel {
             }
 
             int handshake = 0;
-            // TODO other providers?
             if (provider == Provider.AWS || provider == Provider.IBM) {
                 if (provider == Provider.AWS) {
                     handshake = 3;
