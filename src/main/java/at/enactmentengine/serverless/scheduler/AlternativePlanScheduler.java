@@ -1,17 +1,7 @@
 package at.enactmentengine.serverless.scheduler;
 
-import java.io.IOException;
-import java.util.*;
-
 import at.uibk.dps.afcl.Workflow;
-import at.uibk.dps.afcl.functions.AtomicFunction;
-import at.uibk.dps.afcl.functions.IfThenElse;
-import at.uibk.dps.afcl.functions.Parallel;
-import at.uibk.dps.afcl.functions.ParallelFor;
-import at.uibk.dps.afcl.functions.Sequence;
-import at.uibk.dps.afcl.functions.SequentialFor;
-import at.uibk.dps.afcl.functions.SequentialWhile;
-import at.uibk.dps.afcl.functions.Switch;
+import at.uibk.dps.afcl.functions.*;
 import at.uibk.dps.afcl.functions.objects.Case;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.afcl.functions.objects.Section;
@@ -20,6 +10,9 @@ import at.uibk.dps.function.Function;
 import jdk.jshell.spi.ExecutionControl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Part of Future scheduler
@@ -66,7 +59,7 @@ public class AlternativePlanScheduler {
         double requiredAvailability = Double.parseDouble(constraint.getValue());
         for (PropertyConstraint property : casted.getProperties()) {
             if ("resource".equals(property.getName())) { // Found a Function URL
-                Function tempFunc = new Function(property.getValue(), casted.getType(), functionInputs);
+                Function tempFunc = new Function(property.getValue(), casted.getName(), casted.getType(), -1, functionInputs);
                 List<String> tempList = proposeAlternativeStrategy(tempFunc, requiredAvailability);
                 if (tempList != null) {
                     int i = 0;
@@ -239,7 +232,7 @@ public class AlternativePlanScheduler {
      */
     public List<String> proposeAlternativeStrategy(Function function, double wantedAvailability) throws ExecutionControl.NotImplementedException {
         List<String> proposedAltStrategy = new ArrayList<>();
-        List<Function> functionAlternativeList = database.getFunctionAlternatives(function);
+        List<Function> functionAlternativeList = new ArrayList<>(); //TODO //database.getFunctionAlternatives(function);
         int i = 1;
         while (i <= functionAlternativeList.size()) {
             if (getSuccessRateOfFirstXFuncs(functionAlternativeList, i) > wantedAvailability) {

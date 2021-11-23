@@ -39,6 +39,26 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
     protected Map<String, Object> dataValues;
 
     /**
+     * The number of execution in a parallelFor loop.
+     */
+    protected int loopCounter = -1;
+
+    /**
+     * The end of a parallelFor loop.
+     */
+    protected int maxLoopCounter = -1;
+
+    /**
+     * The concurrency limit of a parallelFor loop.
+     */
+    protected int concurrencyLimit = -1;
+
+    /**
+     * The starting time for a function within a parallelFor used in simulation.
+     */
+    protected long startTime = 0;
+
+    /**
      * Default constructor for a node.
      *
      * @param name of the node.
@@ -48,8 +68,8 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         super();
         this.name = name;
         this.type = type;
-        this.parents = new ArrayList<>();
-        this.children = new ArrayList<>();
+        parents = new ArrayList<>();
+        children = new ArrayList<>();
     }
 
     /**
@@ -101,11 +121,48 @@ public abstract class Node implements Callable<Boolean>, Cloneable {
         this.dataValues = dataValues;
     }
 
+    public int getLoopCounter() {
+        return loopCounter;
+    }
+
+    public void setLoopCounter(int loopCounter) {
+        this.loopCounter = loopCounter;
+    }
+
+    public int getMaxLoopCounter() {return maxLoopCounter;}
+
+    public void setMaxLoopCounter(int maxLoopCounter) {this.maxLoopCounter = maxLoopCounter;}
+
+    public int getConcurrencyLimit() {
+        return concurrencyLimit;
+    }
+
+    public void setConcurrencyLimit(int concurrencyLimit) {
+        this.concurrencyLimit = concurrencyLimit;
+    }
+
+    public long getStartTime() {
+        return startTime;
+    }
+
+    public synchronized void setStartTime(long startTime) {
+        if (this instanceof ParallelForEndNode) {
+            ((ParallelForEndNode) this).addAllFinishTimes(startTime);
+        }
+        if (this.startTime == 0) {
+            this.startTime = startTime;
+        } else if (startTime > this.startTime) {
+            this.startTime = startTime;
+        }
+    }
+
     /**
      * Clone the whole node.
      *
      * @param endNode end node.
+     *
      * @return cloned node.
+     *
      * @throws CloneNotSupportedException on failure.
      */
     public Node clone(Node endNode) throws CloneNotSupportedException {

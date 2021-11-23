@@ -3,6 +3,9 @@ package at.enactmentengine.serverless.main;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
+import at.uibk.dps.databases.MongoDBAccess;
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.FileUtils;
@@ -12,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  * Main class of enactment engine which specifies the workflowInput file and starts the
@@ -46,9 +51,11 @@ class Executor {
      * @param workflow      path to workflow yaml file which should be executed.
      * @param workflowInput path to input json file which should be used as workflow input.
      * @param executionId   the unique identifier for each execution.
+     * @param start         the start time
+     *
      * @return the result of the workflow.
      */
-    Map<String, Object> executeWorkflow(String workflow, String workflowInput, int executionId) {
+    Map<String, Object> executeWorkflow(String workflow, String workflowInput, int executionId, long start) {
         Map<String, Object> workflowResult = null;
 
         try {
@@ -56,7 +63,7 @@ class Executor {
             workflowResult = executeWorkflow(
                     workflow == null ? null : FileUtils.readFileToByteArray(new File(workflow)),
                     workflowInput == null ? null : FileUtils.readFileToByteArray(new File(workflowInput)),
-                    executionId);
+                    executionId, start);
         } catch (IOException e) {
             LOGGER.error(e.getMessage(), e);
         }
@@ -70,12 +77,11 @@ class Executor {
      * @param workflow      byte[] of the workflow yaml file which should be executed.
      * @param workflowInput byte[] of the input json file which should be used as workflow input.
      * @param executionId   the unique identifier for each execution.
+     * @param start         the start time
+     *
      * @return the result of the workflow.
      */
-    Map<String, Object> executeWorkflow(byte[] workflow, byte[] workflowInput, int executionId) {
-
-        /* Measure start time of the workflow execution */
-        long start = System.currentTimeMillis();
+    Map<String, Object> executeWorkflow(byte[] workflow, byte[] workflowInput, int executionId, long start) {
 
         /* Disable hostname verification (enable OpenWhisk connections) */
         final Properties props = System.getProperties();
@@ -110,12 +116,16 @@ class Executor {
                 workflowOutput = ex.executeWorkflow(this.workflowInput);
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
+                MongoDBAccess.saveLog(Event.WORKFLOW_FAILED, null, null, null, null, null, System.currentTimeMillis() - start, false, -1, -1, start, Type.EXEC);
                 return null;
             }
 
             /* Measure end time of the workflow execution */
             long end = System.currentTimeMillis();
             LOGGER.info("Execution took {}ms.", (end - start));
+            boolean success = ex.getEndNode().getResult() != null;
+            Event event = success ? Event.WORKFLOW_END : Event.WORKFLOW_FAILED;
+            MongoDBAccess.saveLog(event, null, null, null, null, null, end - start, success, -1, -1, start, Type.EXEC);
         }
 
         return workflowOutput;

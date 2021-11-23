@@ -1,17 +1,18 @@
 package at.enactmentengine.serverless.main;
 
-import at.uibk.dps.socketutils.*;
+import at.uibk.dps.socketutils.ConstantsNetwork;
+import at.uibk.dps.socketutils.UtilsSocket;
 import at.uibk.dps.socketutils.enactmentengine.RequestEnactmentEngine;
 import at.uibk.dps.socketutils.enactmentengine.ResponseEnactmentEngine;
 import at.uibk.dps.socketutils.enactmentengine.UtilsSocketEnactmentEngine;
 import at.uibk.dps.socketutils.entity.Statistics;
-import at.uibk.dps.socketutils.logger.ResponseLogger;
 import at.uibk.dps.socketutils.logger.RequestLoggerExecutionId;
+import at.uibk.dps.socketutils.logger.ResponseLogger;
 import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class Handler implements Runnable {
 			Executor executor = new Executor();
 			Map<String, Object> executionResult = executor.executeWorkflow(
 					enactmentEngineRequest.getWorkflow(),
-					enactmentEngineRequest.getWorkflowInput(), executionId);
+					enactmentEngineRequest.getWorkflowInput(), executionId, start);
 
 			/* Stop measuring time for workflow execution */
 			long end = System.currentTimeMillis();

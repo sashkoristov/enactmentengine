@@ -17,8 +17,7 @@ import java.util.concurrent.Future;
 /**
  * Class which handles the start of the execution of the workflow.
  *
- * @author markusmoosbrugger, jakobnoeckl
- * extended by @author stefanpedratscher
+ * @author markusmoosbrugger, jakobnoeckl extended by @author stefanpedratscher
  */
 public class ExecutableWorkflow {
 
@@ -60,11 +59,11 @@ public class ExecutableWorkflow {
      * @param definedInput expected workflow inputs.
      */
     public ExecutableWorkflow(String workflowName, ListPair<Node, Node> workflow, List<DataIns> definedInput) {
-        this.startNode = workflow.getStart();
-        this.endNode = workflow.getEnd();
+        startNode = workflow.getStart();
+        endNode = workflow.getEnd();
         this.workflowName = workflowName;
         this.definedInput = definedInput;
-        this.executorService = Executors.newSingleThreadExecutor();
+        executorService = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -75,8 +74,8 @@ public class ExecutableWorkflow {
      * @return result of the workflow.
      *
      * @throws MissingInputDataException on missing input data.
-     * @throws ExecutionException on execution failure.
-     * @throws InterruptedException on interruption.
+     * @throws ExecutionException        on execution failure.
+     * @throws InterruptedException      on interruption.
      */
     public Map<String, Object> executeWorkflow(Map<String, Object> input) throws MissingInputDataException, ExecutionException, InterruptedException {
 
@@ -84,7 +83,7 @@ public class ExecutableWorkflow {
         final Map<String, Object> presentInput = new HashMap<>();
 
         /* Iterate over all expected inputs */
-        if( definedInput!= null ) {
+        if (definedInput != null) {
             for (DataIns data : definedInput) {
 
                 /* Check if the actual input contains the expected input */
@@ -101,6 +100,72 @@ public class ExecutableWorkflow {
 
         /* Start workflow execution */
         logger.info("Starting execution of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
+
+        /* Pass the present inputs to the start node */
+        startNode.passResult(presentInput);
+
+        /* Run the start node */
+        Future<Boolean> future = executorService.submit(startNode);
+
+        try {
+
+            /* Wait if needed for the node */
+            if (Boolean.TRUE.equals(future.get())) {
+                /* Check if the result is valid */
+                if (endNode.getResult() != null) {
+                    logger.info("Workflow completed: {}", endNode.getResult());
+                } else {
+                    logger.error("Workflow Failed! End result is Null");
+                }
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            /* Cancel task and shut down executor on failure */
+            future.cancel(true);
+            executorService.shutdownNow();
+            throw e;
+        }
+
+        /* Terminate executor */
+        executorService.shutdown();
+
+        /* Return result of the last node in the workflow (workflow result) */
+        return endNode.getResult();
+    }
+
+    /**
+     * Starts the execution of the workflow.
+     *
+     * @param input values for the first workflow element (actual values).
+     *
+     * @return result of the workflow.
+     *
+     * @throws MissingInputDataException on missing input data.
+     * @throws ExecutionException        on execution failure.
+     * @throws InterruptedException      on interruption.
+     */
+    public Map<String, Object> simulateWorkflow(Map<String, Object> input) throws MissingInputDataException, ExecutionException, InterruptedException {
+
+        /* Create a variable to handle the present input */
+        final Map<String, Object> presentInput = new HashMap<>();
+
+        /* Iterate over all expected inputs */
+        if (definedInput != null) {
+            for (DataIns data : definedInput) {
+
+                /* Check if the actual input contains the expected input */
+                if (input != null && input.containsKey(data.getSource())) {
+
+                    /* Add the actual input to the list of actually present inputs */
+                    presentInput.put(workflowName + "/" + data.getName(), input.get(data.getSource()));
+                } else {
+                    /* The expected input is not present */
+                    throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
+                }
+            }
+        }
+
+        /* Start workflow execution */
+        logger.info("Starting simulation of workflow: \"{}\" [at {}ms]", workflowName, System.currentTimeMillis());
 
         /* Pass the present inputs to the start node */
         startNode.passResult(presentInput);

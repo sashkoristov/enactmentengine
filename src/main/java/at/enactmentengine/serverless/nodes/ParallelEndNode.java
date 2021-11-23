@@ -7,7 +7,10 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -96,6 +99,12 @@ public class ParallelEndNode extends Node {
         /* Pass the results to all children */
         for (Node node : children) {
             node.passResult(outputValues);
+            if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
+                node.setConcurrencyLimit(concurrencyLimit);
+                node.setStartTime(startTime);
+            }
             node.call();
         }
 

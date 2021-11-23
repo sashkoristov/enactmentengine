@@ -64,7 +64,7 @@ public class IfEndNode extends Node {
             for (DataOuts data : dataOuts) {
 
                 /* Find the corresponding actual output of the if node */
-                for (Entry<String, Object> inputElement : this.ifResult.entrySet()) {
+                for (Entry<String, Object> inputElement : ifResult.entrySet()) {
                     outputValues.put(name + "/" + data.getName(), inputElement.getValue());
                 }
             }
@@ -75,6 +75,12 @@ public class IfEndNode extends Node {
         /* Pass the output to all child nodes */
         for (Node node : children) {
             node.passResult(outputValues);
+            if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
+                node.setConcurrencyLimit(concurrencyLimit);
+                node.setStartTime(startTime);
+            }
             node.call();
         }
 
@@ -101,7 +107,7 @@ public class IfEndNode extends Node {
                 for (DataOuts data : dataOuts) {
                     for (Entry<String, Object> inputElement : input.entrySet()) {
                         if (data.getSource().contains(inputElement.getKey())) {
-                            this.ifResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
+                            ifResult.put(inputElement.getKey(), input.get(inputElement.getKey()));
                         }
                     }
                 }

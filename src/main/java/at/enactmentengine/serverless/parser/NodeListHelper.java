@@ -2,25 +2,40 @@ package at.enactmentengine.serverless.parser;
 
 import at.enactmentengine.serverless.nodes.*;
 import at.enactmentengine.serverless.object.ListPair;
+import at.uibk.dps.afcl.Function;
 import at.uibk.dps.afcl.functions.*;
 import at.uibk.dps.afcl.functions.objects.Case;
 import at.uibk.dps.afcl.functions.objects.Section;
-import at.uibk.dps.afcl.Function;
 import org.apache.commons.lang3.NotImplementedException;
 
 /**
  * Helper class to create NodeLists out of function constructs
  *
- * @author stefanpedratscher
+ * @author stefanpedratscher, extended by @author mikahautz
  */
 class NodeListHelper {
+
+    /**
+     * Flag used to determine whether to simulate or execute.
+     */
+    private final boolean simulate;
 
     int executionId;
 
     /**
      * Default constructor for NodeList helper
      */
-    NodeListHelper() {
+    public NodeListHelper() {
+        simulate = false;
+    }
+
+    /**
+     * Constructor for NodeList helper
+     *
+     * @param simulate whether to simulate or execute
+     */
+    public NodeListHelper(boolean simulate) {
+        this.simulate = simulate;
     }
 
 
@@ -28,19 +43,26 @@ class NodeListHelper {
      * Convert a function to NodeList
      *
      * @param function compound or atomic function
+     *
      * @return NodeList
      */
     ListPair<Node, Node> toNodeList(Function function) {
-        if (function instanceof AtomicFunction) {
+        if (function instanceof AtomicFunction && simulate) {
             AtomicFunction tmp = (AtomicFunction) function;
-            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
+            SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getDeployment(),
+                    tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
+            return new ListPair<>(simulationNode, simulationNode);
+        } else if (function instanceof AtomicFunction) {
+            AtomicFunction tmp = (AtomicFunction) function;
+            FunctionNode functionNode = new FunctionNode(tmp.getName(), tmp.getType(), tmp.getDeployment(),
+                    tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
             return new ListPair<>(functionNode, functionNode);
         } else if (function instanceof IfThenElse) {
             return toNodeListIf((IfThenElse) function);
         } else if (function instanceof Parallel) {
             return toNodeListParallel((Parallel) function);
         } else if (function instanceof ParallelFor) {
-            return toNodeListParallelFor((ParallelFor) function);
+            return toNodeListParallelFor((ParallelFor) function, simulate);
         } else if (function instanceof Sequence) {
             return toNodeListSequence((Sequence) function);
         } else if (function instanceof Switch) {
@@ -53,6 +75,7 @@ class NodeListHelper {
      * Convert a switch compound to a NodeList
      *
      * @param function switch function
+     *
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListSwitch(Switch function) {
@@ -105,6 +128,7 @@ class NodeListHelper {
      * Convert a sequence compound to a NodeList
      *
      * @param function sequence function
+     *
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListSequence(Sequence function) {
@@ -115,11 +139,12 @@ class NodeListHelper {
      * Convert a parallelFor compound to a NodeList
      *
      * @param function parallelFor function
+     *
      * @return NodeList
      */
-    private ListPair<Node, Node> toNodeListParallelFor(ParallelFor function) {
+    private ListPair<Node, Node> toNodeListParallelFor(ParallelFor function, boolean simulate) {
         ParallelForStartNode parallelForStartNode = new ParallelForStartNode(function.getName(), "type", function.getDataIns(), function.getLoopCounter(), function.getProperties(), function.getConstraints());
-        ParallelForEndNode parallelForEndNode = new ParallelForEndNode(function.getName(), "", function.getDataOuts());
+        ParallelForEndNode parallelForEndNode = new ParallelForEndNode(function.getName(), "", function.getDataOuts(), simulate);
 
         // Create parallel compound NodeList
         ListPair<Node, Node> firstPair = toNodeList(function.getLoopBody().get(0));
@@ -141,6 +166,7 @@ class NodeListHelper {
      * Convert a parallel compound to a NodeList
      *
      * @param function parallel function
+     *
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListParallel(Parallel function) {
@@ -162,6 +188,7 @@ class NodeListHelper {
      * Convert a section compound to a NodeList
      *
      * @param section section function
+     *
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListSection(Section section) {
@@ -185,6 +212,7 @@ class NodeListHelper {
      * Convert an if compound to a NodeList
      *
      * @param function if function
+     *
      * @return NodeList
      */
     private ListPair<Node, Node> toNodeListIf(IfThenElse function) {
