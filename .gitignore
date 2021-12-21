@@ -3,6 +3,8 @@ target/
 out/
 enactment-engine.iml
 credentials.properties
+mongoDatabase.properties
+mariaDatabase.properties
 src/main/resources/credentials.properties
 .classpath
 .project
