@@ -158,27 +158,39 @@ public class FunctionNode extends Node {
 				/* Iterate over all specified inputs */
 				for (DataIns data : input) {
 
-					String dataSource;
+					String dataSources;
 					if (this.getId() != 0) {
-						dataSource = data.getSource() + "/" + this.getId();
+						dataSources = data.getSource() + "/" + this.getId();
 					} else if(!parents.isEmpty() && parents.get(0).getId() != 0 && parents.get(0).getClass() != ParallelForEndNode.class) {
-						dataSource = data.getSource() + "/" + parents.get(0).getId();
+						dataSources = data.getSource() + "/" + parents.get(0).getId();
 					} else {
-						dataSource = data.getSource();
+						dataSources = data.getSource();
 					}
 
-					if (State.getInstance().getStateObject().get(dataSource) != null) {
+					String source = dataSources.replaceAll("\\s+","").replaceAll("\\[", "").replaceAll("\\]", "");
+					String[] sourceList = source.split(",");
 
-						//logger.info("GETTING FROM STATE");
-						State.getInstance().getStateObject().add(name + "/" + data.getName(), new Gson().fromJson(State.getInstance().getStateObject().get(dataSource).toString(), JsonElement.class));
+					boolean gotDataFromDataSource = false;
 
-						/* Check if the element should be passed to the output */
-						if (data.getPassing() != null && data.getPassing()) {
-							functionOutputs.put(name + "/" + data.getName(), State.getInstance().getStateObject().get(dataSource));
-						} else {
-							actualFunctionInputs.put(data.getName(), State.getInstance().getStateObject().get(dataSource));
+					for(String dataSource : sourceList){
+						if (State.getInstance().getStateObject().get(dataSource) != null) {
+
+							State.getInstance().addParamToState(State.getInstance().getStateObject().get(dataSource).toString(), name + "/" + data.getName(), this.getId(), data.getType());
+
+							/* Check if the element should be passed to the output */
+							if (data.getPassing() != null && data.getPassing()) {
+								functionOutputs.put(name + "/" + data.getName(), State.getInstance().getStateObject().get(dataSource));
+							} else {
+								actualFunctionInputs.put(data.getName(), State.getInstance().getStateObject().get(dataSource));
+							}
+
+							gotDataFromDataSource = true;
 						}
-					} else {
+					}
+
+					if(!gotDataFromDataSource){
+						logger.info(data.getSource());
+
 						throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
 								+ " needs " + data.getSource() + " !");
 					}
@@ -210,7 +222,7 @@ public class FunctionNode extends Node {
 		/* Log the function output */
 		logFunctionOutput(start, end, resultString, id);
 
-		State.getInstance().addResultToState(resultString, name, this.getId());
+		State.getInstance().addResultToState(resultString, name, this.getId(), this.output);
 
 		/*
 		 * Read the actual function outputs by their key and store them in
@@ -219,13 +231,13 @@ public class FunctionNode extends Node {
 		// TODO check for success
 		boolean success = getValuesParsed(resultString, functionOutputs);
 
+		/* Set the result of the function node */
+		result = functionOutputs;
+
 		/* Pass the output to the next node */
 		for (Node node : children) {
 			node.call();
 		}
-
-		/* Set the result of the function node */
-		result = functionOutputs;
 
 		/*
 		 * Check if the execution identifier is specified (check if execution should be

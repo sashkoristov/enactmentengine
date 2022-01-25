@@ -6,18 +6,12 @@ import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.LoopCounter;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -221,25 +215,41 @@ public class ParallelForStartNode extends Node {
 
                 /* Iterate over inputs and add corresponding values to the data values */
                 for (DataIns data : dataIns) {
-                    if (State.getInstance().getStateObject().get(data.getSource()) != null) {
-                        dataValues.put(data.getSource(), State.getInstance().getStateObject().get(data.getSource()));
+                    String source = data.getSource().replaceAll("\\s+","").replaceAll("\\[", "").replaceAll("\\]", "");;
+                    String[] sourceList = source.split(",");
+
+                    for(String dataSource : sourceList){
+                        if (State.getInstance().getStateObject().get(dataSource) != null) {
+                            dataValues.put(dataSource, State.getInstance().getStateObject().get(dataSource));
+                        }
                     }
                 }
             }
 
             /* Iterate over counter variables and check if the input contains the values */
             for (String counterValue : counterVariableNames) {
-                if (State.getInstance().getStateObject().get(counterValue) != null) {
-                    counterValues.put(counterValue, State.getInstance().getStateObject().get(counterValue));
+                if(counterValue == null){
+                    continue;
+                }
+
+                String source = counterValue.replace("\\s+","").replace("\\[", "").replace("\\]", "");
+                String[] sourceList = source.split(",");
+
+                for(String counterSource : sourceList){
+                    if (State.getInstance().getStateObject().get(counterSource) != null) {
+                        counterValues.put(counterSource, State.getInstance().getStateObject().get(counterSource));
+                    }
                 }
             }
         }
 
         /* Check if there is input defined in the workflow file */
-        if (dataIns != null) {
+ /*       if (dataIns != null) { */
+
+
 
             /* Iterate over the input data and handle input values */
-            for (DataIns data : dataIns) {
+            /*for (DataIns data : dataIns) {
                 if (State.getInstance().getStateObject().get(data.getSource()) == null) {
                     throw new MissingInputDataException(ParallelForStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
@@ -249,6 +259,7 @@ public class ParallelForStartNode extends Node {
                 }
             }
         }
+       */
 
         logger.info("Executing {} ParallelForStartNodeOld", name);
 
@@ -318,8 +329,27 @@ public class ParallelForStartNode extends Node {
     private void addChildren() throws MissingInputDataException, CloneNotSupportedException {
 
         /* Iterate over counter variables and check if there is the according value */
-        for (String counterKeyName : counterVariableNames) {
-            if (counterKeyName != null && !counterValues.containsKey(counterKeyName)) {
+        for (int i = 0; i < counterVariableNames.length; i++) {
+
+            String counterKeyName = counterVariableNames[i];
+
+            boolean gotDataFromDataSource = false;
+
+            if(counterKeyName == null){
+                continue;
+            }
+
+            String source = counterKeyName.replaceAll("\\s+","").replaceAll("\\[", "").replaceAll("\\]", "");;
+            String[] sourceList = source.split(",");
+
+            for(String counterSource : sourceList){
+                if (counterValues.containsKey(counterSource)) {
+                    counterVariableNames[i] = counterSource;
+                    gotDataFromDataSource = true;
+                }
+            }
+
+            if(!gotDataFromDataSource){
                 throw new MissingInputDataException(
                         ParallelForStartNode.class.getCanonicalName() + ": " + name + " needs " + counterKeyName + "!");
             }
@@ -410,38 +440,62 @@ public class ParallelForStartNode extends Node {
                 /* Check of there are constraints defined */
                 if (data.getConstraints() != null) {
 
-                    /* Check if the actual input is an array */
-                    if(dataValues.get(data.getSource()) instanceof ArrayList || dataValues.get(data.getSource()) instanceof JsonArray){
+                    String source = data.getSource().replaceAll("\\s+","").replaceAll("\\[", "").replaceAll("\\]", "");;
+                    String[] sourceList = source.split(",");
 
-                        /* Convert the data to an array */
-                        JsonArray dataElements = new Gson().toJsonTree(dataValues.get(data.getSource())).getAsJsonArray();
+                    for(String dataSource : sourceList) {
 
-                        /* Check if a distribution is specified */
-                        List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
-                        checkDistributedElements(distributedElements, data, values);
-                    } else {
+                        if(State.getInstance().getStateObject().get(dataSource) == null) {
+                            continue;
+                        }
 
-                        // TODO can the following be simplified and generalized e.g. also for bool etc.?
-                        if (dataValues.get(data.getSource()) instanceof Double){
-                            JsonArray dataElements = new JsonArray();
-                            dataElements.add((Double) dataValues.get(data.getSource()));
+                        /* Check if the actual input is an array */
+                        if(dataValues.get(dataSource) instanceof ArrayList || dataValues.get(dataSource) instanceof JsonArray){
+
+                            /* Convert the data to an array */
+                            JsonArray dataElements = new Gson().toJsonTree(dataValues.get(dataSource)).getAsJsonArray();
+
+                            /* Check if a distribution is specified */
                             List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
-
-                            checkDistributedElements(distributedElements, data, values);
-                        } else if (dataValues.get(data.getSource()) instanceof Integer){
-                            JsonArray dataElements = new JsonArray();
-                            dataElements.add((Integer) dataValues.get(data.getSource()));
-                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
-
-                            checkDistributedElements(distributedElements, data, values);
-                        } else if (dataValues.get(data.getSource()) instanceof String){
-                            JsonArray dataElements = new JsonArray();
-                            dataElements.add((String) dataValues.get(data.getSource()));
-                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
-
                             checkDistributedElements(distributedElements, data, values);
                         } else {
-                            throw new NotImplementedException("Not implemented: " + dataValues.get(data.getSource()).getClass());
+
+                            // TODO can the following be simplified and generalized e.g. also for bool etc.?
+                            if (dataValues.get(dataSource) instanceof Double){
+                                JsonArray dataElements = new JsonArray();
+                                dataElements.add((Double) dataValues.get(dataSource));
+                                List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                                checkDistributedElements(distributedElements, data, values);
+                            } else if (dataValues.get(dataSource) instanceof Integer){
+                                JsonArray dataElements = new JsonArray();
+                                dataElements.add((Integer) dataValues.get(dataSource));
+                                List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                                checkDistributedElements(distributedElements, data, values);
+                            } else if (dataValues.get(dataSource) instanceof String){
+                                JsonArray dataElements = new JsonArray();
+                                dataElements.add((String) dataValues.get(dataSource));
+                                List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                                checkDistributedElements(distributedElements, data, values);
+                            } else if (dataValues.get(dataSource) instanceof JsonPrimitive){
+                                JsonArray dataElements = new JsonArray();
+                                logger.info(State.getInstance().getStateObject().toString());
+                                logger.info(String.valueOf(State.getInstance().getStateObject().get(dataSource)));
+                                dataElements.add(State.getInstance().getStateObject().get(dataSource));
+
+                                logger.info("DATA ELEMENTS: " + dataElements);
+                                List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                                logger.info("HERE:" + distributedElements);
+
+                                checkDistributedElements(distributedElements, data, values);
+
+                                logger.info(distributedElements.toString());
+                            }else {
+                                throw new NotImplementedException("Not implemented: " + dataValues.get(dataSource).getClass());
+                            }
                         }
                     }
                 } else {
@@ -606,6 +660,7 @@ public class ParallelForStartNode extends Node {
                 } else {
                     replicaSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
                 }
+                logger.info("REPLICA SIZE: " + replicaSize);
 
                 /* Create an array of that specific size */
                 distributedElements = new ArrayList<>();

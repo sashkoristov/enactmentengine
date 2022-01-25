@@ -66,11 +66,23 @@ public class ParallelStartNode extends Node {
 
             /* Iterate over the possible inputs and look for defined ones */
             for (DataIns data : definedInput) {
-                if ((state.get(data.getSource()) == null)) {
+
+                String source = data.getSource().replaceAll("\\s+","").replaceAll("\\[", "").replaceAll("\\]", "");;
+                String[] sourceList = source.split(",");
+
+                boolean gotDataFromDataSource = false;
+
+
+                for(String dataSource : sourceList){
+                    if(state.get(dataSource) != null) {
+                        state.add(name + "/" + data.getName(), new Gson().fromJson(state.get(dataSource).toString(), JsonElement.class));
+                        gotDataFromDataSource = true;
+                    }
+                }
+
+                if(!gotDataFromDataSource){
                     throw new MissingInputDataException(ParallelStartNode.class.getCanonicalName() + ": " + name
                             + " needs " + data.getSource() + "!");
-                } else {
-                    state.add(name + "/" + data.getName(), new Gson().fromJson(state.get(data.getSource()).toString(), JsonElement.class));
                 }
             }
         }

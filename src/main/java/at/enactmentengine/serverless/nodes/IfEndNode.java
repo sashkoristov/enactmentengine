@@ -5,6 +5,7 @@ import at.uibk.dps.afcl.functions.objects.DataOuts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,10 +65,15 @@ public class IfEndNode extends Node {
             /* Iterate over all data outputs specified in the workflow file */
             for (DataOuts data : dataOuts) {
 
-                if(State.getInstance().getStateObject().get(data.getSource()) != null){
-                    String keyName = name + "/" + data.getName();
-                    State.getInstance().getStateObject().add(keyName, State.getInstance().stateObject.get(data.getSource()));
-                    outputValues.put(keyName, State.getInstance().stateObject.get(data.getSource()));
+                String source = data.getSource().replaceAll("\\s+","").replaceAll("\\[", "").replaceAll("\\]", "");;
+                String[] sourceList = source.split(",");
+
+                for(String dataSource : sourceList){
+                    if(State.getInstance().getStateObject().get(dataSource) != null){
+                        String keyName = name + "/" + data.getName();
+                        State.getInstance().addParamToState(State.getInstance().getStateObject().get(dataSource).toString(), keyName, this.getId(), data.getType());
+                        outputValues.put(keyName, State.getInstance().getStateObject().get(keyName));
+                    }
                 }
             }
         }

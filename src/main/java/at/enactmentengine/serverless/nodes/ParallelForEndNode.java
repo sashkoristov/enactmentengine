@@ -81,15 +81,14 @@ public class ParallelForEndNode extends Node {
 
                 Set<String> set = State.getInstance().getStateObject().keySet().stream().filter(s -> s.startsWith(data.getSource())).collect(Collectors.toSet());
 
-                ArrayList list = new ArrayList();
-                for(String key : set){
-                    list.add(State.getInstance().getStateObject().get(key));
+                ArrayList<JsonElement> list = new ArrayList<>();
+                for(String partialKey : set){
+                    list.add(State.getInstance().getStateObject().get(partialKey));
                 }
 
-                State.getInstance().getStateObject().addProperty(data.getSource(), list.toString());
+                State.getInstance().addParamToState(list.toString(), data.getSource(), 0, data.getType());
 
                 /* Define the output key */
-                // TODO should we remove name?
                 String key = name + "/" + data.getName();
 
                 /* Check if the result contains the specified source */
@@ -98,7 +97,7 @@ public class ParallelForEndNode extends Node {
                     outputValues.put(key, State.getInstance().getStateObject().get(data.getSource()));
                 } else if ("collection".equals(data.getType())) {
                     State.getInstance().getStateObject().add(key, new Gson().fromJson(State.getInstance().getStateObject().toString(), JsonElement.class));
-                    //outputValues.put(key, parallelForResult);
+                    outputValues.put(key, parallelForResult);
                 }
             }
         }

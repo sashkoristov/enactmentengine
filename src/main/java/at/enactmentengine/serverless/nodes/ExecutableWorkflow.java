@@ -81,8 +81,6 @@ public class ExecutableWorkflow {
      */
     public Map<String, Object> executeWorkflow(Map<String, Object> input) throws MissingInputDataException, ExecutionException, InterruptedException {
 
-        JsonObject state = State.getInstance().getStateObject();
-
         /* Iterate over all expected inputs */
         if( definedInput!= null ) {
             for (DataIns data : definedInput) {
@@ -91,7 +89,7 @@ public class ExecutableWorkflow {
                 if (input != null && input.containsKey(data.getSource())) {
 
                     /* Add the input of the workflow to the state*/
-                    state.addProperty(workflowName + "/" + data.getName(), input.get(data.getSource()).toString());
+                    State.getInstance().addParamToState(input.get(data.getSource()).toString(), workflowName + "/" + data.getName(), 0, data.getType());
                 } else {
                     /* The expected input is not present */
                     throw new MissingInputDataException(workflowName + " needs more input data: " + data.getSource());
