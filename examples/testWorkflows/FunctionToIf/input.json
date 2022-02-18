@@ -1,0 +1,7 @@
+{
+    "inputWorkflow1": [1, 2.5, 3, 4, 5],
+    "inputWorkflow2": 3.1,
+    "inputWorkflow3": 4,
+    "inputWorkflow4": "testString",
+    "loopCounter": 5
+}
