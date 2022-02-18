@@ -20,11 +20,13 @@ import at.uibk.dps.function.AlternativeStrategy;
 import at.uibk.dps.function.ConstraintSettings;
 import at.uibk.dps.function.FaultToleranceSettings;
 import at.uibk.dps.function.Function;
-import at.uibk.dps.socketutils.ConstantsNetwork;
-import at.uibk.dps.socketutils.UtilsSocket;
-import at.uibk.dps.socketutils.entity.Invocation;
-import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
-import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
+
+/* remove not available dependency */
+//import at.uibk.dps.socketutils.ConstantsNetwork;
+//import at.uibk.dps.socketutils.UtilsSocket;
+//import at.uibk.dps.socketutils.entity.Invocation;
+//import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
+//import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -245,15 +247,16 @@ public class FunctionNode extends Node {
 		 */
 		if (executionId != -1) {
 
-			/* Create a function invocation object */
-			Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
-					Utils.detectRegion(resourceLink),
-					new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-					new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-					checkResultSuccess(resultString).toString(), null, executionId);
-
-			/* Store the invocation in the database */
-			storeInDBFunctionInvocation(functionInvocation);
+			/* code snippet not working because of removed dependency 'com.github.ApolloCEC:socketUtils:-SNAPSHOT' */
+//			/* Create a function invocation object */
+//			Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
+//					Utils.detectRegion(resourceLink),
+//					new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+//					new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
+//					checkResultSuccess(resultString).toString(), null, executionId);
+//
+//			/* Store the invocation in the database */
+//			storeInDBFunctionInvocation(functionInvocation);
 		}
 		return true;
 	}
@@ -381,22 +384,23 @@ public class FunctionNode extends Node {
 	 *
 	 * @param functionInvocation to store in the database.
 	 */
-	private void storeInDBFunctionInvocation(Invocation functionInvocation) {
-
-		logger.info("Connecting to logger service...");
-		try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST,
-				ConstantsNetwork.LOGGER_SERVICE_PORT)) {
-
-			RequestLoggerInvocationWrite invocationLogManagerRequest = UtilsSocketLogger
-					.generateRequestInvocationWrite(functionInvocation, executionId);
-			logger.info("Sending request to logger-service...");
-			UtilsSocket.sendJsonObject(loggerService.getOutputStream(), invocationLogManagerRequest);
-
-			logger.info("Closing connection to logger service...");
-		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
-		}
-	}
+	/* code snippet not working because of removed dependency 'com.github.ApolloCEC:socketUtils:-SNAPSHOT' */
+//	private void storeInDBFunctionInvocation(Invocation functionInvocation) {
+//
+//		logger.info("Connecting to logger service...");
+//		try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST,
+//				ConstantsNetwork.LOGGER_SERVICE_PORT)) {
+//
+//			RequestLoggerInvocationWrite invocationLogManagerRequest = UtilsSocketLogger
+//					.generateRequestInvocationWrite(functionInvocation, executionId);
+//			logger.info("Sending request to logger-service...");
+//			UtilsSocket.sendJsonObject(loggerService.getOutputStream(), invocationLogManagerRequest);
+//
+//			logger.info("Closing connection to logger service...");
+//		} catch (IOException e) {
+//			logger.error(e.getMessage(), e);
+//		}
+//	}
 
 	/**
 	 * Parses the json result into a map as key-value pair.

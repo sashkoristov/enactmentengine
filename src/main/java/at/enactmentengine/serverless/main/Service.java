@@ -1,6 +1,8 @@
 package at.enactmentengine.serverless.main;
 
-import at.uibk.dps.socketutils.ConstantsNetwork;
+/* remove not available dependency */
+//import at.uibk.dps.socketutils.ConstantsNetwork;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,25 +35,26 @@ public class Service {
      */
     public static void main(String[] args) {
 
+        /* code snippet not working because of removed dependency 'com.github.ApolloCEC:socketUtils:-SNAPSHOT' */
         /* Start the service */
-        try (ServerSocket serverSocket = new ServerSocket(ConstantsNetwork.EE_PORT)) {
-
-            logger.info("Server is up and running at {}:{}", InetAddress.getLocalHost().getHostAddress(), ConstantsNetwork.EE_PORT);
-
-            Socket socket = null;
-            while (running) {
-                logger.info("Waiting for client(s)...");
-                socket = serverSocket.accept();
-
-                Thread handler = new Thread(new Handler(socket));
-                handler.start();
-                logger.info("Handle client in thread {}", handler.getId());
-            }
-
-            assert socket != null;
-            socket.close();
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
+//        try (ServerSocket serverSocket = new ServerSocket(ConstantsNetwork.EE_PORT)) {
+//
+//            logger.info("Server is up and running at {}:{}", InetAddress.getLocalHost().getHostAddress(), ConstantsNetwork.EE_PORT);
+//
+//            Socket socket = null;
+//            while (running) {
+//                logger.info("Waiting for client(s)...");
+//                socket = serverSocket.accept();
+//
+//                Thread handler = new Thread(new Handler(socket));
+//                handler.start();
+//                logger.info("Handle client in thread {}", handler.getId());
+//            }
+//
+//            assert socket != null;
+//            socket.close();
+//        } catch (IOException e) {
+//            logger.error(e.getMessage(), e);
+//        }
     }
 }
