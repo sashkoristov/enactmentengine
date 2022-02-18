@@ -1,0 +1,88 @@
+---
+name: "FunctionToParallelToFunctionToFunction"
+dataIns:
+- name: "inputWorkflow"
+  type: "collection"
+  source: "inputWorkflow"
+  passing: true
+workflowBody:
+- function:
+    name: "f1"
+    type: "Collection"
+    dataIns:
+    - name: "f1input1"
+      type: "collection"
+      source: "FunctionToParallelToFunction/inputWorkflow"
+    dataOuts:
+    - name: "f1out1"
+      type: "collection"
+    - name: "f1out2"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "Parallelf1.py"
+- parallel:
+    name: "parallelFunc"
+    dataIns:
+    - name: "parInput1"
+      type: "collection"
+      source: "f1/f1out1"
+    - name: "parInput2"
+      type: "number"
+      source: "f1/f1out2"
+    parallelBody:
+    - section:
+      - function:
+          name: "f2"
+          type: "Collection"
+          dataIns:
+          - name: "f2input1"
+            type: "collection"
+            source: "parallelFunc/parInput1"
+          dataOuts:
+          - name: "f2out1"
+            type: "collection"
+          properties:
+          - name: "resource"
+            value: "Parallelf2.py"
+    - section:
+      - function:
+          name: "f3"
+          type: "number"
+          dataIns:
+          - name: "f3input1"
+            type: "number"
+            source: "parallelFunc/parInput2"
+          dataOuts:
+          - name: "f3out1"
+            type: "string"
+          properties:
+          - name: "resource"
+            value: "Parallelf3.py"
+    dataOuts:
+    - name: "parOut1"
+      type: "collection"
+      source: "f2/f2out1"
+    - name: "parOut2"
+      type: "string"
+      source: "f3/f3out1"
+- function:
+    name: "f4"
+    type: "Collection"
+    dataIns:
+    - name: "f4input1"
+      type: "collection"
+      source: "parallelFunc/parOut1"
+    - name: "f4input2"
+      type: "string"
+      source: "parallelFunc/parOut2"
+    dataOuts:
+    - name: "f4out1"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "Parallelf4.py"
+dataOuts:
+- name: "finalOutput"
+  type: "string"
+  source: "f4/f4out1"
