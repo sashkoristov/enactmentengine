@@ -1,0 +1,75 @@
+---
+name: "FunctionToParallelFor"
+dataIns:
+- name: "inputWorkflow"
+  type: "collection"
+  source: "inputWorkflow"
+  passing: true
+workflowBody:
+- function:
+    name: "f1"
+    type: "Collection"
+    dataIns:
+    - name: "f1input1"
+      type: "collection"
+      source: "FunctionToParallelFor/inputWorkflow"
+    dataOuts:
+    - name: "f1out1"
+      type: "collection"
+    - name: "f1out2"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "ParallelForf1.py"
+- parallelFor:
+    name: "parallelFunc"
+    dataIns:
+    - name: "parInput1"
+      type: "collection"
+      source: "f1/f1out1"
+      constraints:
+      - name: "distribution"
+        value: "BLOCK(1)"
+    loopCounter:
+      type: "number"
+      from: "0"
+      to: "f1/f1out2"
+      step: "1"
+    loopBody:
+    - function:
+        name: "f2"
+        type: "Collection"
+        dataIns:
+        - name: "f2input1"
+          type: "number"
+          source: "parallelFunc/parInput1"
+        dataOuts:
+        - name: "f2out1"
+          type: "number"
+        properties:
+        - name: "resource"
+          value: "ParallelForf2.py"
+    dataOuts:
+    - name: "aggregatedOut1"
+      type: "collection"
+      source: "f2/f2out1"
+      constraints:
+      - name: "aggregation"
+        value: "+"
+- function:
+    name: "f3"
+    type: "Collection"
+    dataIns:
+    - name: "f3input1"
+      type: "collection"
+      source: "parallelFunc/aggregatedOut1"
+    dataOuts:
+    - name: "f3out1"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "ParallelForf3.py"
+dataOuts:
+- name: "finalOutput"
+  type: "string"
+  source: "f3/f3out1"
