@@ -1,0 +1,122 @@
+---
+name: "functionToIfToFunction"
+dataIns:
+- name: "inputWorkflow1"
+  type: "collection"
+  source: "inputWorkflow1"
+  passing: true
+- name: "inputWorkflow2"
+  type: "number"
+  source: "inputWorkflow2"
+  passing: true
+- name: "inputWorkflow3"
+  type: "number"  
+  source: "inputWorkflow3"
+  passing: true
+workflowBody:
+- function:
+    name: "f1"
+    type: "Collection"
+    dataIns:
+    - name: "f1input1"
+      type: "collection"
+      source: "functionToIfToFunction/inputWorkflow1"
+    - name: "f1input2"
+      type: "number"
+      source: "functionToIfToFunction/inputWorkflow2"
+    - name: "f1input3"
+      type: "number"
+      source: "functionToIfToFunction/inputWorkflow3"
+    dataOuts:
+    - name: "f1out1"
+      type: "collection"
+    - name: "f1out2"
+      type: "collection"
+    - name: "f1out3"
+      type: "number"
+    - name: "f1out4"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "FunctionToIfToFunctionf1.py"
+- if:
+    name: "if"
+    dataIns:
+    - name: "ifinput1"
+      type: "collection"
+      source: "f1/f1out1"
+    - name: "ifinput2"
+      type: "collection"
+      source: "f1/f1out2"
+    - name: "ifinput3"
+      type: "number"
+      source: "f1/f1out3"
+    - name: "ifinput4"
+      type: "number"
+      source: "f1/f1out4"
+    condition:
+      combinedWith: "and"
+      conditions:
+      - data1: "if/ifinput3"
+        data2: "if/ifinput4"
+        operator: "<"
+    then:
+    - function:
+        name: "f2"
+        type: "Collection"
+        dataIns:
+        - name: "f2input1"
+          type: "collection"
+          source: "if/ifinput1"
+        dataOuts:
+        - name: "f2out1"
+          type: "collection"
+        - name: "f2out2"
+          type: "number"
+        properties:
+        - name: "resource"
+          value: "FunctionToIfToFunctionf2.py"
+    else:
+    - function:
+        name: "f3"
+        type: "Collection"
+        dataIns:
+        - name: "f3input1"
+          type: "collection"
+          source: "if/ifinput2"
+        dataOuts:
+        - name: "f3out1"
+          type: "collection"
+        properties:
+        - name: "resource"
+          value: "FunctionToIfToFunctionf3.py"
+    dataOuts:
+    - name: ifout1
+      type: collection
+      source: f2/f2out1
+    - name: ifout2
+      type: number
+      source: f2/f2out2
+    - name: ifout3
+      type: collection
+      source: f3/f3out1
+- function:
+    name: "f4"
+    type: "Collection"
+    dataIns:
+    - name: "f4input1"
+      type: "collection"
+      source: "if/ifout1"
+    - name: "f4input2"
+      type: "collection"
+      source: "if/ifout2"
+    dataOuts:
+    - name: "f4out1"
+      type: "collection"
+    properties:
+    - name: "resource"
+      value: "FunctionToIfToFunctionf4.py"
+dataOuts:
+- name: "finalOutput1"
+  type: "collection"
+  source: "f4/f4out1"
