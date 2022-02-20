@@ -9,11 +9,14 @@ import at.uibk.dps.function.AlternativeStrategy;
 import at.uibk.dps.function.ConstraintSettings;
 import at.uibk.dps.function.FaultToleranceSettings;
 import at.uibk.dps.function.Function;
-import at.uibk.dps.socketutils.ConstantsNetwork;
-import at.uibk.dps.socketutils.UtilsSocket;
-import at.uibk.dps.socketutils.entity.Invocation;
-import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
-import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
+
+/* remove not available dependency */
+//import at.uibk.dps.socketutils.ConstantsNetwork;
+//import at.uibk.dps.socketutils.UtilsSocket;
+//import at.uibk.dps.socketutils.entity.Invocation;
+//import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
+//import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
+
 import at.uibk.dps.util.Provider;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -272,27 +275,28 @@ public class Utils {
         return (resultString.contains("error:") || resultString.contains("\"error\":")) ? Status.ERROR : Status.SUCCESS;
     }
 
-    /**
-     * Send a request to store the function invocation in the logging database.
-     *
-     * @param functionInvocation to store in the database.
-     */
-    public static void storeInDBFunctionInvocation(Logger logger, Invocation functionInvocation, int executionId) {
-
-        logger.info("Connecting to logger service...");
-        try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST,
-                ConstantsNetwork.LOGGER_SERVICE_PORT)) {
-
-            RequestLoggerInvocationWrite invocationLogManagerRequest = UtilsSocketLogger
-                    .generateRequestInvocationWrite(functionInvocation, executionId);
-            logger.info("Sending request to logger-service...");
-            UtilsSocket.sendJsonObject(loggerService.getOutputStream(), invocationLogManagerRequest);
-
-            logger.info("Closing connection to logger service...");
-        } catch (IOException e) {
-            logger.error(e.getMessage(), e);
-        }
-    }
+    /* code snippet not working because of removed dependency 'com.github.ApolloCEC:socketUtils:-SNAPSHOT' */
+//    /**
+//     * Send a request to store the function invocation in the logging database.
+//     *
+//     * @param functionInvocation to store in the database.
+//     */
+//    public static void storeInDBFunctionInvocation(Logger logger, Invocation functionInvocation, int executionId) {
+//
+//        logger.info("Connecting to logger service...");
+//        try (Socket loggerService = new Socket(ConstantsNetwork.LOGGER_SERVICE_HOST,
+//                ConstantsNetwork.LOGGER_SERVICE_PORT)) {
+//
+//            RequestLoggerInvocationWrite invocationLogManagerRequest = UtilsSocketLogger
+//                    .generateRequestInvocationWrite(functionInvocation, executionId);
+//            logger.info("Sending request to logger-service...");
+//            UtilsSocket.sendJsonObject(loggerService.getOutputStream(), invocationLogManagerRequest);
+//
+//            logger.info("Closing connection to logger service...");
+//        } catch (IOException e) {
+//            logger.error(e.getMessage(), e);
+//        }
+//    }
 
     /**
      * Convert the stringified json to a json object representing the function output.
