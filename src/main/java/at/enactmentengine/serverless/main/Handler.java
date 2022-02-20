@@ -1,19 +1,18 @@
 package at.enactmentengine.serverless.main;
 
-/* remove not available dependency */
-//import at.uibk.dps.socketutils.*;
-//import at.uibk.dps.socketutils.enactmentengine.RequestEnactmentEngine;
-//import at.uibk.dps.socketutils.enactmentengine.ResponseEnactmentEngine;
-//import at.uibk.dps.socketutils.enactmentengine.UtilsSocketEnactmentEngine;
-//import at.uibk.dps.socketutils.entity.Statistics;
-//import at.uibk.dps.socketutils.logger.ResponseLogger;
-//import at.uibk.dps.socketutils.logger.RequestLoggerExecutionId;
-//import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
-
+// import at.uibk.dps.socketutils.ConstantsNetwork;
+// import at.uibk.dps.socketutils.UtilsSocket;
+// import at.uibk.dps.socketutils.enactmentengine.RequestEnactmentEngine;
+// import at.uibk.dps.socketutils.enactmentengine.ResponseEnactmentEngine;
+// import at.uibk.dps.socketutils.enactmentengine.UtilsSocketEnactmentEngine;
+// import at.uibk.dps.socketutils.entity.Statistics;
+// import at.uibk.dps.socketutils.logger.RequestLoggerExecutionId;
+// import at.uibk.dps.socketutils.logger.ResponseLogger;
+// import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.Map;
@@ -57,8 +56,8 @@ public class Handler implements Runnable {
 
 //		try {
 //			/* Wait for request */
-//			RequestEnactmentEngine enactmentEngineRequest = UtilsSocket.receiveJsonObject(socket.getInputStream(),
-//					RequestEnactmentEngine.class);
+//			//RequestEnactmentEngine enactmentEngineRequest = UtilsSocket.receiveJsonObject(socket.getInputStream(),
+//			//		RequestEnactmentEngine.class);
 //
 //			/* Start measuring time for workflow execution */
 //			long start = System.currentTimeMillis();

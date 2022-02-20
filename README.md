@@ -1,4 +1,4 @@
-# *xAFCL EE* - Portable and scalable enactment engine to run serverless workflows across multiple FaaS systems
+# *xAFCL EE* - Portable and scalable enactment engine to run and simulate serverless workflows across multiple FaaS systems with fault tolerance
 
 This project provides a portable and scalable middleware service *xAFCL Enactment Engine (xAFCL EE)* that can simultaneously execute individual functions of a serverless workflow application (Function Choreographies - *FCs*) across multiple FaaS systems (AWS Lambda, IBM Cloud Functions, Google Cloud Functions, Alibaba Function Compute, and Microsoft Functions). 
 
@@ -11,18 +11,22 @@ This project provides a portable and scalable middleware service *xAFCL Enactmen
 
 ## File structure
 
-- **[externalJars](externalJars)** contain pre-build jars used within the EE. Keep them upToDate if they work properly.
+- **[externalJars](externalJars)** contain pre-build jars used within the EE. Keep them upToDate.
 - **[src/main](src/main)** 
     - **[/java](src/main/java)** contains the source code of the EE.
-    - **[/resources](src/main/resources)** contains example yaml files to test the execution.
-- You will need to create a **credentials.properties** file in the root directory of the project, which contains the login credentials for the FaaS providers. This file will be ignored from git (**[.gitignore](.gitignore)**).
+
+## Requirements
+
+### credentials.properties
+
+You will need to create a **credentials.properties** file in the root directory of the project, which contains the login credentials for the FaaS providers. This file will be ignored from git (**[.gitignore](.gitignore)**).
 
 The file should look as follows:
 
 ````
 aws_access_key=
 aws_secret_key=
-aws_session_token=              // (needed for AWS Educate)
+aws_session_token=              // (needed for AWS Academy)
 ibm_api_key=
 google_sa_key={\
  "type": "",\
@@ -38,9 +42,25 @@ google_sa_key={\
 }
 azure_key=
 ````
-    
----------------
-    
+
+### mongoDatabase.properties
+
+You will need to create a **mongoDatabase.properties** file in the root directory of the project, which contains the login credentials for the execution log. This file will be ignored from git (**[.gitignore](.gitignore)**).
+
+The file should look as follows:
+
+````
+host=
+port=
+database=
+collection=
+username=
+password=
+````
+
+You need to have access to a MongoDB server, with created database and a collection.
+
+
 ## Deploy
 
 ### Local
@@ -53,7 +73,6 @@ or
 ````
 gradle standalone
 ````
-
 
 ### Service
 Run the [main method in Service.java](src/main/java/at/enactmentengine/serverless/main/Service.java). The Service will wait on port 9000 for a `.yaml` file and return the result of the execution in json format.
@@ -122,6 +141,93 @@ NOT SUPPORTED RIGHT NOW:
     Use tools like https://www.json2yaml.com/ to convert from yaml to json and https://www.freeformatter.com/json-escape.html to escape characters.
 --->
 
+
+## Run an FC
+
+In order to run an FC, you need to develop a proper FC.yaml file for the FC and the FC input.json file. You can use the [FCEditor](https://github.com/sashkoristov/FCEDitor) to develop your FC, which is currently deployed and publicly available on the following [link](http://fceditor.dps.uibk.ac.at:8180/).
+
+
+````
+java -jar enactment-engine-all.jar FC.yaml input.json
+````
+
+Examples of FCs yaml files can be found in **[examples/faultTolerance/](examples/faultTolerance/)**. 
+
+All functions of the FC need to be deployed in order to be able to run them.
+
+----
+
+## Simulate an FC execution
+
+When properly configured, *xAFCL* may also simulate execution of a function choreography across any of the top five cloud providers. You can use the same yaml file for simulation with a very few adaptations if you would like to simulate functions that were not even executed.
+
+### mariaDatabase.properties (needed for simulation)
+
+In order to use simulation, you will need to create a **mariaDatabase.properties** file in the root directory of the project, which contains the login credentials for the AFCL metadata database. This file will be ignored from git (**[.gitignore](.gitignore)**).
+
+The file should look as follows:
+
+````
+host=
+port=
+database=
+username=
+password=
+````
+
+You need to have access to a MariaDB server, with created database and filled minimum required metadata entries for
+
+- cloud providers
+- cloud regions
+- function types
+- function implementations
+- function deployments
+
+An example of the metadata database schema, including configuration data from Innsbruck to multiple AWS, Google, and IBM cloud regions will be available soon.
+
+Example workflows to run and simulate will be also availble soon.
+
+### Usage
+
+````
+java -jar enactment-engine-all.jar FC.yaml input.json --simulate
+````
+
+### Simulate `parallelFor` loops and *siblings* and *twins* of functions
+
+AFCL language offers to describe `parallelFor` loops with a dynamic loop iteration count which may be known during runtime. For instance, as an output of another predecessor function. In order to be able to simulate such FCs, a user may specify the loop iteration count in the field *simValue* for the parameter that is determined dynamically during runtime. See the following example:
+
+````yaml
+- function:
+    name: "MonteCarlo"
+    type: "MonteCarloType"
+    deployment: "AWS_ap-southeast-1_128"
+    dataOuts:
+    - name: "counter"
+      type: "number"
+      properties:
+      - name: "simValue" 
+        value: 5 # specified value for simulation
+    properties:
+    - name: "resource"
+      value: "arn:aws:lambda:ap-southeast-1:xxx:function:MC"
+````
+
+xAFCLSim can determine all siblings and twins of a function if you specify the provider, region, and assigned memory of a function, as it is shown in the field *deployment* in the above example. Use the following format *"\<providerName\>\_\<RegionCode\>\_\<memoryInMB\>"*. In the given example, the function MonteCarlo is deployed on AWS Tokyo with 128 MB.
+
+Note: 
+
+- *Siblings* of a function are all deployments in the same cloud region with different memory.
+- *Twins* of a function are all deployments in another cloud region of the same cloud provider with the same memory
+
+In order to be able to simulate a function, *xAFCLSim* uses the values from the MariaDB metadata with the following priority (from the highest to the lowest):
+
+- execution log from the same function deployment
+- execution log from some twin
+- execution log from some siblings, applying the linear speedup by default compared to the sibling with 128 MB.
+
+
+
 ---------------
 
 ## Fault Tolerance
@@ -133,6 +239,7 @@ The *xAFCL EE* will automatically pass functions with fault tolerance and constr
 This section will show the features of the Fault Tolerance engine with some very simple examples. All examples are based on the following simple workflow (only the constraints field of a function needs to be changed within the CFCL file):
 
 ````yaml
+---
 name: "exampleWorkflow"
 workflowBody:
 - function:
@@ -234,8 +341,42 @@ You can find many examples for FCs including fault tolerance in the folder [exam
 
 Several bachelor theses at department of computer science, University of Innsbruck, supervised by Dr. Sashko Ristov contributed to this project:
 
-- "Multi-provider enactment engine (EE) for serverless workflow applications", Jakob Nöckl, Markus Moosbrugger, SS2019. `Among top three theses for 2019` at the institute of computer science. (The initial version of the *xAFCL EE*)
+- "*xAFCLSim* simulation framework", Mika Hautz, WS2021 (Simulation)
 - "Fault-tolerant execution of serverless functions across multiple FaaS systems", Matteo Bernard, Battaglin, SS2020.
+- "Multi-provider enactment engine (EE) for serverless workflow applications", Jakob Nöckl, Markus Moosbrugger, SS2019. `Among top three theses for 2019` at the institute of computer science. (The initial version of the *xAFCL EE*)
+
+## Publications
+
+S. Ristov, S. Pedratscher and T. Fahringer, "xAFCL: Run Scalable Function Choreographies Across Multiple FaaS Systems," in *IEEE Transactions on Services Computing*, https://doi.org/10.1109/TSC.2021.3128137.
+
+````
+@article{RistovxAFCL:2021,
+  author={Ristov, Sasko and Pedratscher, Stefan and Fahringer, Thomas},
+  journal={IEEE Transactions on Services Computing}, 
+  title={{xAFCL}: Run Scalable Function Choreographies Across Multiple {FaaS} Systems}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TSC.2021.3128137}
+}
+````
+
+S. Ristov, S. Pedratscher, T. Fahringer, "AFCL: An Abstract Function Choreography Language for serverless workflow specification", *Future Generation Computer Systems*, Volume 114, 2021, Pages 368-382, ISSN 0167-739X, https://doi.org/10.1016/j.future.2020.08.012.
+
+````
+@article{ristovAFCL:2020,
+  title={AFCL: An Abstract Function Choreography Language for serverless workflow specification},
+  author={Ristov, Sasko and Pedratscher, Stefan and Fahringer, Thomas},
+  journal={Future Generation Computer Systems},
+  volume={114},
+  pages={368--382},
+  publisher={Elsevier},
+  doi={https://doi.org/10.1016/j.future.2020.08.012}
+}
+````
+
+
 
 
 ## Support

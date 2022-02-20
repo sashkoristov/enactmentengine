@@ -28,10 +28,13 @@ public class IfStartNode extends Node {
     static final Logger logger = LoggerFactory.getLogger(IfStartNode.class);
 
     /**
+     * Specifies if its parent is a parallelFor and counts how many SimulationNodes are children of this node.
+     */
+    public long isAfterParallelForNode = -1;
+    /**
      * Condition of the if node (if statement).
      */
     private Condition condition;
-
     /**
      * The input specified in the workflow file.
      */
@@ -40,8 +43,8 @@ public class IfStartNode extends Node {
     /**
      * Constructor for a if-start node.
      *
-     * @param name of the if construct.
-     * @param dataIns input specified in the workflow file.
+     * @param name      of the if construct.
+     * @param dataIns   input specified in the workflow file.
      * @param condition of the if node (if statement).
      */
     public IfStartNode(String name, List<DataIns> dataIns, Condition condition) {
@@ -111,6 +114,26 @@ public class IfStartNode extends Node {
         }
 
         /* Pass data to the according branch and execute */
+        if (getLoopCounter() != -1) {
+            node.setLoopCounter(loopCounter);
+            node.setMaxLoopCounter(maxLoopCounter);
+            node.setConcurrencyLimit(concurrencyLimit);
+            node.setStartTime(startTime);
+        }
+
+        // specify how many functions are directly after a nested construct (needed if concurrency limit is exceeded)
+        if (isAfterParallelForNode != -1) {
+            if (node instanceof IfStartNode) {
+                ((IfStartNode) node).isAfterParallelForNode = isAfterParallelForNode;
+            } else if (node instanceof ParallelStartNode) {
+                ((ParallelStartNode) node).isAfterParallelForNode = isAfterParallelForNode;
+            } else if (node instanceof SwitchStartNode) {
+                ((SwitchStartNode) node).isAfterParallelForNode = isAfterParallelForNode;
+            } else if (node instanceof SimulationNode) {
+                ((SimulationNode) node).setAmountParallelFunctions(isAfterParallelForNode + 1);
+            }
+        }
+
         node.call();
 
         return true;

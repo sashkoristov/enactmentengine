@@ -2,10 +2,11 @@ package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.object.State;
 import at.enactmentengine.serverless.parser.ElementIndex;
-import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
+import at.enactmentengine.serverless.parser.ElementIndex;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.LoopCounter;
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import com.google.gson.*;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -19,8 +20,7 @@ import java.util.concurrent.Future;
 /**
  * Control node which manages the tasks at the start of a parallel for loop.
  *
- * @author markusmoosbrugger, jakobnoeckl
- * adapted by @author stefanpedratscher
+ * @author markusmoosbrugger, jakobnoeckl adapted by @author stefanpedratscher
  */
 public class ParallelForStartNode extends Node {
 
@@ -28,58 +28,49 @@ public class ParallelForStartNode extends Node {
      * Logger for parallel-for-start node.
      */
     static final Logger logger = LoggerFactory.getLogger(ParallelForStartNode.class);
-
+    /**
+     * The properties of a parallel-for-start node.
+     */
+    List<PropertyConstraint> properties;
+    /**
+     * The constraints of a parallel-for-start node.
+     */
+    List<PropertyConstraint> constraints;
     /**
      * Input data defined in the workflow file.
      */
     private List<DataIns> dataIns;
-
     /**
      * The actual values of the counter variables.
      */
     private Map<String, Object> counterValues;
-
     /**
      * The start value of the loop counter.
      */
     private int counterStart;
-
     /**
      * The end value of the loop counter.
      */
     private int counterEnd;
-
     /**
      * The step size for the loop counter.
      */
     private int counterStepSize;
-
     /**
      * Contains all counter variable names.
      */
     private String[] counterVariableNames;
-
     /**
      * The maximum number of concurrent function executions.
      */
     private int maxNumberThreads = 1000;
 
     /**
-     * The properties of a parallel-for-start node.
-     */
-    List<PropertyConstraint> properties;
-
-    /**
-     * The constraints of a parallel-for-start node.
-     */
-    List<PropertyConstraint> constraints;
-
-    /**
      * Default constructor for the parallel-for-start node.
      *
-     * @param name of the parallel-for-start node.
-     * @param type of the parallel-for-start node.
-     * @param dataIns specified in the workflow file.
+     * @param name        of the parallel-for-start node.
+     * @param type        of the parallel-for-start node.
+     * @param dataIns     specified in the workflow file.
      * @param loopCounter of the parallel-for-start node.
      */
     public ParallelForStartNode(String name, String type, List<DataIns> dataIns, LoopCounter loopCounter, List<PropertyConstraint> properties,
@@ -102,14 +93,14 @@ public class ParallelForStartNode extends Node {
     private void checkConstraints(List<PropertyConstraint> constraints) {
 
         /* Check if there are constraints specified */
-        if(constraints != null) {
-            for(PropertyConstraint constraint : constraints) {
+        if (constraints != null) {
+            for (PropertyConstraint constraint : constraints) {
 
                 /* Check for concurrency constraint */
-                if("concurrency".equals(constraint.getName())) {
+                if ("concurrency".equals(constraint.getName())) {
                     try {
                         maxNumberThreads = Integer.parseInt(constraint.getValue());
-                        logger.info("Detected new concurrency for " + this.name + ": " + maxNumberThreads);
+                        logger.info("Detected new concurrency for " + name + ": " + maxNumberThreads);
                     } catch (java.lang.NumberFormatException e) {
                         logger.warn("Could not parse new concurrency. Default concurrency value is used: " + maxNumberThreads);
                     }
@@ -119,8 +110,8 @@ public class ParallelForStartNode extends Node {
     }
 
     /**
-     * Parses the loop counter. Tries to cast each value as integer. If casting as
-     * integer is not possible it assumes that the value comes from a variable.
+     * Parses the loop counter. Tries to cast each value as integer. If casting as integer is not possible it assumes
+     * that the value comes from a variable.
      *
      * @param loopCounter loopCounter
      */
@@ -188,10 +179,11 @@ public class ParallelForStartNode extends Node {
     }
 
     /**
-     * Checks the input values, adds specific number of children depending on the
-     * input values and creates a thread pool for execution of the children.
+     * Checks the input values, adds specific number of children depending on the input values and creates a thread pool
+     * for execution of the children.
      *
      * @return True on success, False otherwise
+     *
      * @throws Exception on failure
      */
     @Override
@@ -272,10 +264,24 @@ public class ParallelForStartNode extends Node {
         List<Future<Boolean>> futures = new ArrayList<>();
         List<Map<String, Object>> outValuesForChildren = transferOutVals(children.size(), outValues);
 
+        int customConcurrencyLimit = maxNumberThreads == 1000 ? -1 : maxNumberThreads;
+
         /* Iterate over all children */
         for (int i = 0; i < children.size(); i++) {
 
             Node node = children.get(i);
+            node.setLoopCounter(i);
+            node.setMaxLoopCounter(counterEnd - 1);
+            node.setConcurrencyLimit(customConcurrencyLimit);
+            node.setStartTime(startTime);
+            // if another construct is following directly afterwards, set the field to 0 (needed if concurrency limit is exceeded)
+            if (node instanceof IfStartNode) {
+                ((IfStartNode) node).isAfterParallelForNode = 0;
+            } else if (node instanceof ParallelStartNode) {
+                ((ParallelStartNode) node).isAfterParallelForNode = 0;
+            } else if (node instanceof SwitchStartNode) {
+                ((SwitchStartNode) node).isAfterParallelForNode = 0;
+            }
 
             node.setId(i + 1);
             setIdOfChildren(node, i + 1);
@@ -368,8 +374,8 @@ public class ParallelForStartNode extends Node {
             counterStepSize = Integer.parseInt((String) counterValues.get(counterVariableNames[2]));
         }
 
-        logger.info("Counter values for "+ParallelForStartNode.class.getCanonicalName()+" : " +
-                        "counterStart: "+counterStart+", counterEnd: "+counterEnd+", stepSize: "+counterStepSize+"");
+        logger.info("Counter values for " + ParallelForStartNode.class.getCanonicalName() + " : " +
+                "counterStart: " + counterStart + ", counterEnd: " + counterEnd + ", stepSize: " + counterStepSize + "");
 
         /* Search the end node of the parallel-for */
         ParallelForEndNode endNode = findParallelForEndNode(children.get(0), 0);
@@ -390,7 +396,7 @@ public class ParallelForStartNode extends Node {
      * Finds the matching ParallelForEndNodeOld recursively.
      *
      * @param currentNode node to start looking for.
-     * @param depth recursive depth to check which parallel-for node is checked.
+     * @param depth       recursive depth to check which parallel-for node is checked.
      *
      * @return the end node of the parallel-for.
      */
@@ -513,25 +519,25 @@ public class ParallelForStartNode extends Node {
     /**
      * Pass the data to the next successor.
      *
-     * @param outValues output values.
-     * @param data input data specified in the workflow file.
+     * @param outValues   output values.
+     * @param data        input data specified in the workflow file.
      * @param numChildren number of children.
-     * @param values where the data should be added.
+     * @param values      where the data should be added.
      */
     private void passData(Map<String, Object> outValues, DataIns data, int numChildren, ArrayList<Map<String, Object>> values) {
 
         /* Check if the output contains the specified key */
-        if (outValues.containsKey(this.name + "/" + data.getName())) {
+        if (outValues.containsKey(name + "/" + data.getName())) {
 
             /* Iterate over all children */
             for (int i = 0; i < numChildren; i++) {
 
                 /* Check if there is data for the specified child */
                 if (values.size() > i) {
-                    values.get(i).put(data.getName(), outValues.get(this.name + "/" + data.getName()));
+                    values.get(i).put(data.getName(), outValues.get(name + "/" + data.getName()));
                 } else {
                     Map<String, Object> tmp = new HashMap<>();
-                    tmp.put(data.getName(), outValues.get(this.name + "/" + data.getName()));
+                    tmp.put(data.getName(), outValues.get(name + "/" + data.getName()));
                     values.add(i, tmp);
                 }
             }
@@ -544,8 +550,8 @@ public class ParallelForStartNode extends Node {
      * Check for the distribution of data elements.
      *
      * @param distributedElements input list of distributed elements.
-     * @param data the dataIns specified in the workflow file.
-     * @param values result which are transferred.
+     * @param data                the dataIns specified in the workflow file.
+     * @param values              result which are transferred.
      */
     private void checkDistributedElements(List<JsonArray> distributedElements, DataIns data, ArrayList<Map<String, Object>> values) {
 
@@ -581,11 +587,11 @@ public class ParallelForStartNode extends Node {
     }
 
     /**
-     * Distributes the given elements in BLOCK mode. The collection is split into
-     * blocks of the given size.
+     * Distributes the given elements in BLOCK mode. The collection is split into blocks of the given size.
      *
      * @param elements  The data elements to distribute.
      * @param blockSize The block size of each block.
+     *
      * @return The data blocks in a list.
      */
     private List<JsonArray> distributeOutValsBlock(JsonArray elements, int blockSize) {
@@ -613,6 +619,7 @@ public class ParallelForStartNode extends Node {
      * @param dataElements the data elements to distribute
      * @param constraints  the constraints to consider
      * @param children     the number of children (iterations)
+     *
      * @return a list containing the distributed elements
      */
     protected List<JsonArray> distributeElements(JsonArray dataElements, List<PropertyConstraint> constraints,
@@ -688,6 +695,7 @@ public class ParallelForStartNode extends Node {
      *
      * @param propertyConstraints the property constraints
      * @param name                the name of the property constraint to be searched for
+     *
      * @return the first property constraint with the given name or {@code null} if it does not exist
      */
     protected PropertyConstraint getPropertyConstraintByName(List<PropertyConstraint> propertyConstraints,
@@ -699,7 +707,9 @@ public class ParallelForStartNode extends Node {
                 .orElse(null);
     }
 
-    /** Getter and Setter */
+    /**
+     * Getter and Setter
+     */
 
     @Override
     public Map<String, Object> getResult() {

@@ -1,7 +1,7 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
-import at.enactmentengine.serverless.exception.MissingResourceLinkException;
+//import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 //import at.enactmentengine.serverless.main.LambdaHandler;
 //import at.enactmentengine.serverless.main.Local;
 import at.enactmentengine.serverless.object.State;
@@ -11,14 +11,11 @@ import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
-import at.uibk.dps.database.SQLLiteDatabase;
+import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
 import at.uibk.dps.exception.MaxRunningTimeException;
-import at.uibk.dps.function.AlternativeStrategy;
-import at.uibk.dps.function.ConstraintSettings;
-import at.uibk.dps.function.FaultToleranceSettings;
 import at.uibk.dps.function.Function;
 
 /* remove not available dependency */
@@ -28,19 +25,18 @@ import at.uibk.dps.function.Function;
 //import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
 //import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 
+import at.uibk.dps.util.Event;
+import at.uibk.dps.util.Type;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
 import jFaaS.Gateway;
-// import org.apache.commons.io.FileUtils;
+import jFaaS.utils.PairResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.Socket;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -49,7 +45,7 @@ import java.util.*;
  *
  * @author markusmoosbrugger, jakobnoeckl
  *
- *         adapted by @author stefanpedratscher
+ * adapted by @author stefanpedratscher
  */
 public class FunctionNode extends Node {
 
@@ -57,12 +53,22 @@ public class FunctionNode extends Node {
 	 * Logger for the a function node.
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(FunctionNode.class);
-
+    /**
+     * The protocol for the http requests.
+     */
+    private static final String PROTOCOL = "https://";
 	/**
 	 * The number of executed functions.
 	 */
 	private static int counter = 0;
-
+    /**
+     * The invoker for the cloud functions.
+     */
+    private static Gateway gateway = new Gateway(Utils.PATH_TO_CREDENTIALS);
+    /**
+     * The deployment of the Atomic Function.
+     */
+    private final String deployment;
 	/**
 	 * The execution id of the workflow (needed to log the execution).
 	 */
@@ -98,34 +104,36 @@ public class FunctionNode extends Node {
 	 */
 	private Map<String, Object> result;
 
-	/**
-	 * The protocol for the http requests.
-	 */
-	private static final String PROTOCOL = "https://";
+    /**
+     * Flag if function was successful or not.
+     */
+    private boolean success;
 
-	/**
-	 * Constructor for a function node.
-	 *
-	 * @param name        of the base function.
-	 * @param type        of the base function (fType).
-	 * @param properties  of the base function.
-	 * @param constraints of the base function.
-	 * @param input       to the base function.
-	 * @param output      of the base function.
-	 * @param executionId for the logging of the execution.
-	 */
-	public FunctionNode(String name, String type, List<PropertyConstraint> properties,
-						List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
-		super(name, type);
-		this.output = output;
-		this.properties = properties;
-		this.constraints = constraints;
-		this.input = input;
-		this.executionId = executionId;
-		if (output == null) {
-			this.output = new ArrayList<>();
-		}
-	}
+    /**
+     * Constructor for a function node.
+     *
+     * @param name        of the base function.
+     * @param type        of the base function (fType).
+     * @param deployment  of the base function.
+     * @param properties  of the base function.
+     * @param constraints of the base function.
+     * @param input       to the base function.
+     * @param output      of the base function.
+     * @param executionId for the logging of the execution.
+     */
+    public FunctionNode(String name, String type, String deployment, List<PropertyConstraint> properties,
+                        List<PropertyConstraint> constraints, List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
+        super(name, type);
+        this.deployment = deployment;
+        this.output = output;
+        this.properties = properties;
+        this.constraints = constraints;
+        this.input = input;
+        this.executionId = executionId;
+        if (output == null) {
+            this.output = new ArrayList<>();
+        }
+    }
 
 	/**
 	 * Checks the inputs, invokes function and passes results to children.
@@ -143,9 +151,9 @@ public class FunctionNode extends Node {
 		}
 
 		/* Read the resource link of the base function */
-		String resourceLink = getResourceLink();
-		logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
-				+ "ms], id=" + id);
+        String resourceLink = Utils.getResourceLink(properties, this);
+        logger.info("Executing function " + name + " at resource: " + resourceLink + " [" + System.currentTimeMillis()
+                + "ms], id=" + id);
 
 		/* Actual values of the function input */
 		Map<String, Object> actualFunctionInputs = new HashMap<>();
@@ -203,26 +211,29 @@ public class FunctionNode extends Node {
 			return false;
 		}
 
-		/* Simulate Availability if specified TODO is this really needed? */
-		if (Utils.SIMULATE_AVAILABILITY) {
-			SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
-			double simAvail = db.getSimulatedAvail(resourceLink);
-			actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
-		}
+		// /* Simulate Availability if specified TODO is this really needed? */
+		// if (Utils.SIMULATE_AVAILABILITY) {
+		// 	SQLLiteDatabase db = new SQLLiteDatabase("jdbc:sqlite:Database/FTDatabase.db");
+		// 	double simAvail = db.getSimulatedAvail(resourceLink);
+		// 	actualFunctionInputs = checkFunctionSimAvail(simAvail, actualFunctionInputs);
+		// }
 
 		/* Log the function input */
 		logFunctionInput(actualFunctionInputs, id);
 
-		/* Parse function with optional constraints and properties */
-		Function functionToInvoke = parseFTConstraints(resourceLink, actualFunctionInputs);
+        /* Parse function with optional constraints and properties */
+        Function functionToInvoke = Utils.parseFTConstraints(resourceLink, actualFunctionInputs, constraints, type, name, loopCounter);
+        if (functionToInvoke != null) {
+            functionToInvoke.setDeployment(deployment);
+        }
 
-		/* Invoke function and measure duration */
-		long start = System.currentTimeMillis();
-		String resultString = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs);
-		long end = System.currentTimeMillis();
+        /* Invoke function and measure duration */
+        long start = System.currentTimeMillis();
+        PairResult<String, Long> pairResult = invokeFunction(functionToInvoke, resourceLink, actualFunctionInputs, functionOutputs);
+        long end = System.currentTimeMillis();
 
-		/* Log the function output */
-		logFunctionOutput(start, end, resultString, id);
+        /* Log the function output */
+        logFunctionOutput(pairResult.getRTT(), pairResult.getResult(), id);
 
 		State.getInstance().addResultToState(resultString, name, this.getId(), this.output);
 
@@ -238,146 +249,157 @@ public class FunctionNode extends Node {
 
 		/* Pass the output to the next node */
 		for (Node node : children) {
+			if (getLoopCounter() != -1) {
+                node.setLoopCounter(loopCounter);
+                node.setMaxLoopCounter(maxLoopCounter);
+                node.setConcurrencyLimit(concurrencyLimit);
+            }
 			node.call();
 		}
 
-		/*
-		 * Check if the execution identifier is specified (check if execution should be
-		 * stored in the database)
-		 */
-		if (executionId != -1) {
+         * Check if the execution identifier is specified (check if execution should be
+         * stored in the database)
+         */
+        if (executionId != -1) {
 
-			/* code snippet not working because of removed dependency 'com.github.ApolloCEC:socketUtils:-SNAPSHOT' */
-//			/* Create a function invocation object */
-//			Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
-//					Utils.detectRegion(resourceLink),
-//					new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-//					new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-//					checkResultSuccess(resultString).toString(), null, executionId);
-//
-//			/* Store the invocation in the database */
-//			storeInDBFunctionInvocation(functionInvocation);
-		}
-		return true;
+            /* Create a function invocation object */
+            Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
+                    Utils.detectRegion(resourceLink),
+                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
+                    Utils.checkResultSuccess(pairResult.getResult()).toString(), null, executionId);
+
+            /* Store the invocation in the database */
+            Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
+        }
+        return true;
 	}
 
-	/**
-	 * Add availability value to the function input. TODO is this really needed?
-	 *
-	 * @param simAvail       the simulated availability from the database.
-	 * @param functionInputs the actual function input.
-	 * @return the new function input.
-	 */
-	private Map<String, Object> checkFunctionSimAvail(double simAvail, Map<String, Object> functionInputs) {
+    /**
+     * Add availability value to the function input. TODO is this really needed?
+     *
+     * @param simAvail       the simulated availability from the database.
+     * @param functionInputs the actual function input.
+     *
+     * @return the new function input.
+     */
+    private Map<String, Object> checkFunctionSimAvail(double simAvail, Map<String, Object> functionInputs) {
 
-		/* Check if this functions avail should be simulated */
-		if (simAvail != 1) {
-			functionInputs.put("availability", simAvail);
-		}
-		return functionInputs;
-	}
+        /* Check if this functions avail should be simulated */
+        if (simAvail != 1) {
+            functionInputs.put("availability", simAvail);
+        }
+        return functionInputs;
+    }
 
-	/**
-	 * Check for error object in the json result of the cloud function.
-	 *
-	 * @param resultString json result of the base function.
-	 * @return status og the execution.
-	 */
-	private Status checkResultSuccess(String resultString) {
-		return resultString.contains("error:") ? Status.ERROR : Status.SUCCESS;
-	}
+    /**
+     * Log the function output.
+     *
+     * @param RTT          the RTT of the base function.
+     * @param resultString json result of the base function.
+     * @param id           unique identifier of the base function.
+     */
+    private void logFunctionOutput(long RTT, String resultString, int id) {
+        if (resultString.length() > 100000) {
+            logger.info("Function took: " + RTT + " ms. Result: too large [" + System.currentTimeMillis()
+                    + "ms], id=" + id + "");
+        } else {
+            logger.info("Function took: " + RTT + " ms. Result: " + name + " : " + resultString + " ["
+                    + System.currentTimeMillis() + "ms], id=" + id + "");
+        }
+    }
 
-	/**
-	 * Log the function output.
-	 *
-	 * @param start        time of the base function.
-	 * @param end          time of the base function.
-	 * @param resultString json result of the base function.
-	 * @param id           unique identifier of the base function.
-	 */
-	private void logFunctionOutput(long start, long end, String resultString, int id) {
-		if (resultString.length() > 100000) {
-			logger.info("Function took: " + (end - start) + " ms. Result: too large [" + System.currentTimeMillis()
-					+ "ms], id=" + id + "");
-		} else {
-			logger.info("Function took: " + (end - start) + " ms. Result: " + name + " : " + resultString + " ["
-					+ System.currentTimeMillis() + "ms], id=" + id + "");
-		}
-	}
 
-	/**
-	 * Invoke the base function.
-	 *
-	 * @param functionToInvoke the base function which should be invoked.
-	 * @param resourceLink     the resource of the base function.
-	 * @param functionInputs   the input to the base function.
-	 *
-	 * @return the stringified json result of the base function invocation.
-	 *
-	 * @throws MaxRunningTimeException      on maximum runtime exceeded.
-	 * @throws LatestFinishingTimeException on latest finish time exceeded.
-	 * @throws LatestStartingTimeException  on latest start time exceeded.
-	 * @throws InvokationFailureException   on failed invocation.
-	 * @throws IOException                  on input output exception.
-	 */
-	private String invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs)
-			throws MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException,
-			InvokationFailureException, IOException {
-		String resultString;
+    /**
+     * Invoke the base function.
+     *
+     * @param functionToInvoke the base function which should be invoked.
+     * @param resourceLink     the resource of the base function.
+     * @param functionInputs   the input to the base function.
+     *
+     * @return a PairResult containing the stringified json result of the base function invocation and the round trip
+     * time.
+     *
+     * @throws MaxRunningTimeException      on maximum runtime exceeded.
+     * @throws LatestFinishingTimeException on latest finish time exceeded.
+     * @throws LatestStartingTimeException  on latest start time exceeded.
+     * @throws InvokationFailureException   on failed invocation.
+     * @throws IOException                  on input output exception.
+     */
+    private PairResult<String, Long> invokeFunction(Function functionToInvoke, String resourceLink, Map<String, Object> functionInputs, Map<String, Object> functionOutputs)
+            throws MaxRunningTimeException, LatestFinishingTimeException, LatestStartingTimeException,
+            InvokationFailureException, IOException {
+        String resultString = null;
+        PairResult<String, Long> pairResult = null;
 
-		/* Check if function should be invoked with fault tolerance settings */
-		if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
+        /* Check if function should be invoked with fault tolerance settings */
+        if (functionToInvoke != null && (functionToInvoke.hasConstraintSet() || functionToInvoke.hasFTSet())) {
 
-			/* Invoke the function with fault tolerance */
-			FaultToleranceEngine ftEngine = null;
+            /* Invoke the function with fault tolerance */
+            FaultToleranceEngine ftEngine = null;
 
-			if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null){
-				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(),getAWSAccount(), getIBMAccount());
+            if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null && getAWSAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount(), getIBMAccount());
+            } else if (getGoogleAccount() != null && getAzureAccount() != null && getIBMAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
+            } else if (getGoogleAccount() != null && getAzureAccount() != null && getAWSAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount());
+            } else if (getAzureAccount() != null && getGoogleAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount());
+            } else if (getIBMAccount() != null && getAWSAccount() != null) {
+                ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
+            }
 
-			}
-			else if(getGoogleAccount()!= null && getAzureAccount() != null && getIBMAccount() != null){
-				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getIBMAccount());
-			}
+            try {
+                logger.info("Invoking function with fault tolerance...");
+                pairResult = ftEngine.InvokeFunctionFT(functionToInvoke);
+                resultString = pairResult.getResult();
+            } catch (Exception e) {
+                result = null;
+                throw e;
+            } finally {
+                /*
+                 * Read the actual function outputs by their key and store them in
+                 * functionOutputs
+                 */
+                success = getValuesParsed(resultString, functionOutputs);
+            }
+        } else {
+            /* Invoke the function without fault tolerance */
+            long start = System.currentTimeMillis();
+            pairResult = gateway.invokeFunction(resourceLink, functionInputs);
+            long end = System.currentTimeMillis();
+            resultString = pairResult.getResult();
+            /*
+             * Read the actual function outputs by their key and store them in
+             * functionOutputs
+             */
+            success = getValuesParsed(resultString, functionOutputs);
+            Event event = null;
+            if (success) {
+                event = Event.FUNCTION_END;
+            } else {
+                event = Event.FUNCTION_FAILED;
+            }
+            MongoDBAccess.saveLog(event, resourceLink, deployment, name, type, resultString, pairResult.getRTT(), success, loopCounter, maxLoopCounter, start, Type.EXEC);
+        }
+        return pairResult;
+    }
 
-			else if(getGoogleAccount()!= null && getAzureAccount() != null && getAWSAccount() != null ){
-				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount(), getAWSAccount());
-			}
-
-			else if(getAzureAccount() != null && getGoogleAccount() != null) {
-				ftEngine = new FaultToleranceEngine(getGoogleAccount(), getAzureAccount());
-			} else if (getIBMAccount() != null && getAWSAccount() != null) {
-				ftEngine = new FaultToleranceEngine(getAWSAccount(), getIBMAccount());
-
-			}
-
-			try {
-				logger.info("Invoking function with fault tolerance...");
-				resultString = ftEngine.InvokeFunctionFT(functionToInvoke);
-			} catch (Exception e) {
-				result = null;
-				throw e;
-			}
-		} else {
-			/* Invoke the function without fault tolerance */
-			resultString = gateway.invokeFunction(resourceLink, functionInputs).toString();
-		}
-		return resultString;
-	}
-
-	/**
-	 * Log the function input.
-	 *
-	 * @param functionInputs the actual function input.
-	 * @param id             unique identifier of the base function.
-	 */
-	private void logFunctionInput(Map<String, Object> functionInputs, int id) {
-		if (functionInputs.size() > 20) {
-			logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
-		} else {
-			logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis()
-					+ "ms], id=" + id + "");
-		}
-	}
+    /**
+     * Log the function input.
+     *
+     * @param functionInputs the actual function input.
+     * @param id             unique identifier of the base function.
+     */
+    private void logFunctionInput(Map<String, Object> functionInputs, int id) {
+        if (functionInputs.size() > 20) {
+            logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
+        } else {
+            logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis()
+                    + "ms], id=" + id + "");
+        }
+    }
 
 	/**
 	 * Send a request to store the function invocation in the logging database.
@@ -420,8 +442,8 @@ public class FunctionNode extends Node {
 			/* Iterate over all specified outputs in the yaml file */
 			for (DataOutsAtomic data : output) {
 
-				/* Convert the json result to a json object */
-				JsonObject jsonResult = generateJson(result, data);
+                /* Convert the json result to a json object */
+                JsonObject jsonResult = Utils.generateJson(result, data);
 
 				/* Check if the function output already contains the specified value */
 				if (functionOutputs.containsKey(name + "/" + data.getName())) {
@@ -456,74 +478,12 @@ public class FunctionNode extends Node {
 						break;
 				}*/
 			}
-			return true;
+            return !(result.contains("error:") || result.contains("\"error\":"));
 
-		} catch (Exception e) {
-			logger.error("Error while trying to parse key in function {}", name);
-			return false;
-		}
-	}
-
-	/**
-	 * Convert the stringified json to a json object representing the function
-	 * output.
-	 *
-	 * @param resultString stringified json.
-	 * @param data         outputs of the base function.
-	 *
-	 * @return json object representing the base function output.
-	 */
-	JsonObject generateJson(String resultString, DataOutsAtomic data) {
-		JsonObject jso;
-		try {
-
-			/* Parse the json string to a json object */
-			jso = new Gson().fromJson(resultString, JsonObject.class);
-		} catch (com.google.gson.JsonSyntaxException e) {
-
-			/* If there is no JSON object as return value, create one */
-			jso = new JsonObject();
-			jso.addProperty(data.getName(), resultString);
-		}
-		return jso;
-	}
-
-	/**
-	 * Get the resource link of the base function.
-	 *
-	 * @return the resource link of the base function.
-	 *
-	 * @throws MissingResourceLinkException on missing resource link.
-	 */
-	private String getResourceLink() throws MissingResourceLinkException {
-
-		/* Check if there are properties specified */
-		if (properties == null) {
-			throw new MissingResourceLinkException("No properties specified " + this.toString());
-		}
-
-		String resourceLink = null;
-
-		/* Iterate over properties and search for the resource */
-		for (PropertyConstraint p : properties) {
-			if ("resource".equals(p.getName())) {
-				resourceLink = p.getValue();
-				break;
-			}
-		}
-
-		/* Check if the resource link was not specified */
-		if (resourceLink == null) {
-			throw new MissingResourceLinkException("No resource link on function node " + this.toString());
-		}
-
-		if (!resourceLink.startsWith("http") && !resourceLink.startsWith("arn")) {
-
-			/* Remove the programming language of the resource link */
-			resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
-		}
-
-		return resourceLink;
+        } catch (Exception e) {
+            logger.error("Error while trying to parse key in function {}", name);
+            return false;
+        }
 	}
 
 	/**
@@ -546,213 +506,106 @@ public class FunctionNode extends Node {
 
 	}
 
-	/**
-	 * Get the result of a function node.
-	 *
-	 * @return result of the base function.
-	 */
-	@Override
-	public Map<String, Object> getResult() {
-		return result;
-	}
+    /**
+     * Get the result of a function node.
+     *
+     * @return result of the base function.
+     */
+    @Override
+    public Map<String, Object> getResult() {
+        return result;
+    }
 
-	/**
-	 * Parse the fault tolerance constraints.
-	 *
-	 * @param resourceLink   the resource link of the base function.
-	 * @param functionInputs inputs to the base function.
-	 *
-	 * @return function object with correctly set ft values.
-	 */
-	private Function parseFTConstraints(String resourceLink, Map<String, Object> functionInputs) {
+    /**
+     * Checks if the current node is within a parallelFor.
+     *
+     * @return true if it is within a parallelFor, false otherwise
+     */
+    private boolean inLoop() {
+        return loopCounter != -1;
+    }
 
-		/* Keeps track of all constraint settings */
-		List<PropertyConstraint> cList = new LinkedList<>();
+    /**
+     * Read the AWS credentials. TODO do we need this?
+     *
+     * @return aws account object.
+     */
+    private AWSAccount getAWSAccount() {
+        String awsAccessKey = null;
+        String awsSecretKey = null;
+        String awsSessionToken = null;
+        try {
+            Properties propertiesFile = new Properties();
+//            propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
+            propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+            // FileUtils.readFileToByteArray(new File(workflow))
+            awsAccessKey = propertiesFile.getProperty("aws_access_key");
+            awsSecretKey = propertiesFile.getProperty("aws_secret_key");
+            if (propertiesFile.containsKey("aws_session_token")) {
+                awsSessionToken = propertiesFile.getProperty("aws_session_token");
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return new AWSAccount(awsAccessKey, awsSecretKey, awsSessionToken);
+    }
 
-		/* Keeps track of all fault tolerance settings */
-		List<PropertyConstraint> ftList = new LinkedList<>();
-
-		/* Check if there are constraints set */
-		if (this.constraints == null) {
-			return null;
-		}
-
-		/* Iterate over constraints and look for according settings */
-		for (PropertyConstraint constraint : this.constraints) {
-			if (constraint.getName().startsWith("FT-")) {
-				ftList.add(constraint);
-			} else if (constraint.getName().startsWith("C-")) {
-				cList.add(constraint);
-			}
-		}
-
-		/* Parse fault tolerance settings */
-		FaultToleranceSettings ftSettings = getFaultToleranceSettings(ftList, functionInputs);
-
-		/* Parse constraint settings */
-		ConstraintSettings cSettings = getConstraintSettings(cList);
-
-		return new Function(resourceLink, this.type, functionInputs, ftSettings.isEmpty() ? null : ftSettings,
-				cSettings.isEmpty() ? null : cSettings);
-	}
-
-	/**
-	 * Look for fault tolerance settings.
-	 *
-	 * @param ftList         all fault tolerance settings.
-	 * @param functionInputs the input of the base function.
-	 *
-	 * @return fault tolerance settings.
-	 */
-	private FaultToleranceSettings getFaultToleranceSettings(List<PropertyConstraint> ftList,
-															 Map<String, Object> functionInputs) {
-
-		/* Set the default fault tolerance settings to zero retries */
-		FaultToleranceSettings ftSettings = new FaultToleranceSettings(0);
-
-		/* Create a lis for the alternative strategy */
-		List<List<Function>> alternativeStrategy = new LinkedList<>();
-
-		/* Iterate over all fault tolerance constraints and check for supported ones */
-		for (PropertyConstraint ftConstraint : ftList) {
-			if (ftConstraint.getName().compareTo("FT-Retries") == 0) {
-
-				/*
-				 * Set the given number of retries a base function should be repeated if a
-				 * failure happens
-				 */
-				ftSettings.setRetries(Integer.valueOf(ftConstraint.getValue()));
-			} else if (ftConstraint.getName().startsWith("FT-AltPlan-")) {
-
-				/* Pack all alternative function into an alternative plan */
-				List<Function> alternativePlan = new LinkedList<>();
-				String possibleResources = ftConstraint.getValue().substring(ftConstraint.getValue().indexOf(";") + 1);
-				while (possibleResources.contains(";")) {
-					String funcString = possibleResources.substring(0, possibleResources.indexOf(";"));
-					Function tmpFunc = new Function(funcString, this.type, functionInputs);
-					possibleResources = possibleResources.substring(possibleResources.indexOf(";") + 1);
-
-					alternativePlan.add(tmpFunc);
-				}
-				alternativeStrategy.add(alternativePlan);
-			}
-		}
-		ftSettings.setAltStrategy(new AlternativeStrategy(alternativeStrategy));
-		return ftSettings;
-	}
-
-	/**
-	 * Look for constraint settings.
-	 *
-	 * @param cList all constraint settings.
-	 *
-	 * @return constraint settings.
-	 */
-	private ConstraintSettings getConstraintSettings(List<PropertyConstraint> cList) {
-
-		/* Set the default constraint settings */
-		ConstraintSettings cSettings = new ConstraintSettings(null, null, 0);
-
-		/* Iterate over all constraint settings and check for supported ones */
-		for (PropertyConstraint cConstraint : cList) {
-			if (cConstraint.getName().compareTo("C-latestStartingTime") == 0) {
-				cSettings.setLatestStartingTime(Timestamp.valueOf(cConstraint.getValue()));
-			} else if (cConstraint.getName().compareTo("C-latestFinishingTime") == 0) {
-				cSettings.setLatestFinishingTime(Timestamp.valueOf(cConstraint.getValue()));
-			} else if (cConstraint.getName().compareTo("C-maxRunningTime") == 0) {
-				cSettings.setMaxRunningTime(Integer.valueOf(cConstraint.getValue()));
-			}
-		}
-		return cSettings;
-	}
-
-	/**
-	 * Read the AWS credentials. TODO do we need this?
-	 *
-	 * @return aws account object.
-	 */
-	private AWSAccount getAWSAccount() {
-		String awsAccessKey = null;
-		String awsSecretKey = null;
-		String awsSessionToken = null;
-		try {
-			Properties propertiesFile = new Properties();
-//			propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
-
-
-
-
-			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
-
-			//FileUtils.readFileToByteArray(new File(workflow))
-
-			awsAccessKey = propertiesFile.getProperty("aws_access_key");
-			awsSecretKey = propertiesFile.getProperty("aws_secret_key");
-			if(propertiesFile.containsKey("aws_session_token")){
-				awsSessionToken = propertiesFile.getProperty("aws_session_token");
-			}
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-		}
-		return new AWSAccount(awsAccessKey, awsSecretKey, awsSessionToken);
-	}
-
-	/**
-	 * Read the IBM credentials. TODO do we need this?
-	 *
-	 * @return ibm account object.
-	 */
-	private IBMAccount getIBMAccount() {
-		String ibmKey = null;
-		try {
-			Properties propertiesFile = new Properties();
+    /**
+     * Read the IBM credentials. TODO do we need this?
+     *
+     * @return ibm account object.
+     */
+    private IBMAccount getIBMAccount() {
+        String ibmKey = null;
+        try {
+            Properties propertiesFile = new Properties();
 //			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
-			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+            propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
 
-			ibmKey = propertiesFile.getProperty("ibm_api_key");
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-		}
-		return new IBMAccount(ibmKey);
-	}
+            ibmKey = propertiesFile.getProperty("ibm_api_key");
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return new IBMAccount(ibmKey);
+    }
 
-	/**
-	 * Read the Azure credentials. TODO do we need this?
-	 *
-	 * @return azure account object.
-	 */
-	private AzureAccount getAzureAccount() {
-		String azure_key = null;
-		try {
-			Properties propertiesFile = new Properties();
+    /**
+     * Read the Azure credentials. TODO do we need this?
+     *
+     * @return azure account object.
+     */
+    private AzureAccount getAzureAccount() {
+        String azure_key = null;
+        try {
+            Properties propertiesFile = new Properties();
 //			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
-			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+            propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
 
-			azure_key = propertiesFile.getProperty("azure_key");
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-		}
-		return new AzureAccount(azure_key);
-	}
+            azure_key = propertiesFile.getProperty("azure_key");
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return new AzureAccount(azure_key);
+    }
 
 
-	/**
-	 * Read the Google credentials. TODO do we need this?
-	 *
-	 * @return google account object.
-	 */
-	private GoogleFunctionAccount getGoogleAccount() {
-		String google_key = null;
-		try {
-			Properties propertiesFile = new Properties();
+    /**
+     * Read the Google credentials. TODO do we need this?
+     *
+     * @return google account object.
+     */
+    private GoogleFunctionAccount getGoogleAccount() {
+        String google_key = null;
+        try {
+            Properties propertiesFile = new Properties();
 //			propertiesFile.load(Local.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
-			propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
+            propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
 
-			google_key = propertiesFile.getProperty("google_sa_key");
-		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
-		}
-		return new GoogleFunctionAccount(google_key);
-	}
+            google_key = propertiesFile.getProperty("google_sa_key");
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+        }
+        return new GoogleFunctionAccount(google_key);
+    }
 
 }
