@@ -95,11 +95,6 @@ public class FunctionNode extends Node {
 	private List<DataIns> input;
 
 	/**
-	 * The invoker for the cloud functions.
-	 */
-	private static Gateway gateway = new Gateway(Utils.PATH_TO_CREDENTIALS);
-
-	/**
 	 * The result of the function node.
 	 */
 	private Map<String, Object> result;
@@ -235,14 +230,14 @@ public class FunctionNode extends Node {
         /* Log the function output */
         logFunctionOutput(pairResult.getRTT(), pairResult.getResult(), id);
 
-		State.getInstance().addResultToState(resultString, name, this.getId(), this.output);
+		State.getInstance().addResultToState(pairResult.getResult(), name, this.getId(), this.output);
 
 		/*
 		 * Read the actual function outputs by their key and store them in
 		 * functionOutputs
 		 */
 		// TODO check for success
-		boolean success = getValuesParsed(resultString, functionOutputs);
+		boolean success = getValuesParsed(pairResult.getResult(), functionOutputs);
 
 		/* Set the result of the function node */
 		result = functionOutputs;
@@ -257,20 +252,20 @@ public class FunctionNode extends Node {
 			node.call();
 		}
 
-         * Check if the execution identifier is specified (check if execution should be
+         /* Check if the execution identifier is specified (check if execution should be
          * stored in the database)
          */
         if (executionId != -1) {
 
             /* Create a function invocation object */
-            Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
-                    Utils.detectRegion(resourceLink),
-                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
-                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
-                    Utils.checkResultSuccess(pairResult.getResult()).toString(), null, executionId);
-
-            /* Store the invocation in the database */
-            Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
+//            Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
+//                    Utils.detectRegion(resourceLink),
+//                    new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
+//                    new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
+//                    Utils.checkResultSuccess(pairResult.getResult()).toString(), null, executionId);
+//
+//            /* Store the invocation in the database */
+//            Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
         }
         return true;
 	}
