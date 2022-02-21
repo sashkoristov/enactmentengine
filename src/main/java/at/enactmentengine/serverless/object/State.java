@@ -70,4 +70,26 @@ public class State {
             }
         }
     }
+
+    public synchronized String findJSONSubObject(String dataSource, String subKey, long count) {
+        String retval = null;
+
+        /**
+         * Check if key 'dataSource' is accessible, could not be accessible if combinedSource in is used
+         */
+        if(State.getInstance().getStateObject().get(dataSource) != null){
+            JsonObject jsonElement = new Gson().fromJson(State.getInstance().getStateObject().get(dataSource), JsonElement.class).getAsJsonObject();
+
+            String[] subKeyList = subKey.split("/");
+
+            for(int i = 0; i < subKeyList.length; i++){
+                retval = jsonElement.get(subKeyList[i]) != null ? jsonElement.get(subKeyList[i]).toString() : null;
+                if(i < count - 2){
+                    jsonElement = new Gson().fromJson(retval, JsonElement.class).getAsJsonObject();
+                }
+            }
+        }
+
+        return retval;
+    }
 }
