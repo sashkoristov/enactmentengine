@@ -75,10 +75,19 @@ public class ParallelStartNode extends Node {
 
                 boolean gotDataFromDataSource = false;
 
-
                 for(String dataSource : sourceList){
-                    if(state.get(dataSource) != null) {
-                        state.add(name + "/" + data.getName(), new Gson().fromJson(state.get(dataSource).toString(), JsonElement.class));
+
+                    String subObject = null;
+
+                    long count = data.getSource().chars().filter(ch -> ch == '/').count();
+                    if(count > 1){
+                        subObject = State.getInstance().findJSONSubObject(data.getSource().substring(0, data.getSource().indexOf("/", data.getSource().indexOf("/") + 1)), data.getSource().substring(data.getSource().indexOf("/", data.getSource().indexOf("/") + 1) + 1), count);
+                    }
+
+                    if(state.get(dataSource) != null || subObject != null) {
+                        String toUse = subObject != null ? subObject : State.getInstance().getStateObject().get(dataSource).toString();
+
+                        state.add(name + "/" + data.getName(), new Gson().fromJson(toUse, JsonElement.class));
                         gotDataFromDataSource = true;
                     }
                 }
