@@ -117,6 +117,8 @@ public class ParallelForEndNode extends Node {
             }
         }
 
+        parallelForResult = outputValues;
+
         logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, outputValues);
         if (simulate) {
             SimulationParameters.reset();
