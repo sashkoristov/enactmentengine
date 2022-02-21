@@ -178,15 +178,25 @@ public class FunctionNode extends Node {
 					boolean gotDataFromDataSource = false;
 
 					for(String dataSource : sourceList){
-						if (State.getInstance().getStateObject().get(dataSource) != null) {
 
-							State.getInstance().addParamToState(State.getInstance().getStateObject().get(dataSource).toString(), name + "/" + data.getName(), this.getId(), data.getType());
+                        String subObject = null;
+
+                        long count = dataSource.chars().filter(ch -> ch == '/').count();
+                        if(count > 1){
+                            subObject = State.getInstance().findJSONSubObject(dataSource.substring(0, dataSource.indexOf("/", dataSource.indexOf("/") + 1)), dataSource.substring(dataSource.indexOf("/", dataSource.indexOf("/") + 1) + 1), count);
+                        }
+
+						if (State.getInstance().getStateObject().get(dataSource) != null || subObject != null) {
+
+                            String toUse = subObject != null ? subObject : State.getInstance().getStateObject().get(dataSource).toString();
+
+							State.getInstance().addParamToState(toUse, name + "/" + data.getName(), this.getId(), data.getType());
 
 							/* Check if the element should be passed to the output */
 							if (data.getPassing() != null && data.getPassing()) {
-								functionOutputs.put(name + "/" + data.getName(), State.getInstance().getStateObject().get(dataSource));
+								functionOutputs.put(name + "/" + data.getName(), toUse);
 							} else {
-								actualFunctionInputs.put(data.getName(), State.getInstance().getStateObject().get(dataSource));
+								actualFunctionInputs.put(data.getName(), toUse);
 							}
 
 							gotDataFromDataSource = true;
@@ -194,8 +204,6 @@ public class FunctionNode extends Node {
 					}
 
 					if(!gotDataFromDataSource){
-						logger.info(data.getSource());
-
 						throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
 								+ " needs " + data.getSource() + " !");
 					}
