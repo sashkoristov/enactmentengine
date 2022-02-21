@@ -25,17 +25,26 @@ Workflow containing two functions and a parallel section
 
 ### Examples with new Features
 
+You can see a difference in the code of each function compared to functions for the existing version: each function returns a JSON-Object with the keys 'statusCode' and 'body'. The actual return values should be part of body-key.
+
+```
+    'statusCode': 200,
+    'body': {
+        'f1out1': event["f1input1"]
+    }
+```
+
 #### FunctionToFunction
 With this example the new data-flow is shown. It is now possible to just use a dataout from f1 in f3, without passing it through f2.
 
 #### IfCombinedSource
 Simple if-construct where at the dataouts of a multiple source is defined.
 
-``` json
-    dataOuts:
-    - name: "ifout1"
-      type: "number"
-      source: "[f1/f1out1, f2/f2out1]"
+```
+  dataOuts:
+  - name: "ifout1"
+    type: "number"
+    source: "[f1/f1out1, f2/f2out1]"
 ```
 
 In this case the engine takes one of the two defined datasources. Especially, here would only be one datasource available and the other one undefined, because the if-construct only executes one branch.
@@ -43,10 +52,11 @@ In this case the engine takes one of the two defined datasources. Especially, he
 #### IfCombinedSourceFunction
 In this case we see, that we do not have to define the dataouts of a if-construct, but can simply define the datains with a combined source in the next function.
 
-``` json
-    - name: "f3input2"
-      type: "number"
-      source: "[f1/f1out1, f2/f2out1]"
+```
+  dataIns:
+  - name: "f3input2"
+    type: "number"
+    source: "[f1/f1out1, f2/f2out1]"
 ```
 
 #### IfCombinedSourceParallel
