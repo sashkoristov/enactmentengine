@@ -1,4 +1,7 @@
 def lambda_handler(event, context):
     return {
-        'f2out1': 'This is a Dummy function'
+        'statusCode': 200,
+        'body': {
+            'f2out1': 'This is a Dummy function'
+        }
     }

@@ -1,4 +1,7 @@
 def lambda_handler(event, context):
     return {
-        'f3out1': 'Finished successfully'
+        'statusCode': 200,
+        'body': {
+            'f3out1': 'Finished successfully'
+        }
     }
