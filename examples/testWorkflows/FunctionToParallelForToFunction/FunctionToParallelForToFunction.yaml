@@ -4,7 +4,6 @@ dataIns:
 - name: "inputWorkflow"
   type: "collection"
   source: "inputWorkflow"
-  passing: true
 workflowBody:
 - function:
     name: "f1"

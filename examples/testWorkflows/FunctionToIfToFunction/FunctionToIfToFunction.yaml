@@ -4,15 +4,12 @@ dataIns:
 - name: "inputWorkflow1"
   type: "collection"
   source: "inputWorkflow1"
-  passing: true
 - name: "inputWorkflow2"
   type: "number"
   source: "inputWorkflow2"
-  passing: true
 - name: "inputWorkflow3"
   type: "number"  
   source: "inputWorkflow3"
-  passing: true
 workflowBody:
 - function:
     name: "f1"
@@ -91,15 +88,15 @@ workflowBody:
         - name: "resource"
           value: "FunctionToIfToFunctionf3.py"
     dataOuts:
-    - name: ifout1
-      type: collection
-      source: f2/f2out1
-    - name: ifout2
-      type: number
-      source: f2/f2out2
-    - name: ifout3
-      type: collection
-      source: f3/f3out1
+    - name: "ifout1"
+      type: "collection"
+      source: "f2/f2out1"
+    - name: "ifout2"
+      type: "number"
+      source: "f2/f2out2"
+    - name: "ifout3"
+      type: "collection"
+      source: "f3/f3out1"
 - function:
     name: "f4"
     type: "Collection"
