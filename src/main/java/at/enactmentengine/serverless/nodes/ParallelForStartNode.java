@@ -487,18 +487,12 @@ public class ParallelForStartNode extends Node {
                                 checkDistributedElements(distributedElements, data, values);
                             } else if (dataValues.get(dataSource) instanceof JsonPrimitive){
                                 JsonArray dataElements = new JsonArray();
-                                logger.info(State.getInstance().getStateObject().toString());
-                                logger.info(String.valueOf(State.getInstance().getStateObject().get(dataSource)));
                                 dataElements.add(State.getInstance().getStateObject().get(dataSource));
 
-                                logger.info("DATA ELEMENTS: " + dataElements);
                                 List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
-
-                                logger.info("HERE:" + distributedElements);
 
                                 checkDistributedElements(distributedElements, data, values);
 
-                                logger.info(distributedElements.toString());
                             }else {
                                 throw new NotImplementedException("Not implemented: " + dataValues.get(dataSource).getClass());
                             }
@@ -667,7 +661,6 @@ public class ParallelForStartNode extends Node {
                 } else {
                     replicaSize = Integer.parseInt(distributionConstraint.getValue().replaceAll("[^0-9?!.]", ""));
                 }
-                logger.info("REPLICA SIZE: " + replicaSize);
 
                 /* Create an array of that specific size */
                 distributedElements = new ArrayList<>();
