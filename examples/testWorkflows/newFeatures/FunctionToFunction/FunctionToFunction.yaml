@@ -1,0 +1,58 @@
+---
+name: "FunctionToFunction"
+dataIns:
+- name: "inputWorkflow"
+  type: "collection"
+  source: "inputWorkflow"
+workflowBody:
+- function:
+    name: "f1"
+    type: "Collection"
+    dataIns:
+    - name: "f1input1"
+      type: "collection"
+      source: "FunctionToFunction/inputWorkflow"
+    dataOuts:
+    - name: "f1out1"
+      type: "collection"
+    - name: "f1out2"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "FunctionToFunctionf1.py"
+- function:
+    name: "f2"
+    type: "Collection"
+    dataIns:
+    - name: "f2input1"
+      type: "collection"
+      source: "f1/f1out1"
+    - name: "f2input2"
+      type: "number"
+      source: "f1/f1out2"
+    dataOuts:
+    - name: "f2out1"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "FunctionToFunctionf2.py"
+- function:
+    name: "f3"
+    type: "Collection"
+    dataIns:
+    - name: "f3input1"
+      type: "string"
+      source: "f2/f2out1"
+    - name: "f2input2"
+      type: "number"
+      source: "f1/f1out2"
+    dataOuts:
+    - name: "f3out1"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "FunctionToFunctionf3.py"
+dataOuts:
+- name: "finalOutput"
+  type: "string"
+  source: "f3/f3out1"
