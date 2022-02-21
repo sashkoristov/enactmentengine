@@ -1,0 +1,118 @@
+---
+name: "functionToIf"
+dataIns:
+- name: "inputWorkflow1"
+  type: "collection"
+  source: "inputWorkflow1"
+- name: "inputWorkflow2"
+  type: "number"
+  source: "inputWorkflow2"
+- name: "inputWorkflow3"
+  type: "number"  
+  source: "inputWorkflow3"
+- name: "inputWorkflow4"
+  type: "string"  
+  source: "inputWorkflow4"
+- name: "inputWorkflow5"
+  type: "number"  
+  source: "loopCounter"
+workflowBody:
+- if:
+    name: "if"
+    dataIns:
+    - name: "ifinput1"
+      type: "number"
+      source: "functionToIf/inputWorkflow2"
+    condition:
+      combinedWith: "and"
+      conditions:
+      - data1: "functionToIf/inputWorkflow2"
+        data2: "functionToIf/inputWorkflow3"
+        operator: "<"
+    then:
+    - function:
+        name: "f1"
+        type: "Collection"
+        dataIns:
+        - name: "f1input1"
+          type: "collection"
+          source: "if/ifinput1"
+        dataOuts:
+        - name: "f1out1"
+          type: "number"
+        properties:
+        - name: "resource"
+          value: "IfCombinedSourceParallelForf1.py"
+    else:
+    - function:
+        name: "f2"
+        type: "Collection"
+        dataIns:
+        - name: "f2input1"
+          type: "collection"
+          source: "if/ifinput1"
+        dataOuts:
+        - name: "f2out1"
+          type: "number"
+        properties:
+        - name: "resource"
+          value: "IfCombinedSourceParallelForf2.py"
+- parallelFor:
+    name: "parallelFunc"
+    dataIns:
+    - name: "parInput1"
+      type: "collection"
+      source: "functionToIf/inputWorkflow1"
+      constraints:
+      - name: "distribution"
+        value: "BLOCK(1)"
+    - name: "parInput2"
+      type: "number"
+      source: "[f1/f1out1, f2/f2out1]"
+      constraints:
+      - name: "distribution"
+        value: "REPLICATE(5)"
+    loopCounter:
+      type: "number"
+      from: "0"
+      to: "functionToIf/inputWorkflow5"
+      step: "1"
+    loopBody:
+    - function:
+        name: "f3"
+        type: "Collection"
+        dataIns:
+        - name: "f3input1"
+          type: "collection"
+          source: "parallelFunc/parInput1"
+        - name: "f3input2"
+          type: "number"
+          source: "parallelFunc/parInput2"
+        dataOuts:
+        - name: "f3out1"
+          type: "collection"
+        - name: "f3out2"
+          type: "number"
+        properties:
+        - name: "resource"
+          value: "IfCombinedSourceParallelForf3.py"
+    dataOuts:
+    - name: "aggregatedOut1"
+      type: "collection"
+      source: "f3/f3out1"
+      constraints:
+      - name: "aggregation"
+        value: "+"
+    - name: "aggregatedOut2"
+      type: "collection"
+      source: "f3/f3out2"
+      constraints:
+      - name: "aggregation"
+        value: "+"
+dataOuts:
+- name: "finalOutput1"
+  type: "collection"
+  source: "parallelFunc/aggregatedOut1"
+- name: "finalOutput2"
+  type: "collection"
+  source: "parallelFunc/aggregatedOut2"
