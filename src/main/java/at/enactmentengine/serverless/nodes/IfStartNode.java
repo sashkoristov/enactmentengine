@@ -72,12 +72,21 @@ public class IfStartNode extends Node {
             /* Iterate over every input specified in the workflow file */
             for (DataIns data : dataIns) {
 
+                String subObject = null;
+
+                long count = data.getSource().chars().filter(ch -> ch == '/').count();
+                if(count > 1){
+                    subObject = State.getInstance().findJSONSubObject(data.getSource().substring(0, data.getSource().indexOf("/", data.getSource().indexOf("/") + 1)), data.getSource().substring(data.getSource().indexOf("/", data.getSource().indexOf("/") + 1) + 1), count);
+                }
+
                 /* Check if the actual input does not contains the specified input */
-                if (State.getInstance().getStateObject().get(data.getSource()) == null) {
+                if (State.getInstance().getStateObject().get(data.getSource()) == null && subObject == null) {
                     throw new MissingInputDataException(
                             IfStartNode.class.getCanonicalName() + ": " + name + " needs " + data.getSource() + "!");
                 } else {
-                    State.getInstance().getStateObject().add(name + "/" + data.getName(), State.getInstance().getStateObject().get(data.getSource()));
+                    String toUse = subObject != null ? subObject : State.getInstance().getStateObject().get(data.getSource()).toString();
+
+                    State.getInstance().addParamToState(toUse, name + "/" + data.getName(), this.getId(), data.getType());
                 }
             }
         }
