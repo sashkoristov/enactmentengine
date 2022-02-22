@@ -65,6 +65,30 @@ This example is similar to 'IfCombinedSourceFunction', but here we define the da
 #### IfCombinedSourceParallelFor
 Similar example as 'IfCombinedSourceParallel', but for the parallelFor-construct.
 
+#### jsonSubobjects
+This example shows how the engine can access a specified key of a json objects and pass it to a function.
+
+f1 one returns the following object:
+
+```
+  {'test': {"subtest" : [0, 1, 2, 3]}, "test2": 42}
+```
+
+And in f4 we can use this information to access a key of the returned JSON;
+
+```
+  - name: "f4input1"
+    type: "collection"
+    source: "f1/f1out1/test/subtest"
+```
+
+So this will pass only to f4:
+
+```
+  [0, 1, 2, 3]
+```
+
+
 ## Example structure
 
 You will find one directory for workflows which are working with the old version of the engine and one directory with example using new features of the engine.
