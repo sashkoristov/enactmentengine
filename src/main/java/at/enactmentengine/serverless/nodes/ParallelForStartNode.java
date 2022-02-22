@@ -211,8 +211,17 @@ public class ParallelForStartNode extends Node {
                     String[] sourceList = source.split(",");
 
                     for(String dataSource : sourceList){
-                        if (State.getInstance().getStateObject().get(dataSource) != null) {
-                            dataValues.put(dataSource, State.getInstance().getStateObject().get(dataSource));
+
+                        String subObject = null;
+
+                        long count = dataSource.chars().filter(ch -> ch == '/').count();
+                        if(count > 1){
+                            subObject = State.getInstance().findJSONSubObject(dataSource.substring(0, dataSource.indexOf("/", dataSource.indexOf("/") + 1)), dataSource.substring(dataSource.indexOf("/", dataSource.indexOf("/") + 1) + 1), count);
+                        }
+
+                        if (State.getInstance().getStateObject().get(dataSource) != null || subObject != null) {
+                            String toUse = subObject != null ? subObject : State.getInstance().getStateObject().get(dataSource).getAsString();
+                            dataValues.put(dataSource, toUse);
                         }
                     }
                 }
@@ -451,7 +460,7 @@ public class ParallelForStartNode extends Node {
 
                     for(String dataSource : sourceList) {
 
-                        if(State.getInstance().getStateObject().get(dataSource) == null) {
+                        if(dataValues.get(dataSource) == null) {
                             continue;
                         }
 
