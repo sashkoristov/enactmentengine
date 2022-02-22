@@ -1,0 +1,195 @@
+---
+name: "jsonsubobjects"
+dataIns:
+- name: "inputWorkflow1"
+  type: "collection"
+  source: "inputWorkflow1"
+- name: "inputWorkflow2"
+  type: "number"
+  source: "inputWorkflow2"
+- name: "inputWorkflow3"
+  type: "number"  
+  source: "inputWorkflow3"
+- name: "inputWorkflow4"
+  type: "string"  
+  source: "inputWorkflow4"
+- name: "inputWorkflow5"
+  type: "number"  
+  source: "loopCounter"
+workflowBody:
+- function:
+    name: "f1"
+    type: "Collection"
+    dataIns:
+    - name: "f1input1"
+      type: "collection"
+      source: "jsonsubobjects/inputWorkflow1"
+    dataOuts:
+    - name: "f1out1"
+      type: "collection"
+    - name: "f1out2"
+      type: "number"
+    properties:
+    - name: "resource"
+      value: "ajsonsubobjectsf1.py"
+- if:
+    name: "if"
+    dataIns:
+    - name: "ifinput1"
+      type: "collection"
+      source: "f1/f1out1/test/subtest"
+    - name: "ifinput2"
+      type: "collection"
+      source: "f1/f1out2"
+    - name: "ifinput3"
+      type: "number"
+      source: "jsonsubobjects/inputWorkflow2"
+    - name: "ifinput4"
+      type: "number"
+      source: "jsonsubobjects/inputWorkflow3"
+    condition:
+      combinedWith: "and"
+      conditions:
+      - data1: "if/ifinput3"
+        data2: "if/ifinput4"
+        operator: "<"
+    then:
+    - function:
+        name: "f2"
+        type: "Collection"
+        dataIns:
+        - name: "f2input1"
+          type: "collection"
+          source: "if/ifinput1"
+        dataOuts:
+        - name: "f2out1"
+          type: "collection"
+        - name: "f2out2"
+          type: "number"
+        properties:
+        - name: "resource"
+          value: "jsonsubobjectsf2.py"
+    else:
+    - function:
+        name: "f3"
+        type: "Collection"
+        dataIns:
+        - name: "f3input1"
+          type: "collection"
+          source: "if/ifinput2"
+        dataOuts:
+        - name: "f3out1"
+          type: "collection"
+        properties:
+        - name: "resource"
+          value: "jsonsubobjectsf3.py"
+    dataOuts:
+    - name: ifout1
+      type: collection
+      source: f2/f2out1
+    - name: ifout2
+      type: number
+      source: f2/f2out2
+    - name: ifout3
+      type: collection
+      source: f3/f3out1
+- function:
+    name: "f4"
+    type: "Collection"
+    dataIns:
+    - name: "f4input1"
+      type: "collection"
+      source: "f1/f1out1/test/subtest"
+    - name: "f4input2"
+      type: "number"
+      source: "f1/f1out2"
+    dataOuts:
+    - name: "f4out1"
+      type: "string"
+    properties:
+    - name: "resource"
+      value: "jsonsubobjectsf4.py"
+- parallel:
+    name: "parallelFunc"
+    dataIns:
+    - name: "parInput1"
+      type: "collection"
+      source: "f1/f1out1/test/subtest"
+    - name: "parInput2"
+      type: "number"
+      source: "f1/f1out2"
+    parallelBody:
+    - section:
+      - function:
+          name: "f5"
+          type: "Collection"
+          dataIns:
+          - name: "f5input1"
+            type: "collection"
+            source: "parallelFunc/parInput1"
+          dataOuts:
+          - name: "f5out1"
+            type: "collection"
+          properties:
+          - name: "resource"
+            value: "jsonsubobjectsf5.py"
+    - section:
+      - function:
+          name: "f6"
+          type: "number"
+          dataIns:
+          - name: "f6input1"
+            type: "number"
+            source: "parallelFunc/parInput2"
+          dataOuts:
+          - name: "f6out1"
+            type: "string"
+          properties:
+          - name: "resource"
+            value: "jsonsubobjectsf6.py"
+    dataOuts:
+    - name: "parOut1"
+      type: "collection"
+      source: "f5/f5out1"
+    - name: "parOut2"
+      type: "string"
+      source: "f6/f6out1"
+- parallelFor:
+    name: "parallelForFunc"
+    dataIns:
+    - name: "parInput1"
+      type: "collection"
+      source: "f1/f1out1/test/subtest"
+      constraints:
+      - name: "distribution"
+        value: "REPLICATE(5)"
+    loopCounter:
+      type: "number"
+      from: "0"
+      to: "jsonsubobjects/inputWorkflow5"
+      step: "1"
+    loopBody:
+    - function:
+        name: "f7"
+        type: "Collection"
+        dataIns:
+        - name: "f7input1"
+          type: "collection"
+          source: "parallelForFunc/parInput1"
+        dataOuts:
+        - name: "f7out1"
+          type: "collection"
+        properties:
+        - name: "resource"
+          value: "jsonsubobjectsf7.py"
+    dataOuts:
+    - name: "aggregatedOut1"
+      type: "collection"
+      source: "f7/f7out1"
+      constraints:
+      - name: "aggregation"
+        value: "+"
+dataOuts:
+- name: "finalOutput"
+  type: "string"
+  source: "f4/f4out1"
