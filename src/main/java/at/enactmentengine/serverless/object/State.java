@@ -43,10 +43,10 @@ public class State {
                 jsonElement = new JsonPrimitive(result.replace("\"", ""));
                 break;
             case "number" :
-                jsonElement = new JsonPrimitive(Double.parseDouble(result.replace("\"", "")));
+                jsonElement = new JsonPrimitive(Double.parseDouble(result.replaceAll("\"", "").replaceAll("\\\\", "")));
                 break;
             case "collection":
-                jsonElement = new Gson().fromJson(result, JsonElement.class);
+                jsonElement = new Gson().fromJson(result.replaceAll("\"", "").replaceAll("\\\\", ""), JsonElement.class);
                 break;
             case "boolean":
                 jsonElement = new JsonPrimitive(Boolean.parseBoolean(result));
