@@ -347,7 +347,25 @@ Several bachelor theses at department of computer science, University of Innsbru
 
 ## Publications
 
-S. Ristov, S. Pedratscher and T. Fahringer, "xAFCL: Run Scalable Function Choreographies Across Multiple FaaS Systems," in *IEEE Transactions on Services Computing*, https://doi.org/10.1109/TSC.2021.3128137.
+### *rAFCL*
+
+S. Ristov, D. Kimovski and T. Fahringer, "FaaScinating Resilience for Serverless Function Choreographies in Federated Clouds," in *IEEE Transactions on Network and Service Management*, doi: [10.1109/TNSM.2022.3162036](https://doi.org/10.1109/TNSM.2022.3162036).
+
+````
+@ARTICLE{RistovrAFCL:2022,
+  author={Ristov, Sasko and Kimovski, Dragi and Fahringer, Thomas},
+  journal={IEEE Transactions on Network and Service Management}, 
+  title={FaaScinating Resilience for Serverless Function Choreographies in Federated Clouds}, 
+  year={2022},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TNSM.2022.3162036}}
+````
+
+### *xAFCL*
+
+S. Ristov, S. Pedratscher and T. Fahringer, "xAFCL: Run Scalable Function Choreographies Across Multiple FaaS Systems," in *IEEE Transactions on Services Computing*, [10.1109/TSC.2021.3128137](https://doi.org/10.1109/TSC.2021.3128137).
 
 ````
 @article{RistovxAFCL:2021,
@@ -362,7 +380,9 @@ S. Ristov, S. Pedratscher and T. Fahringer, "xAFCL: Run Scalable Function Choreo
 }
 ````
 
-S. Ristov, S. Pedratscher, T. Fahringer, "AFCL: An Abstract Function Choreography Language for serverless workflow specification", *Future Generation Computer Systems*, Volume 114, 2021, Pages 368-382, ISSN 0167-739X, https://doi.org/10.1016/j.future.2020.08.012.
+### *AFCL*
+
+S. Ristov, S. Pedratscher, T. Fahringer, "AFCL: An Abstract Function Choreography Language for serverless workflow specification", *Future Generation Computer Systems*, Volume 114, 2021, Pages 368-382, ISSN 0167-739X, [10.1016/j.future.2020.08.012](https://doi.org/10.1016/j.future.2020.08.012).
 
 ````
 @article{ristovAFCL:2020,
@@ -381,4 +401,4 @@ S. Ristov, S. Pedratscher, T. Fahringer, "AFCL: An Abstract Function Choreograph
 
 ## Support
 
-If you need any additional information, please do not hesitate to contact sashko@dps.uibk.ac.at.
+If you need any additional information, please do not hesitate to contact us.
