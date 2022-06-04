@@ -24,8 +24,8 @@ You will need to create a **credentials.properties** file in the root directory 
 The file should look as follows:
 
 ````
-aws_access_key=
-aws_secret_key=
+aws_access_key_id=
+aws_secret_access_key=
 aws_session_token=              // (needed for AWS Academy)
 ibm_api_key=
 google_sa_key={\
