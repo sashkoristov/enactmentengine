@@ -12,7 +12,7 @@ import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
 import at.uibk.dps.exception.MaxRunningTimeException;
 import at.uibk.dps.function.Function;
-import at.uibk.dps.socketutils.entity.Invocation;
+//import at.uibk.dps.socketutils.entity.Invocation;
 import at.uibk.dps.util.Event;
 import at.uibk.dps.util.Type;
 import com.google.gson.JsonObject;
@@ -207,18 +207,21 @@ public class FunctionNode extends Node {
          * Check if the execution identifier is specified (check if execution should be
          * stored in the database)
          */
+
+        /*
         if (executionId != -1) {
 
-            /* Create a function invocation object */
+            // Create a function invocation object
             Invocation functionInvocation = new Invocation(resourceLink, Utils.detectProvider(resourceLink).toString(),
                     Utils.detectRegion(resourceLink),
                     new Timestamp(start + TimeZone.getTimeZone("Europe/Rome").getOffset(start)),
                     new Timestamp(end + TimeZone.getTimeZone("Europe/Rome").getOffset(start)), (end - start),
                     Utils.checkResultSuccess(pairResult.getResult()).toString(), null, executionId);
 
-            /* Store the invocation in the database */
+            // Store the invocation in the database
             Utils.storeInDBFunctionInvocation(logger, functionInvocation, executionId);
         }
+        */
         return true;
     }
 
@@ -463,8 +466,8 @@ public class FunctionNode extends Node {
 //            propertiesFile.load(LambdaHandler.class.getResourceAsStream(Utils.PATH_TO_CREDENTIALS));
             propertiesFile.load(new FileInputStream(Utils.PATH_TO_CREDENTIALS));
             // FileUtils.readFileToByteArray(new File(workflow))
-            awsAccessKey = propertiesFile.getProperty("aws_access_key");
-            awsSecretKey = propertiesFile.getProperty("aws_secret_key");
+            awsAccessKey = propertiesFile.getProperty("aws_access_key_id");
+            awsSecretKey = propertiesFile.getProperty("aws_secret_access_key");
             if (propertiesFile.containsKey("aws_session_token")) {
                 awsSessionToken = propertiesFile.getProperty("aws_session_token");
             }

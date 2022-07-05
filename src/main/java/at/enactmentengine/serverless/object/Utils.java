@@ -9,11 +9,11 @@ import at.uibk.dps.function.AlternativeStrategy;
 import at.uibk.dps.function.ConstraintSettings;
 import at.uibk.dps.function.FaultToleranceSettings;
 import at.uibk.dps.function.Function;
-import at.uibk.dps.socketutils.ConstantsNetwork;
-import at.uibk.dps.socketutils.UtilsSocket;
-import at.uibk.dps.socketutils.entity.Invocation;
-import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
-import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
+// import at.uibk.dps.socketutils.ConstantsNetwork;
+// import at.uibk.dps.socketutils.UtilsSocket;
+// import at.uibk.dps.socketutils.entity.Invocation;
+// import at.uibk.dps.socketutils.logger.RequestLoggerInvocationWrite;
+// import at.uibk.dps.socketutils.logger.UtilsSocketLogger;
 import at.uibk.dps.util.Provider;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -277,6 +277,7 @@ public class Utils {
      *
      * @param functionInvocation to store in the database.
      */
+    /*
     public static void storeInDBFunctionInvocation(Logger logger, Invocation functionInvocation, int executionId) {
 
         logger.info("Connecting to logger service...");
@@ -293,6 +294,7 @@ public class Utils {
             logger.error(e.getMessage(), e);
         }
     }
+    */
 
     /**
      * Convert the stringified json to a json object representing the function output.

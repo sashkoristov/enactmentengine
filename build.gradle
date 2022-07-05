@@ -58,7 +58,7 @@ repositories {
 }
 dependencies {
 //    implementation 'com.github.stefanpedratscher:AFCLCore:v0.0.1'
-    implementation 'com.github.ApolloCEC:socketUtils:-SNAPSHOT'
+//    implementation 'com.github.ApolloCEC:socketUtils:-SNAPSHOT'
 
     testImplementation group: 'junit', name: 'junit', version: '4.+'
     implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.30.1'
