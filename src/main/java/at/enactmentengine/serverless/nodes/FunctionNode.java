@@ -148,10 +148,22 @@ public class FunctionNode extends Node {
                     /* Check if actual data contains the specified source */
                     if (dataValues.containsKey(data.getSource())) {
 
+
+                        boolean replicate = false;
+                        if(data.getProperties() != null) {
+                            PropertyConstraint replicateConstraint = Utils.getPropertyConstraintByName(data.getProperties(), "replicate");
+                            if (replicateConstraint != null) {
+                                replicate = Boolean.parseBoolean(replicateConstraint.getValue());
+                            }
+                        }
+
+                        boolean passing = data.getPassing() != null && data.getPassing();
+
                         /* Check if the element should be passed to the output */
-                        if (data.getPassing() != null && data.getPassing()) {
+                        if (passing || replicate) {
                             functionOutputs.put(name + "/" + data.getName(), dataValues.get(data.getSource()));
-                        } else {
+                        }
+                        if (!passing) {
                             actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
                         }
                     } else {
