@@ -378,23 +378,24 @@ public class FunctionNode extends Node {
             return output == null || output.isEmpty();
         }
 
-        try {
-            /* Iterate over all specified outputs in the yaml file */
-            for (DataOutsAtomic data : output) {
 
-                /* Convert the json result to a json object */
-                JsonObject jsonResult = Utils.generateJson(result, data);
+        /* Iterate over all specified outputs in the yaml file */
+        for (DataOutsAtomic data : output) {
 
-                /* Check if the function output already contains the specified value */
-                if (functionOutputs.containsKey(name + "/" + data.getName())) {
-                    continue;
-                }
+            /* Convert the json result to a json object */
+            JsonObject jsonResult = Utils.generateJson(result, data);
 
-                // TODO why not do this?
-                // functionOutputs.put(name + "/" + data.getName(),
-                // jsonResult.get(data.getName()));
+            /* Check if the function output already contains the specified value */
+            if (functionOutputs.containsKey(name + "/" + data.getName())) {
+                continue;
+            }
 
-                /* Parse according data type */
+            // TODO why not do this?
+            // functionOutputs.put(name + "/" + data.getName(),
+            // jsonResult.get(data.getName()));
+
+            /* Parse according data type */
+            try {
                 switch (data.getType()) {
                     case "number":
                         Object number = jsonResult.get(data.getName()).getAsDouble();
@@ -417,14 +418,17 @@ public class FunctionNode extends Node {
                         logger.error("Error while trying to parse key in function {}. Type: {}", name, data.getType());
                         break;
                 }
+            } catch (UnsupportedOperationException e) {
+                // if the value was null we save it regardless of the data type
+                if (e.getMessage().equals("JsonNull")) {
+                    functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()));
+                }
+            } catch (Exception e) {
+                logger.error("Error while trying to parse key in function {}", name);
+                return false;
             }
-
-            return !(result.contains("error:") || result.contains("\"error\":"));
-
-        } catch (Exception e) {
-            logger.error("Error while trying to parse key in function {}", name);
-            return false;
         }
+        return !(result.contains("error:") || result.contains("\"error\":"));
     }
 
     /**
