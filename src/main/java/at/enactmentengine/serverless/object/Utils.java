@@ -3,6 +3,7 @@ package at.enactmentengine.serverless.object;
 import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.exception.RegionDetectionException;
 import at.enactmentengine.serverless.nodes.Node;
+import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.function.AlternativeStrategy;
@@ -18,6 +19,7 @@ import at.uibk.dps.util.Provider;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -33,7 +35,7 @@ import java.util.Map;
  * @author stefanpedratscher, extended by @author mikahautz
  */
 public class Utils {
-
+    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
     /**
      * The protocol for the resource links.
      */
@@ -315,5 +317,50 @@ public class Utils {
             jso.addProperty(data.getName(), resultString);
         }
         return jso;
+    }
+
+    /**
+     * Retrieve a property/constraint from a list by name
+     *
+     * @param propertyConstraints List of properties/contstraints
+     * @param name The name of the property to retrieve
+     *
+     * @return PropertyConstraint if name was found, null otherwise.
+     */
+    public static PropertyConstraint getPropertyConstraintByName(List<PropertyConstraint> propertyConstraints,
+                                                             String name) {
+        return propertyConstraints
+                .stream()
+                .filter(x -> x.getName().equals(name))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Return the value of a DataIns with the correct type.
+     *
+     * @param data DataIns for which to cast the value
+     *
+     *
+     * @return value of the specified DataIns cast to its type.
+     */
+    public static Object castDataValue(DataIns data) {
+        Object value;
+        switch (data.getType()) {
+            case "number":
+                value = Double.parseDouble(data.getValue());
+                break;
+            case "bool":
+                value = Boolean.parseBoolean(data.getValue());
+                break;
+            case "string":
+                value = data.getValue();
+                break;
+            default:
+                logger.error("Type \"{}\" is not supported for constant datains." , data.getType());
+                value = data.getValue();
+                break;
+        }
+        return value;
     }
 }

@@ -157,7 +157,7 @@ public class FunctionNode extends Node {
                     } else {
                         // constant value in the workflow
                         if(data.getSource() == null && data.getValue() != null) {
-                            actualFunctionInputs.put(data.getName(), data.getValue());
+                            actualFunctionInputs.put(data.getName(), Utils.castDataValue(data));
                         } else {
                             throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
                                     + " needs " + data.getSource() + " !");
