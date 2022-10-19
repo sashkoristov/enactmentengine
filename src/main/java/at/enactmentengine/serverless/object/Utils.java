@@ -136,7 +136,7 @@ public class Utils {
             throw new MissingResourceLinkException("No resource link on function node " + node.toString());
         }
 
-        if (!resourceLink.startsWith("http") && !resourceLink.startsWith("arn")) {
+        if (!resourceLink.toLowerCase().startsWith("http") && !resourceLink.startsWith("arn")) {
 
             /* Remove the programming language of the resource link */
             resourceLink = resourceLink.substring(resourceLink.indexOf(":") + 1);
