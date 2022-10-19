@@ -155,8 +155,13 @@ public class FunctionNode extends Node {
                             actualFunctionInputs.put(data.getName(), dataValues.get(data.getSource()));
                         }
                     } else {
-                        throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
-                                + " needs " + data.getSource() + " !");
+                        // constant value in the workflow
+                        if(data.getSource() == null && data.getValue() != null) {
+                            actualFunctionInputs.put(data.getName(), data.getValue());
+                        } else {
+                            throw new MissingInputDataException(FunctionNode.class.getCanonicalName() + ": " + name
+                                    + " needs " + data.getSource() + " !");
+                        }
                     }
                 }
             }
