@@ -396,7 +396,7 @@ public class FunctionNode extends Node {
                         functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsJsonArray());
                         break;
                     case "object":
-                        functionOutputs.put(name + "/" + data.getName(), jsonResult);
+                        functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()));
                         break;
                     case "bool":
                         functionOutputs.put(name + "/" + data.getName(), jsonResult.get(data.getName()).getAsBoolean());
