@@ -5,8 +5,10 @@ import at.enactmentengine.serverless.parser.ElementIndex;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.LoopCounter;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
+import com.github.fge.jsonschema.core.tree.JsonTree;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.internal.LinkedTreeMap;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -383,9 +385,21 @@ public class ParallelForStartNode extends Node {
                             List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
 
                             checkDistributedElements(distributedElements, data, values);
+                        } else if (dataValues.get(data.getSource()) instanceof Boolean) {
+                            JsonArray dataElements = new JsonArray();
+                            dataElements.add((Boolean) dataValues.get(data.getSource()));
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                            checkDistributedElements(distributedElements, data, values);
                         } else if (dataValues.get(data.getSource()) instanceof String) {
                             JsonArray dataElements = new JsonArray();
                             dataElements.add((String) dataValues.get(data.getSource()));
+                            List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
+
+                            checkDistributedElements(distributedElements, data, values);
+                        } else if (dataValues.get(data.getSource()) instanceof LinkedTreeMap) {
+                            JsonArray dataElements = new JsonArray();
+                            dataElements.add(new Gson().toJson(dataValues.get(data.getSource())));
                             List<JsonArray> distributedElements = distributeElements(dataElements, data.getConstraints(), children);
 
                             checkDistributedElements(distributedElements, data, values);
@@ -452,7 +466,13 @@ public class ParallelForStartNode extends Node {
 
                 /* Extract a single value */
                 JsonArray arr = distributedElements.get(i);
-                block = "number".equals(data.getType()) ? arr.get(0).getAsInt() : arr.get(0).getAsString();
+                if("number".equals(data.getType())){
+                    block = arr.get(0).getAsInt();
+                } else if("bool".equals(data.getType())){
+                    block = arr.get(0).getAsBoolean();
+                } else {
+                    block = arr.get(0).getAsString();
+                }
             }
 
             // TODO check if this should be dynamic
