@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.Simulation.ServiceSimulationModel;
 import at.enactmentengine.serverless.Simulation.SimulationModel;
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.enactmentengine.serverless.exception.*;
@@ -90,6 +91,8 @@ public class SimulationNode extends Node {
      */
     private long amountParallelFunctions = -1;
 
+    private List<String> serviceStrings;
+
     /**
      * Constructor for a simulation node.
      *
@@ -114,6 +117,7 @@ public class SimulationNode extends Node {
         if (output == null) {
             this.output = new ArrayList<>();
         }
+        this.serviceStrings = getUsedServices();
     }
 
     /**
@@ -124,7 +128,7 @@ public class SimulationNode extends Node {
      * @return a list containing 4 elements, the first is the memory size, the second the region, the third the provider
      * and the fourth the function name.
      */
-    private static List<String> extractValuesFromDeployment(String deployment) {
+    public static List<String> extractValuesFromDeployment(String deployment) {
         List<String> result = new ArrayList<>();
         String[] parts = deployment.split("_");
         result.add(parts[parts.length - 1]);
@@ -692,6 +696,19 @@ public class SimulationNode extends Node {
                 result = model.simulateRoundTripTime(success);
             }
         }
+
+        // simulate external services
+        for (String serviceString : serviceStrings){
+            ServiceSimulationModel serviceSimulationModel;
+            if (region == null) {
+                serviceSimulationModel = new ServiceSimulationModel(entry.getInt("regionID"), serviceString);
+            } else {
+                serviceSimulationModel = new ServiceSimulationModel(region, serviceString);
+            }
+
+            result.setRtt(result.getRtt() + serviceSimulationModel.calculateRTT());
+        }
+
         return result;
     }
 
@@ -933,5 +950,18 @@ public class SimulationNode extends Node {
 
     public synchronized void setAmountParallelFunctions(long amountParallelFunctions) {
         this.amountParallelFunctions = amountParallelFunctions;
+    }
+
+    /**
+     * Gets all used services from properties and adds them to the list.
+     */
+    private List<String> getUsedServices() {
+        List<String> serviceStrings = new ArrayList<>();
+        for (PropertyConstraint property : properties) {
+            if (property.getName().equals("service")) {
+                serviceStrings.add(property.getValue());
+            }
+        }
+        return serviceStrings;
     }
 }
