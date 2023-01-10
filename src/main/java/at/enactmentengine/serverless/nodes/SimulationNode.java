@@ -117,7 +117,7 @@ public class SimulationNode extends Node {
         if (output == null) {
             this.output = new ArrayList<>();
         }
-        this.serviceStrings = getUsedServices();
+        this.serviceStrings = ServiceSimulationModel.getUsedServices(this.properties);
     }
 
     /**
@@ -698,15 +698,16 @@ public class SimulationNode extends Node {
         }
 
         // simulate external services
-        for (String serviceString : serviceStrings){
-            ServiceSimulationModel serviceSimulationModel;
-            if (region == null) {
-                serviceSimulationModel = new ServiceSimulationModel(entry.getInt("regionID"), serviceString);
-            } else {
-                serviceSimulationModel = new ServiceSimulationModel(region, serviceString);
+        if(!serviceStrings.isEmpty()) {
+            long totalServiceRtt;
+
+            if(region == null) {
+                totalServiceRtt = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getInt("regionID"), serviceStrings);
+            }else{
+                totalServiceRtt = ServiceSimulationModel.calculateTotalRttForUsedServices(region, serviceStrings);
             }
 
-            result.setRtt(result.getRtt() + serviceSimulationModel.calculateRTT());
+            result.setRtt(result.getRtt() + totalServiceRtt);
         }
 
         return result;
@@ -950,18 +951,5 @@ public class SimulationNode extends Node {
 
     public synchronized void setAmountParallelFunctions(long amountParallelFunctions) {
         this.amountParallelFunctions = amountParallelFunctions;
-    }
-
-    /**
-     * Gets all used services from properties and adds them to the list.
-     */
-    private List<String> getUsedServices() {
-        List<String> serviceStrings = new ArrayList<>();
-        for (PropertyConstraint property : properties) {
-            if (property.getName().equals("service")) {
-                serviceStrings.add(property.getValue());
-            }
-        }
-        return serviceStrings;
     }
 }
