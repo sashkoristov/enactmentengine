@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.Simulation;
 
+import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.databases.MariaDBAccess;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -8,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
@@ -57,7 +59,51 @@ public class ServiceSimulationModel {
     }
 
     /**
+     * Gets all used services from properties and adds them to the list.
+     */
+    public static List<String> getUsedServices(List<PropertyConstraint> properties) {
+        List<String> serviceStrings = new ArrayList<>();
+        for (PropertyConstraint property : properties) {
+            if (property.getName().equals("service")) {
+                serviceStrings.add(property.getValue());
+            }
+        }
+        return serviceStrings;
+    }
+
+    /**
+     * Computes the total round trip time for all used services for the lambda region with the given id
+     */
+    public static long calculateTotalRttForUsedServices(Integer lambdaRegionId, List<String> usedServiceStrings) {
+        long rtt = 0;
+
+        for (String serviceString : usedServiceStrings){
+            ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionId, serviceString);
+
+            rtt += serviceSimulationModel.calculateRTT();
+        }
+
+        return rtt;
+    }
+
+    /**
+     * Computes the total round trip time for all used services for the lambda region with the given name
+     */
+    public static long calculateTotalRttForUsedServices(String lambdaRegionName, List<String> usedServiceStrings) {
+        long rtt = 0;
+
+        for (String serviceString : usedServiceStrings){
+            ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionName, serviceString);
+
+            rtt += serviceSimulationModel.calculateRTT();
+        }
+
+        return rtt;
+    }
+
+    /**
      * Calculates the simulated round trip time of a service deployment.
+     *
      * @return simulated round trip time in seconds
      */
     public long calculateRTT(){
@@ -76,7 +122,9 @@ public class ServiceSimulationModel {
         // 2. calculate RTT according to model
         double roundTripTime = (expectedWork / velocity) + lambdaLatency +
                 startUpTime + (expectedData / bandwidth) + serviceLatency;
+
         logger.info("Simulated service runtime of " + type + ": "+ ((double) Math.round(roundTripTime * 100)) / 100 + "ms");
+
         return (long) roundTripTime;
     }
 

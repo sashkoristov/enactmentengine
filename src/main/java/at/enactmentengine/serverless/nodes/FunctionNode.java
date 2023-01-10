@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.Simulation.ServiceSimulationModel;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
@@ -336,6 +337,8 @@ public class FunctionNode extends Node {
             pairResult = gateway.invokeFunction(resourceLink, functionInputs);
             long end = System.currentTimeMillis();
             resultString = pairResult.getResult();
+            long totalRttForServices = 0;
+
             /*
              * Read the actual function outputs by their key and store them in
              * functionOutputs
@@ -344,10 +347,22 @@ public class FunctionNode extends Node {
             Event event = null;
             if (success) {
                 event = Event.FUNCTION_END;
+
+                // simulate round trip time for used services to subtract below
+                List<String> usedServicesForFunction = ServiceSimulationModel.getUsedServices(properties);
+
+                if(!usedServicesForFunction.isEmpty() && deployment != null) {
+                    String lambdaRegion = SimulationNode.extractValuesFromDeployment(deployment).get(1);
+                    totalRttForServices = ServiceSimulationModel.calculateTotalRttForUsedServices(lambdaRegion, usedServicesForFunction);
+                }
             } else {
                 event = Event.FUNCTION_FAILED;
             }
-            MongoDBAccess.saveLog(event, resourceLink, deployment, name, type, resultString, pairResult.getRTT(), success, loopCounter, maxLoopCounter, start, Type.EXEC);
+
+            // remove the execution times of the services from the round trip time to be stored to the database
+            long logRtt = pairResult.getRTT() - totalRttForServices;
+
+            MongoDBAccess.saveLog(event, resourceLink, deployment, name, type, resultString, logRtt, success, loopCounter, maxLoopCounter, start, Type.EXEC);
         }
         return pairResult;
     }
