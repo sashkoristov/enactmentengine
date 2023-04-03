@@ -1,6 +1,7 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.cronjob.ManualUpdate;
 import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Type;
@@ -77,6 +78,11 @@ public class Local {
                 ManualUpdate.main(null);
                 logger.info("Updating complete!");
             }
+            boolean hideCredentials = parameterList.contains("--hide-credentials");
+            if (hideCredentials) {
+                LoggerUtil.HIDE_CREDENTIALS = true;
+                length -= 1;
+            }
 
             String workflowContent = null;
             String workflowInput = null;
@@ -103,7 +109,7 @@ public class Local {
                 MongoDBAccess.saveLogWorkflowStart(Type.EXEC, workflowContent, null, start);
                 result = executor.executeWorkflow(args[0], null, -1, start);
             } else {
-                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json] [--simulate] [--ignore-FT] [--update] [--export]");
+                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json] [--simulate] [--ignore-FT] [--update] [--export] [--hide-credentials]");
             }
             if (!simulate) {
                 logger.info("Result: {}", result);
