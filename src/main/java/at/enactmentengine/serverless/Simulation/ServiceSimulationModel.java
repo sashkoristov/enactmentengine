@@ -4,6 +4,8 @@ import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.databases.MariaDBAccess;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,27 +14,19 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ServiceSimulationModel {
 
+    private static final Logger logger = LoggerFactory.getLogger(ServiceSimulationModel.class);
     private final String type;
-
     private final double expectedWork;
-
     private final double expectedData;
-
     private Integer typeId;
-
     private Integer providerId;
-
     private Integer lambdaRegionId;
     private Integer serviceRegionId;
 
-    private static final Logger logger = LoggerFactory.getLogger(ServiceSimulationModel.class);
-
-    private ServiceSimulationModel(String serviceString){
+    private ServiceSimulationModel(String serviceString) {
         try {
             List<String> properties = Arrays.asList(serviceString.split(":"));
             type = properties.get(0);
@@ -42,20 +36,20 @@ public class ServiceSimulationModel {
             Pair<Integer, Integer> serviceTypeInfo = getServiceTypeInformation();
             typeId = serviceTypeInfo.getLeft();
             providerId = serviceTypeInfo.getRight();
-            this.serviceRegionId = getRegionId(serviceRegionName);
+            serviceRegionId = getRegionId(serviceRegionName);
         } catch (RuntimeException e) {
             throw new ServiceStringException("Service deployment string could not be parsed.");
         }
     }
 
-    public ServiceSimulationModel(Integer lambdaRegionId, String serviceString){
+    public ServiceSimulationModel(Integer lambdaRegionId, String serviceString) {
         this(serviceString);
         this.lambdaRegionId = lambdaRegionId;
     }
 
-    public ServiceSimulationModel(String lambdaRegionName, String serviceString){
+    public ServiceSimulationModel(String lambdaRegionName, String serviceString) {
         this(serviceString);
-        this.lambdaRegionId = getRegionId(lambdaRegionName);
+        lambdaRegionId = getRegionId(lambdaRegionName);
     }
 
     /**
@@ -77,7 +71,7 @@ public class ServiceSimulationModel {
     public static long calculateTotalRttForUsedServices(Integer lambdaRegionId, List<String> usedServiceStrings) {
         long rtt = 0;
 
-        for (String serviceString : usedServiceStrings){
+        for (String serviceString : usedServiceStrings) {
             ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionId, serviceString);
 
             rtt += serviceSimulationModel.calculateRTT();
@@ -92,7 +86,7 @@ public class ServiceSimulationModel {
     public static long calculateTotalRttForUsedServices(String lambdaRegionName, List<String> usedServiceStrings) {
         long rtt = 0;
 
-        for (String serviceString : usedServiceStrings){
+        for (String serviceString : usedServiceStrings) {
             ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionName, serviceString);
 
             rtt += serviceSimulationModel.calculateRTT();
@@ -106,7 +100,20 @@ public class ServiceSimulationModel {
      *
      * @return simulated round trip time in seconds
      */
-    public long calculateRTT(){
+    public long calculateRTT() {
+        // check if service is of type file transfer
+        if (type.equals("FILE_DL") || type.equals("FILE_UP")) {
+            Pair<Double, Double> dataTransferParams = getDataTransferParamsFromDB(type);
+            Double bandwidth = dataTransferParams.getLeft();        // in Mbps
+            Double latency = dataTransferParams.getRight();         // in ms
+
+            double roundTripTime = expectedWork * latency + ((expectedData / bandwidth) * 1000);
+
+            logger.info("Simulated service runtime of " + type + ": " + ((double) Math.round(roundTripTime * 100)) / 100 + "ms");
+
+            return (long) roundTripTime;
+        }
+
         // 1. get missing information from DB
         // 1.1 get Networking information
         Triple<Double, Double, Double> networkParams = getNetworkParamsFromDB();
@@ -123,16 +130,49 @@ public class ServiceSimulationModel {
         double roundTripTime = (expectedWork / velocity) + lambdaLatency +
                 startUpTime + (expectedData / bandwidth) + serviceLatency;
 
-        logger.info("Simulated service runtime of " + type + ": "+ ((double) Math.round(roundTripTime * 100)) / 100 + "ms");
+        logger.info("Simulated service runtime of " + type + ": " + ((double) Math.round(roundTripTime * 100)) / 100 + "ms");
 
         return (long) roundTripTime;
     }
 
     /**
+     * Fetches data transfer parameters from the DB.
+     *
+     * @param type the type of the data transfer, either "FILE_DL" or "FILE_UP"
+     *
+     * @return pair of bandwidth [Mb/s] and latency [ms]
+     */
+    private Pair<Double, Double> getDataTransferParamsFromDB(String type) {
+        Connection connection = MariaDBAccess.getConnection();
+        String query = "SELECT bandwidth, latency AS latency FROM data_transfer WHERE type = ? AND functionRegionID = ? AND storageRegionID = ?";
+        ResultSet resultSet = null;
+        String dataTransferType = null;
+
+        if (type.equals("FILE_DL")) {
+            dataTransferType = "download";
+        } else if (type.equals("FILE_UP")) {
+            dataTransferType = "upload";
+        }
+
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setString(1, dataTransferType);
+            preparedStatement.setInt(2, lambdaRegionId);
+            preparedStatement.setInt(3, serviceRegionId);
+            resultSet = preparedStatement.executeQuery();
+            resultSet.next();
+            return Pair.of(resultSet.getDouble(1), resultSet.getDouble(2));
+        } catch (SQLException e) {
+            throw new DatabaseEntryNotFoundException("Could not fetch data transfer parameters from database");
+        }
+    }
+
+    /**
      * Fetches simulation relevant network parameters from the database.
+     *
      * @return triple of bandwidth [Mb/ms], lambda latency [ms] and service latency [ms].
      */
-    private Triple<Double, Double, Double> getNetworkParamsFromDB(){
+    private Triple<Double, Double, Double> getNetworkParamsFromDB() {
         // Choose which parameters to return according to service type
         // example: FaceRec vs Bucket
 
@@ -164,9 +204,10 @@ public class ServiceSimulationModel {
 
     /**
      * Fetches the service parameters from the database.
+     *
      * @return pair of relevant service parameters (velocity [ms/work], startup time [ms])
      */
-    private Pair<Double, Double> getServiceParamsFromDB(){
+    private Pair<Double, Double> getServiceParamsFromDB() {
         Connection connection = MariaDBAccess.getConnection();
         String query = "SELECT velocity, startup AS startup FROM serviceDeployment WHERE serviceID = ? AND regionID = ?";
         ResultSet resultSet = null;
@@ -185,9 +226,10 @@ public class ServiceSimulationModel {
 
     /**
      * Fetches the service type information from the database.
+     *
      * @return pair of (service-) typeId, providerId
      */
-    private Pair<Integer, Integer> getServiceTypeInformation(){
+    private Pair<Integer, Integer> getServiceTypeInformation() {
         Connection connection = MariaDBAccess.getConnection();
         String query = "SELECT id, providerID FROM service WHERE type = ?";
         ResultSet resultSet = null;
@@ -204,34 +246,36 @@ public class ServiceSimulationModel {
 
     /**
      * Fetches the regionId for a region with the specified name
+     *
      * @param regionName name of the region to fetch the id for
+     *
      * @return the corresponding regionId
      */
     private int getRegionId(String regionName) {
         Connection connection = MariaDBAccess.getConnection();
-        String query = "SELECT id FROM region WHERE region = ? AND providerID = ?";
+        String query = "SELECT id FROM region WHERE region = ?";
         ResultSet resultSet = null;
 
-        try{
+        try {
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setString(1, regionName);
-            preparedStatement.setString(2, providerId.toString());
+//            preparedStatement.setString(2, providerId.toString());
             resultSet = preparedStatement.executeQuery();
             resultSet.next();
             return resultSet.getInt(1);
-        } catch (SQLException e){
+        } catch (SQLException e) {
             throw new DatabaseEntryNotFoundException("No regionID could be determined from regionName '" + regionName + "'");
         }
     }
 
     public static class ServiceStringException extends RuntimeException {
-        public ServiceStringException(String message){
+        public ServiceStringException(String message) {
             super(message);
         }
     }
 
-    public static class DatabaseEntryNotFoundException extends RuntimeException{
-        public DatabaseEntryNotFoundException (String message){
+    public static class DatabaseEntryNotFoundException extends RuntimeException {
+        public DatabaseEntryNotFoundException(String message) {
             super(message);
         }
     }
