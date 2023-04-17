@@ -27,6 +27,8 @@ import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -97,7 +99,13 @@ public class Utils {
             case AWS:
                 return resourceLink.split("lambda:")[1].split(":")[0];
             case GOOGLE:
-                return resourceLink.split(PROTOCOL)[1].split("\\.cloudfunctions\\.net")[0];
+                Pattern pattern = Pattern.compile("https://([a-z]+-[a-z]+\\d*)");
+                Matcher matcher = pattern.matcher(resourceLink);
+                if (matcher.find()) {
+                    return matcher.group(1);
+                } else {
+                    throw new RegionDetectionException("Error detecting region from resource link.");
+                }
             case AZURE:
                 throw new RegionDetectionException("Azure currently not supported.");
             case ALIBABA:
