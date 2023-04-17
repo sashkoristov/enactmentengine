@@ -12,6 +12,11 @@ public final class SimulationParameters {
     public static boolean IGNORE_FT;
 
     /**
+     * Flag that determines whether no normal distribution should be applied for the RTT of functions.
+     */
+    public static boolean NO_DISTRIBUTION = false;
+
+    /**
      * Variable that sums up the whole cost of the workflow.
      */
     public static double workflowCost = 0;

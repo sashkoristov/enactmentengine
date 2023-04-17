@@ -91,11 +91,11 @@ public class SimulationModel {
      * @return the execution time with the applied distribution
      */
     public static long applyDistribution(long executionTime, boolean success) {
-        if (success) {
+        if (success && !SimulationParameters.NO_DISTRIBUTION) {
             // calculate the time as usual
             Random r = new Random();
             executionTime = (long) (r.nextGaussian() * (executionTime * 0.01) + executionTime);
-        } else {
+        } else if (!success){
             // get a random double between 0 and 1
             Random random = new Random();
             executionTime *= random.nextDouble();

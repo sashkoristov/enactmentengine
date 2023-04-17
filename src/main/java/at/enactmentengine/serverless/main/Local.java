@@ -66,6 +66,11 @@ public class Local {
                 if (SimulationParameters.IGNORE_FT) {
                     length -= 1;
                 }
+
+                SimulationParameters.NO_DISTRIBUTION = parameterList.contains("--no-distribution");
+                if (SimulationParameters.NO_DISTRIBUTION) {
+                    length -= 1;
+                }
             }
             boolean export = parameterList.contains("--export");
             if (export) {
