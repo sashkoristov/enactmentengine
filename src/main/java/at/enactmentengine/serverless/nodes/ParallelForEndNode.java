@@ -1,6 +1,7 @@
 package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.afcl.functions.objects.DataOuts;
 import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Event;
@@ -103,7 +104,7 @@ public class ParallelForEndNode extends Node {
             }
         }
 
-        logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, outputValues);
+        logger.info("Executing {} ParallelForEndNodeOld with output: {}", name, LoggerUtil.clearCredentials(outputValues));
         if (simulate) {
             SimulationParameters.reset();
             MongoDBAccess.saveLog(Event.PARALLEL_FOR_END, null, null, null, null, null,

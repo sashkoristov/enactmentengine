@@ -1,5 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
+import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.afcl.functions.objects.DataOuts;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import com.google.gson.JsonArray;
@@ -92,7 +93,7 @@ public class ParallelEndNode extends Node {
                 /* Check for a collection result */
                 outputValues.putAll(checkCollection(data, key));
             }
-            logger.info("Executing {} ParallelEndNodeOld with output: {}", name, outputValues);
+            logger.info("Executing {} ParallelEndNodeOld with output: {}", name,  LoggerUtil.clearCredentials(outputValues));
 
         }
 
