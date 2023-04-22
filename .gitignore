@@ -15,3 +15,6 @@ src/main/java/META-INF/
 build/
 bin/
 docker/
+workflows*/
+output*
+run*.sh
