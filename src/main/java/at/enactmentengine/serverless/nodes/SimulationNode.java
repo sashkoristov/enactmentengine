@@ -715,9 +715,9 @@ public class SimulationNode extends Node {
             jFaaS.utils.PairResult<String, Long> simResult = null;
 
             if(region == null) {
-                simResult  = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getInt("regionID"), serviceStrings);
+                simResult = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getInt("regionID"), serviceStrings);
             }else{
-                simResult  = ServiceSimulationModel.calculateTotalRttForUsedServices(region, serviceStrings);
+                simResult = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getInt("regionID"), region, serviceStrings);
             }
 
             result.setRtt(result.getRtt() + simResult.getRTT());

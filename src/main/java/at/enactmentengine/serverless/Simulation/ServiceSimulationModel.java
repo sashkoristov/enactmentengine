@@ -26,6 +26,8 @@ public class ServiceSimulationModel {
     private Integer typeId;
     private Integer providerId;
     private Integer lambdaRegionId;
+
+    private Integer originallambdaRegionId;
     private Integer serviceRegionId;
 
     private ServiceSimulationModel(String serviceString) {
@@ -48,11 +50,13 @@ public class ServiceSimulationModel {
     public ServiceSimulationModel(Integer lambdaRegionId, String serviceString) {
         this(serviceString);
         this.lambdaRegionId = lambdaRegionId;
+        this.originallambdaRegionId = lambdaRegionId;
     }
 
-    public ServiceSimulationModel(String lambdaRegionName, String serviceString) {
+    public ServiceSimulationModel(Integer originalLambdaRegionId, String lambdaRegionName, String serviceString) {
         this(serviceString);
         lambdaRegionId = getRegionId(lambdaRegionName);
+        this.originallambdaRegionId = originalLambdaRegionId;
     }
 
     /**
@@ -90,15 +94,14 @@ public class ServiceSimulationModel {
     /**
      * Computes the total round trip time for all used services for the lambda region with the given name
      */
-    public static PairResult<String, Long> calculateTotalRttForUsedServices(String lambdaRegionName, List<String> usedServiceStrings) {
+    public static PairResult<String, Long> calculateTotalRttForUsedServices(Integer lambdaRegionId, String lambdaRegionName, List<String> usedServiceStrings) {
         long rtt = 0;
         int index = 1;
 
         Map<String, Double> serviceOutput = new HashMap<>();
 
         for (String serviceString : usedServiceStrings) {
-            ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionName, serviceString);
-
+            ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionId, lambdaRegionName, serviceString);
             rtt += serviceSimulationModel.calculateRTT(index, serviceOutput);
             index++;
         }
@@ -115,11 +118,17 @@ public class ServiceSimulationModel {
         double roundTripTime;
         // check if service is of type file transfer
         if (type.equals("FILE_DL") || type.equals("FILE_UP")) {
-            Pair<Double, Double> dataTransferParams = getDataTransferParamsFromDB(type);
+            Pair<Double, Double> dataTransferParams = getDataTransferParamsFromDB(type, false);
             Double bandwidth = dataTransferParams.getLeft();        // in Mbps
             Double latency = dataTransferParams.getRight();         // in ms
 
             roundTripTime = expectedWork * latency + ((expectedData / bandwidth) * 1000);
+        } else if (type.equals("DT_REMOVE") || type.equals("UT_REMOVE")) {
+            Pair<Double, Double> dataTransferParams = getDataTransferParamsFromDB(type, true);
+            Double bandwidth = dataTransferParams.getLeft();        // in Mbps
+            Double latency = dataTransferParams.getRight();         // in ms
+
+            roundTripTime = -(expectedWork * latency + ((expectedData / bandwidth) * 1000));
         } else {
             // 1. get missing information from DB
             // 1.1 get Networking information
@@ -149,26 +158,27 @@ public class ServiceSimulationModel {
     /**
      * Fetches data transfer parameters from the DB.
      *
-     * @param type the type of the data transfer, either "FILE_DL" or "FILE_UP"
+     * @param type the type of the data transfer, either "FILE_DL" or "FILE_UP" TODO
+     * @param useOriginalLambdaRegion if the original lambda region should be used or not
      *
      * @return pair of bandwidth [Mb/s] and latency [ms]
      */
-    private Pair<Double, Double> getDataTransferParamsFromDB(String type) {
+    private Pair<Double, Double> getDataTransferParamsFromDB(String type, boolean useOriginalLambdaRegion) {
         Connection connection = MariaDBAccess.getConnection();
         String query = "SELECT bandwidth, latency AS latency FROM data_transfer WHERE type = ? AND functionRegionID = ? AND storageRegionID = ?";
         ResultSet resultSet = null;
         String dataTransferType = null;
 
-        if (type.equals("FILE_DL")) {
+        if (type.equals("FILE_DL") || type.equals("DT_REMOVE")) {
             dataTransferType = "download";
-        } else if (type.equals("FILE_UP")) {
+        } else if (type.equals("FILE_UP") || type.equals("UT_REMOVE")) {
             dataTransferType = "upload";
         }
 
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setString(1, dataTransferType);
-            preparedStatement.setInt(2, lambdaRegionId);
+            preparedStatement.setInt(2, useOriginalLambdaRegion && originallambdaRegionId != -1 ? originallambdaRegionId : lambdaRegionId);
             preparedStatement.setInt(3, serviceRegionId);
             resultSet = preparedStatement.executeQuery();
             resultSet.next();
