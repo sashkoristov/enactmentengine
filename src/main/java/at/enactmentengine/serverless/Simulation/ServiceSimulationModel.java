@@ -2,6 +2,8 @@ package at.enactmentengine.serverless.Simulation;
 
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.databases.MariaDBAccess;
+import com.google.gson.Gson;
+import jFaaS.utils.PairResult;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
@@ -11,13 +13,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class ServiceSimulationModel {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceSimulationModel.class);
+
+    private String serviceString;
     private final String type;
     private final double expectedWork;
     private final double expectedData;
@@ -27,6 +29,7 @@ public class ServiceSimulationModel {
     private Integer serviceRegionId;
 
     private ServiceSimulationModel(String serviceString) {
+        this.serviceString = serviceString;
         try {
             List<String> properties = Arrays.asList(serviceString.split(":"));
             type = properties.get(0);
@@ -68,31 +71,39 @@ public class ServiceSimulationModel {
     /**
      * Computes the total round trip time for all used services for the lambda region with the given id
      */
-    public static long calculateTotalRttForUsedServices(Integer lambdaRegionId, List<String> usedServiceStrings) {
+    public static PairResult<String, Long> calculateTotalRttForUsedServices(Integer lambdaRegionId, List<String> usedServiceStrings) {
         long rtt = 0;
+        int index = 1;
+
+        Map<String, Double> serviceOutput = new HashMap<>();
 
         for (String serviceString : usedServiceStrings) {
             ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionId, serviceString);
 
-            rtt += serviceSimulationModel.calculateRTT();
+            rtt += serviceSimulationModel.calculateRTT(index, serviceOutput);
+            index++;
         }
 
-        return rtt;
+        return new PairResult<>(new Gson().toJson(serviceOutput), rtt);
     }
 
     /**
      * Computes the total round trip time for all used services for the lambda region with the given name
      */
-    public static long calculateTotalRttForUsedServices(String lambdaRegionName, List<String> usedServiceStrings) {
+    public static PairResult<String, Long> calculateTotalRttForUsedServices(String lambdaRegionName, List<String> usedServiceStrings) {
         long rtt = 0;
+        int index = 1;
+
+        Map<String, Double> serviceOutput = new HashMap<>();
 
         for (String serviceString : usedServiceStrings) {
             ServiceSimulationModel serviceSimulationModel = new ServiceSimulationModel(lambdaRegionName, serviceString);
 
-            rtt += serviceSimulationModel.calculateRTT();
+            rtt += serviceSimulationModel.calculateRTT(index, serviceOutput);
+            index++;
         }
 
-        return rtt;
+        return new PairResult<>(new Gson().toJson(serviceOutput), rtt);
     }
 
     /**
@@ -100,37 +111,37 @@ public class ServiceSimulationModel {
      *
      * @return simulated round trip time in seconds
      */
-    public long calculateRTT() {
+    public long calculateRTT(int index, Map<String, Double> output) {
+        double roundTripTime;
         // check if service is of type file transfer
         if (type.equals("FILE_DL") || type.equals("FILE_UP")) {
             Pair<Double, Double> dataTransferParams = getDataTransferParamsFromDB(type);
             Double bandwidth = dataTransferParams.getLeft();        // in Mbps
             Double latency = dataTransferParams.getRight();         // in ms
 
-            double roundTripTime = expectedWork * latency + ((expectedData / bandwidth) * 1000);
+            roundTripTime = expectedWork * latency + ((expectedData / bandwidth) * 1000);
+        } else {
+            // 1. get missing information from DB
+            // 1.1 get Networking information
+            Triple<Double, Double, Double> networkParams = getNetworkParamsFromDB();
+            Double bandwidth = networkParams.getLeft();
+            Double lambdaLatency = networkParams.getMiddle();
+            Double serviceLatency = networkParams.getRight();
 
-            logger.info("Simulated service runtime of " + type + ": " + ((double) Math.round(roundTripTime * 100)) / 100 + "ms");
+            // 1.2 get Service Information
+            Pair<Double, Double> serviceParams = getServiceParamsFromDB();
+            Double velocity = serviceParams.getLeft();
+            Double startUpTime = serviceParams.getRight();
 
-            return (long) roundTripTime;
+            // 2. calculate RTT according to model
+            roundTripTime = (expectedWork / velocity) + lambdaLatency +
+                    startUpTime + (expectedData / bandwidth) + serviceLatency;
         }
 
-        // 1. get missing information from DB
-        // 1.1 get Networking information
-        Triple<Double, Double, Double> networkParams = getNetworkParamsFromDB();
-        Double bandwidth = networkParams.getLeft();
-        Double lambdaLatency = networkParams.getMiddle();
-        Double serviceLatency = networkParams.getRight();
+        Double serviceTime = ((double) Math.round(roundTripTime * 100)) / 100;
+        output.put("service_" + index + "_" + serviceString, serviceTime);
 
-        // 1.2 get Service Information
-        Pair<Double, Double> serviceParams = getServiceParamsFromDB();
-        Double velocity = serviceParams.getLeft();
-        Double startUpTime = serviceParams.getRight();
-
-        // 2. calculate RTT according to model
-        double roundTripTime = (expectedWork / velocity) + lambdaLatency +
-                startUpTime + (expectedData / bandwidth) + serviceLatency;
-
-        logger.info("Simulated service runtime of " + type + ": " + ((double) Math.round(roundTripTime * 100)) / 100 + "ms");
+        logger.info("Simulated service runtime of " + serviceString + ": " + serviceTime + "ms");
 
         return (long) roundTripTime;
     }

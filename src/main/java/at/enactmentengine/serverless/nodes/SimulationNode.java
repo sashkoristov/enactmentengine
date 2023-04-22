@@ -94,6 +94,11 @@ public class SimulationNode extends Node {
     private List<String> serviceStrings;
 
     /**
+     * String containing the times of the simulated services.
+     */
+    private String serviceOutput;
+
+    /**
      * Constructor for a simulation node.
      *
      * @param name        of the base function.
@@ -238,6 +243,14 @@ public class SimulationNode extends Node {
         // set the result of the simulation as the result of the SimulationNode
         result = simResult.getOutput();
 
+        if (this.input != null) {
+            for (DataIns in : this.input) {
+                if (in.getPassing() != null && in.getPassing()) {
+                    this.output.add(new DataOutsAtomic(in.getName(), in.getType()));
+                }
+            }
+        }
+
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(result);
@@ -299,7 +312,7 @@ public class SimulationNode extends Node {
                 event = Event.FUNCTION_FAILED;
                 logger.info("Simulating function {} failed{}.", resourceLink, simInfo);
             }
-            MongoDBAccess.saveLog(event, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), null,
+            MongoDBAccess.saveLog(event, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), this.serviceOutput,
                     result.getRTT(), result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
         }
 
@@ -699,15 +712,16 @@ public class SimulationNode extends Node {
 
         // simulate external services
         if(!serviceStrings.isEmpty()) {
-            long totalServiceRtt;
+            jFaaS.utils.PairResult<String, Long> simResult = null;
 
             if(region == null) {
-                totalServiceRtt = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getInt("regionID"), serviceStrings);
+                simResult  = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getInt("regionID"), serviceStrings);
             }else{
-                totalServiceRtt = ServiceSimulationModel.calculateTotalRttForUsedServices(region, serviceStrings);
+                simResult  = ServiceSimulationModel.calculateTotalRttForUsedServices(region, serviceStrings);
             }
 
-            result.setRtt(result.getRtt() + totalServiceRtt);
+            result.setRtt(result.getRtt() + simResult.getRTT());
+            this.serviceOutput = simResult.getResult();
         }
 
         return result;
@@ -749,7 +763,7 @@ public class SimulationNode extends Node {
      */
     private Map<String, Object> getFunctionOutput() {
         HashMap<String, Object> outputs = new HashMap<>();
-        for (DataOutsAtomic out : output) {
+        for (DataOutsAtomic out : new ArrayList<>(output)) {
             if (out.getProperties() != null && !out.getProperties().isEmpty()) {
                 for (PropertyConstraint constraint : out.getProperties()) {
                     if (constraint.getName().equals("simValue")) {
@@ -759,6 +773,14 @@ public class SimulationNode extends Node {
             } else {
                 // if no properties are set, fill with default values
                 parseOutputValues(out, null, outputs, true);
+            }
+        }
+
+        if (this.input != null) {
+            for (DataIns in : new ArrayList<>(this.input)) {
+                if (in.getPassing() != null && in.getPassing()) {
+                    parseOutputValues(new DataOutsAtomic(in.getName(), in.getType()), null, outputs, true);
+                }
             }
         }
 

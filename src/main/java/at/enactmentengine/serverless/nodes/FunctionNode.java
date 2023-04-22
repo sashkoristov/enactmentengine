@@ -353,7 +353,7 @@ public class FunctionNode extends Node {
 
                 if(!usedServicesForFunction.isEmpty() && deployment != null) {
                     String lambdaRegion = SimulationNode.extractValuesFromDeployment(deployment).get(1);
-                    totalRttForServices = ServiceSimulationModel.calculateTotalRttForUsedServices(lambdaRegion, usedServicesForFunction);
+                    totalRttForServices = ServiceSimulationModel.calculateTotalRttForUsedServices(lambdaRegion, usedServicesForFunction).getRTT();
                 }
             } else {
                 event = Event.FUNCTION_FAILED;
