@@ -1,8 +1,8 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.Simulation.ServiceSimulationModel;
-import at.enactmentengine.serverless.Simulation.SimulationModel;
-import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.ServiceSimulationModel;
+import at.enactmentengine.serverless.simulation.SimulationModel;
+import at.enactmentengine.serverless.simulation.SimulationParameters;
 import at.enactmentengine.serverless.exception.*;
 import at.enactmentengine.serverless.object.PairResult;
 import at.enactmentengine.serverless.object.QuadrupleResult;

@@ -1,4 +1,4 @@
-package at.enactmentengine.serverless.Simulation;
+package at.enactmentengine.serverless.simulation;
 
 import at.enactmentengine.serverless.exception.MissingComputationalWorkException;
 import at.enactmentengine.serverless.exception.MissingSimulationParametersException;

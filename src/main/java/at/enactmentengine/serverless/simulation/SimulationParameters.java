@@ -1,4 +1,4 @@
-package at.enactmentengine.serverless.Simulation;
+package at.enactmentengine.serverless.simulation;
 
 import java.util.*;
 

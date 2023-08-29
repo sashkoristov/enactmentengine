@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.SimulationParameters;
 import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.cronjob.ManualUpdate;
 import at.uibk.dps.databases.MongoDBAccess;

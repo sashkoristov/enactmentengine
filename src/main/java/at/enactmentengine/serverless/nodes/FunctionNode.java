@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.Simulation.ServiceSimulationModel;
+import at.enactmentengine.serverless.simulation.ServiceSimulationModel;
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.*;
@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.*;
 
 /**

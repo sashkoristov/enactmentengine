@@ -1,4 +1,4 @@
-package at.enactmentengine.serverless.Simulation;
+package at.enactmentengine.serverless.simulation;
 
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.databases.MariaDBAccess;
@@ -158,7 +158,7 @@ public class ServiceSimulationModel {
     /**
      * Fetches data transfer parameters from the DB.
      *
-     * @param type the type of the data transfer, either "FILE_DL" or "FILE_UP" TODO
+     * @param type the type of the data transfer, either "FILE_DL" or "FILE_UP"
      * @param useOriginalLambdaRegion if the original lambda region should be used or not
      *
      * @return pair of bandwidth [Mb/s] and latency [ms]
