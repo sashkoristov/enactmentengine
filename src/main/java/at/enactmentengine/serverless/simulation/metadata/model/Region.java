@@ -29,7 +29,7 @@ public class Region implements Entity<Integer>, Serializable {
 
     @Column(name = "providerID", clazz = Long.class)
     @JsonAlias({"providerID", "detailedProviderId"})
-    private Long detailedProviderId;
+    private Long providerID;
 
     @Column(name = "location", clazz = String.class)
     private String location;
@@ -88,12 +88,12 @@ public class Region implements Entity<Integer>, Serializable {
         this.availability = availability;
     }
 
-    public Long getDetailedProviderId() {
-        return detailedProviderId;
+    public Long getProviderId() {
+        return providerID;
     }
 
-    public void setDetailedProviderId(Long detailedProviderId) {
-        this.detailedProviderId = detailedProviderId;
+    public void setProviderId(Long providerID) {
+        this.providerID = providerID;
     }
 
     public String getLocation() {

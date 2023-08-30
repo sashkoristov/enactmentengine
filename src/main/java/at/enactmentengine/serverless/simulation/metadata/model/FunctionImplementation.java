@@ -21,9 +21,9 @@ public class FunctionImplementation extends AdditionalServiceType {
     @Column(name = "algorithm", clazz = String.class)
     private String algorithm;
 
-    @Column(name = "provider", clazz = Long.class)
+    @Column(name = "provider", clazz = Integer.class)
     @JsonAlias({"provider", "detailedProviderId"})
-    private Long detailedProviderId;
+    private Integer provider;
 
     @Column(name = "implementationFilePath", clazz = String.class)
     private String implementationFilePath;
@@ -72,12 +72,12 @@ public class FunctionImplementation extends AdditionalServiceType {
         this.algorithm = algorithm;
     }
 
-    public Long getDetailedProviderId() {
-        return detailedProviderId;
+    public Integer getProvider() {
+        return provider;
     }
 
-    public void setDetailedProviderId(Long detailedProviderId) {
-        this.detailedProviderId = detailedProviderId;
+    public void setProvider(Integer provider) {
+        this.provider = provider;
     }
 
     public String getImplementationFilePath() {
