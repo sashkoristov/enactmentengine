@@ -30,6 +30,7 @@ public final class LoggerUtil {
             printMap.remove("gcp_private_key");
             printMap.remove("gcp_project_id");
             printMap.remove("gcp_client_email");
+            printMap.remove("credentials");
         }
 
         return printMap;

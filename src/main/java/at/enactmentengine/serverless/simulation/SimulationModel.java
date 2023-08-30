@@ -5,11 +5,16 @@ import at.enactmentengine.serverless.exception.MissingSimulationParametersExcept
 import at.enactmentengine.serverless.exception.RegionDetectionException;
 import at.enactmentengine.serverless.object.PairResult;
 import at.enactmentengine.serverless.object.Utils;
+import at.enactmentengine.serverless.simulation.metadata.MetadataStore;
+import at.enactmentengine.serverless.simulation.metadata.model.Cpu;
+import at.enactmentengine.serverless.simulation.metadata.model.FunctionDeployment;
+import at.enactmentengine.serverless.simulation.metadata.model.FunctionImplementation;
+import at.enactmentengine.serverless.simulation.metadata.model.Region;
 import at.uibk.dps.databases.MariaDBAccess;
 import at.uibk.dps.util.Provider;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -22,7 +27,7 @@ public class SimulationModel {
     /**
      * The entry for the functionDeployment in the Metadata-DB.
      */
-    private ResultSet functionDeployment;
+    private final FunctionDeployment functionDeployment;
 
     /**
      * The average RTT from the functionDeployment.
@@ -70,15 +75,15 @@ public class SimulationModel {
      *
      * @throws SQLException if an error occurs when reading fields from the database entry
      */
-    public SimulationModel(ResultSet functionDeployment, Provider provider, String region, int memorySize, int loopCounter) throws SQLException {
+    public SimulationModel(FunctionDeployment functionDeployment, Provider provider, String region, int memorySize, int loopCounter) throws SQLException {
         this.functionDeployment = functionDeployment;
         this.provider = provider;
         this.region = region;
         this.memorySize = memorySize;
         this.loopCounter = loopCounter;
-        avgRTT = (long) functionDeployment.getDouble("avgRTT");
-        avgLoopCounter = functionDeployment.getInt("avgLoopCounter");
-        fdMemorySize = functionDeployment.getInt("memorySize");
+        avgRTT = functionDeployment.getAvgRTT().longValue();
+        avgLoopCounter = functionDeployment.getAvgLoopCounter();
+        fdMemorySize = functionDeployment.getMemorySize();
     }
 
     /**
@@ -114,24 +119,22 @@ public class SimulationModel {
      */
     private long getRawExecutionTime() throws SQLException, MissingSimulationParametersException, RegionDetectionException {
         // if the field 'avgRuntime' has a value set, simply use it
-        double avgRuntime = functionDeployment.getDouble("avgRuntime");
+        double avgRuntime = functionDeployment.getAvgRuntime();
         if (avgRuntime > 1) {
             return (long) avgRuntime;
         }
 
-        String functionId = functionDeployment.getString("KMS_Arn");
+        String functionId = functionDeployment.getKmsArn();
         Provider mdProvider = Utils.detectProvider(functionId);
         String mdRegion = Utils.detectRegion(functionId);
 
-        ResultSet mdProviderEntry = MariaDBAccess.getProviderEntry(mdProvider);
-        ResultSet mdRegionEntry = MariaDBAccess.getRegionEntry(mdRegion, mdProvider);
-        mdProviderEntry.next();
-        mdRegionEntry.next();
+        at.enactmentengine.serverless.simulation.metadata.model.Provider mdProviderEntry = MetadataStore.getProviderEntry(mdProvider);
+        Region mdRegionEntry = MetadataStore.getRegionEntry(mdRegion, mdProvider);
 
-        int faasOverhead = mdProviderEntry.getInt("faasSystemOverheadms");
-        int cryptoOverhead = mdProviderEntry.getInt("cryptoOverheadms");
-        int networkOverhead = mdRegionEntry.getInt("networkOverheadms");
-        int concurrencyOverhead = mdProviderEntry.getInt("concurrencyOverheadms");
+        int faasOverhead = mdProviderEntry.getFaasSystemOverheadms();
+        int cryptoOverhead = mdProviderEntry.getCryptoOverheadms();
+        int networkOverhead = mdRegionEntry.getNetworkOverheadms().intValue();
+        int concurrencyOverhead = mdProviderEntry.getConcurrencyOverheadMs();
         int handshake = 0;
         int authenticationOverhead = 0;
 
@@ -177,19 +180,13 @@ public class SimulationModel {
     private long addOverheads(long executionTime) throws SQLException, MissingSimulationParametersException {
         // O = xcs · CSO + NO + xa · AO + F O + CO
 
-        ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
-        ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
-        if (!providerEntry.next()) {
-            throw new MissingSimulationParametersException("No entry for provider '" + provider.toString() + "' found.");
-        }
-        if (!regionEntry.next()) {
-            throw new MissingSimulationParametersException("No entry for region '" + region + "' found.");
-        }
+        at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.getProviderEntry(provider);
+        Region regionEntry = MetadataStore.getRegionEntry(region, provider);
 
-        int faasOverhead = providerEntry.getInt("faasSystemOverheadms");
-        int cryptoOverhead = providerEntry.getInt("cryptoOverheadms");
-        int networkOverhead = regionEntry.getInt("networkOverheadms");
-        int concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
+        int faasOverhead = providerEntry.getFaasSystemOverheadms();
+        int cryptoOverhead = providerEntry.getCryptoOverheadms();
+        int networkOverhead = regionEntry.getNetworkOverheadms().intValue();
+        int concurrencyOverhead = providerEntry.getConcurrencyOverheadMs();
 
         if (faasOverhead != 0 && cryptoOverhead != 0 && networkOverhead != 0) {
             long rtt = executionTime + networkOverhead + faasOverhead;
@@ -229,18 +226,17 @@ public class SimulationModel {
      *                                           filled
      */
     private long estimateExecutionTime() throws SQLException, MissingComputationalWorkException {
-        int implementationId = functionDeployment.getInt("functionImplementation_id");
-        ResultSet implementation = MariaDBAccess.getImplementationById(implementationId);
-        implementation.next();
-        double instructions = implementation.getDouble("computationWork");
+        long implementationId = functionDeployment.getFunctionImplementationId();
+        FunctionImplementation implementation = MetadataStore.getImplementationById(implementationId);
+        double instructions = implementation.getComputationWork();
         if (instructions == 0) {
             throw new MissingComputationalWorkException("No computational work is given for the functionImplementation " +
                     "with the id " + implementationId + ". Therefore simulating different memory sizes is not possible.");
         }
-        ResultSet sameMemoryDeployment = MariaDBAccess.getDeploymentsWithImplementationIdAndMemorySize(implementationId, memorySize);
+        List<FunctionDeployment> sameMemoryDeployment = MetadataStore.getDeploymentsWithImplementationIdAndMemorySize(implementationId, memorySize);
         double speedup = 0;
-        if (sameMemoryDeployment.next()) {
-            speedup = sameMemoryDeployment.getDouble("speedup");
+        if (sameMemoryDeployment != null && !sameMemoryDeployment.isEmpty()) {
+            speedup = sameMemoryDeployment.get(0).getSpeedup();
         }
         /* The speedup is always measured against the deployment with 128mb ram. If it is NULL, it is assumed
          there is linear speedup relative to 128mb. (e.g. 256mb -> 2, 512mb -> 4, 1024mb -> 8, etc */
@@ -251,32 +247,28 @@ public class SimulationModel {
         Random random = new Random();
         int randomValue = (int) (random.nextDouble() * 100);
         int parallel = loopCounter == -1 ? 0 : 1;
-        ResultSet cpu = null;
+        Cpu cpu = null;
 
         switch (provider) {
             case AWS:
-                cpu = MariaDBAccess.getCpuByProvider(provider, parallel, randomValue);
-                cpu.next();
+                cpu = MetadataStore.getCpuByProvider(provider, parallel, randomValue);
                 break;
             case GOOGLE:
-                ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
-                providerEntry.next();
-                int maxConcurrency = providerEntry.getInt("maxConcurrency");
+                at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.getProviderEntry(provider);
+                int maxConcurrency = providerEntry.getMaxConcurrency();
                 // if the loopCounter is smaller than the concurrency limit, use the sequential CPU
                 if (loopCounter < maxConcurrency) {
                     parallel = 0;
                 }
-                cpu = MariaDBAccess.getCpuByProvider(provider, parallel, randomValue);
-                cpu.next();
+                cpu = MetadataStore.getCpuByProvider(provider, parallel, randomValue);
                 break;
             case IBM:
-                cpu = MariaDBAccess.getCpuByProviderAndRegion(provider, region, parallel, randomValue);
-                cpu.next();
+                cpu = MetadataStore.getCpuByProviderAndRegion(provider, region, parallel, randomValue);
                 break;
             default:
                 break;
         }
-        double mips = cpu.getDouble("MIPS");
+        double mips = cpu.getMips();
         double runtimeInSeconds = instructions / mips / speedup;
         return (long) (runtimeInSeconds * 1000);
     }
