@@ -34,10 +34,10 @@ public class ServiceSimulationModel {
             String serviceRegionName = properties.get(1);
             expectedWork = Double.parseDouble(properties.get(2));
             expectedData = Double.parseDouble(properties.get(3));
-            Pair<Integer, Integer> serviceTypeInfo = MetadataStore.getServiceTypeInformation(type);
+            Pair<Integer, Integer> serviceTypeInfo = MetadataStore.get().getServiceTypeInformation(type);
             typeId = serviceTypeInfo.getLeft();
             providerId = serviceTypeInfo.getRight();
-            serviceRegionId = MetadataStore.getRegionId(serviceRegionName);
+            serviceRegionId = MetadataStore.get().getRegionId(serviceRegionName);
         } catch (RuntimeException e) {
             throw new ServiceStringException("Service deployment string could not be parsed.");
         }
@@ -51,7 +51,7 @@ public class ServiceSimulationModel {
 
     public ServiceSimulationModel(Integer originalLambdaRegionId, String lambdaRegionName, String serviceString) {
         this(serviceString);
-        lambdaRegionId = MetadataStore.getRegionId(lambdaRegionName);
+        lambdaRegionId = MetadataStore.get().getRegionId(lambdaRegionName);
         this.originallambdaRegionId = originalLambdaRegionId;
     }
 
@@ -114,14 +114,14 @@ public class ServiceSimulationModel {
         double roundTripTime;
         // check if service is of type file transfer
         if (type.equals("FILE_DL") || type.equals("FILE_UP")) {
-            Pair<Double, Double> dataTransferParams = MetadataStore.getDataTransferParamsFromDB(type, lambdaRegionId,
+            Pair<Double, Double> dataTransferParams = MetadataStore.get().getDataTransferParamsFromDB(type, lambdaRegionId,
                     serviceRegionId, originallambdaRegionId, false);
             Double bandwidth = dataTransferParams.getLeft();        // in Mbps
             Double latency = dataTransferParams.getRight();         // in ms
 
             roundTripTime = expectedWork * latency + ((expectedData / bandwidth) * 1000);
         } else if (type.equals("DT_REMOVE") || type.equals("UT_REMOVE")) {
-            Pair<Double, Double> dataTransferParams = MetadataStore.getDataTransferParamsFromDB(type, lambdaRegionId,
+            Pair<Double, Double> dataTransferParams = MetadataStore.get().getDataTransferParamsFromDB(type, lambdaRegionId,
                     serviceRegionId, originallambdaRegionId, true);
             Double bandwidth = dataTransferParams.getLeft();        // in Mbps
             Double latency = dataTransferParams.getRight();         // in ms
@@ -130,13 +130,13 @@ public class ServiceSimulationModel {
         } else {
             // 1. get missing information from DB
             // 1.1 get Networking information
-            Triple<Double, Double, Double> networkParams = MetadataStore.getNetworkParamsFromDB(lambdaRegionId, serviceRegionId);
+            Triple<Double, Double, Double> networkParams = MetadataStore.get().getNetworkParamsFromDB(lambdaRegionId, serviceRegionId);
             Double bandwidth = networkParams.getLeft();
             Double lambdaLatency = networkParams.getMiddle();
             Double serviceLatency = networkParams.getRight();
 
             // 1.2 get Service Information
-            Pair<Double, Double> serviceParams = MetadataStore.getServiceParamsFromDB(typeId, serviceRegionId);
+            Pair<Double, Double> serviceParams = MetadataStore.get().getServiceParamsFromDB(typeId, serviceRegionId);
             Double velocity = serviceParams.getLeft();
             Double startUpTime = serviceParams.getRight();
 

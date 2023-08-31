@@ -128,8 +128,8 @@ public class SimulationModel {
         Provider mdProvider = Utils.detectProvider(functionId);
         String mdRegion = Utils.detectRegion(functionId);
 
-        at.enactmentengine.serverless.simulation.metadata.model.Provider mdProviderEntry = MetadataStore.getProviderEntry(mdProvider);
-        Region mdRegionEntry = MetadataStore.getRegionEntry(mdRegion, mdProvider);
+        at.enactmentengine.serverless.simulation.metadata.model.Provider mdProviderEntry = MetadataStore.get().getProviderEntry(mdProvider);
+        Region mdRegionEntry = MetadataStore.get().getRegionEntry(mdRegion, mdProvider);
 
         int faasOverhead = mdProviderEntry.getFaasSystemOverheadms();
         int cryptoOverhead = mdProviderEntry.getCryptoOverheadms();
@@ -180,8 +180,8 @@ public class SimulationModel {
     private long addOverheads(long executionTime) throws SQLException, MissingSimulationParametersException {
         // O = xcs · CSO + NO + xa · AO + F O + CO
 
-        at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.getProviderEntry(provider);
-        Region regionEntry = MetadataStore.getRegionEntry(region, provider);
+        at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.get().getProviderEntry(provider);
+        Region regionEntry = MetadataStore.get().getRegionEntry(region, provider);
 
         int faasOverhead = providerEntry.getFaasSystemOverheadms();
         int cryptoOverhead = providerEntry.getCryptoOverheadms();
@@ -227,13 +227,13 @@ public class SimulationModel {
      */
     private long estimateExecutionTime() throws SQLException, MissingComputationalWorkException {
         long implementationId = functionDeployment.getFunctionImplementationId();
-        FunctionImplementation implementation = MetadataStore.getImplementationById(implementationId);
+        FunctionImplementation implementation = MetadataStore.get().getImplementationById(implementationId);
         double instructions = implementation.getComputationWork();
         if (instructions == 0) {
             throw new MissingComputationalWorkException("No computational work is given for the functionImplementation " +
                     "with the id " + implementationId + ". Therefore simulating different memory sizes is not possible.");
         }
-        List<FunctionDeployment> sameMemoryDeployment = MetadataStore.getDeploymentsWithImplementationIdAndMemorySize(implementationId, memorySize);
+        List<FunctionDeployment> sameMemoryDeployment = MetadataStore.get().getDeploymentsWithImplementationIdAndMemorySize(implementationId, memorySize);
         double speedup = 0;
         if (sameMemoryDeployment != null && !sameMemoryDeployment.isEmpty()) {
             speedup = sameMemoryDeployment.get(0).getSpeedup();
@@ -251,19 +251,19 @@ public class SimulationModel {
 
         switch (provider) {
             case AWS:
-                cpu = MetadataStore.getCpuByProvider(provider, parallel, randomValue);
+                cpu = MetadataStore.get().getCpuByProvider(provider, parallel, randomValue);
                 break;
             case GOOGLE:
-                at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.getProviderEntry(provider);
+                at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.get().getProviderEntry(provider);
                 int maxConcurrency = providerEntry.getMaxConcurrency();
                 // if the loopCounter is smaller than the concurrency limit, use the sequential CPU
                 if (loopCounter < maxConcurrency) {
                     parallel = 0;
                 }
-                cpu = MetadataStore.getCpuByProvider(provider, parallel, randomValue);
+                cpu = MetadataStore.get().getCpuByProvider(provider, parallel, randomValue);
                 break;
             case IBM:
-                cpu = MetadataStore.getCpuByProviderAndRegion(provider, region, parallel, randomValue);
+                cpu = MetadataStore.get().getCpuByProviderAndRegion(provider, region, parallel, randomValue);
                 break;
             default:
                 break;

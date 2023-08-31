@@ -1,6 +1,7 @@
 package at.enactmentengine.serverless.main;
 
 import at.enactmentengine.serverless.simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.metadata.MetadataStore;
 import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.cronjob.ManualUpdate;
 import at.uibk.dps.databases.MongoDBAccess;
@@ -69,6 +70,11 @@ public class Local {
 
                 SimulationParameters.NO_DISTRIBUTION = parameterList.contains("--no-distribution");
                 if (SimulationParameters.NO_DISTRIBUTION) {
+                    length -= 1;
+                }
+
+                MetadataStore.FORCE_DATABASE_PROVIDER = parameterList.contains("--db");
+                if (MetadataStore.FORCE_DATABASE_PROVIDER) {
                     length -= 1;
                 }
             }

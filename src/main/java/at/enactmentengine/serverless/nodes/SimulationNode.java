@@ -606,20 +606,6 @@ public class SimulationNode extends Node {
     }
 
     /**
-     * Checks if there are functionDeployments stored with the same functionImplementation as the given
-     * functionDeployment.
-     *
-     * @param functionDeployment to get the parameters
-     *
-     * @return entries with the same functionImplementationId
-     *
-     * @throws SQLException if an error occurs when reading fields from a database entry
-     */
-    private List<FunctionDeployment> sameImplementationStored(FunctionDeployment functionDeployment) throws SQLException {
-        return MetadataStore.getDeploymentsWithImplementationId(functionDeployment.getFunctionImplementationId());
-    }
-
-    /**
      * Calculates the RTT of a given function.
      *
      * @param entry            the entry from the database
@@ -649,9 +635,9 @@ public class SimulationNode extends Node {
             memory = Integer.parseInt(elements.get(0));
             region = elements.get(1);
             provider = Provider.valueOf(elements.get(2));
-            providerEntry = MetadataStore.getProviderEntry(provider);
+            providerEntry = MetadataStore.get().getProviderEntry(provider);
         } else {
-            providerEntry = MetadataStore.getProviderEntry(Utils.detectProvider(entry.getKmsArn()));
+            providerEntry = MetadataStore.get().getProviderEntry(Utils.detectProvider(entry.getKmsArn()));
         }
         concurrencyOverhead = providerEntry.getConcurrencyOverheadMs();
 
@@ -661,14 +647,15 @@ public class SimulationNode extends Node {
             // simply read from the values from the DB without calculating them again
             result = extractRttAndCost(success, concurrencyOverhead, entry);
         } else {
-            List<FunctionDeployment> similarDeployments = sameImplementationStored(entry);
+            List<FunctionDeployment> similarDeployments = MetadataStore.get().getDeploymentsWithImplementationId(
+                    entry.getFunctionImplementationId());
             // indicates if a similar deployment was found
             boolean similar = false;
 
             if (similarDeployments != null && !similarDeployments.isEmpty()) {
                 Long sameRegionAndMemory = null;
                 Long sameMemory = null;
-                Region regionEntry = MetadataStore.getRegionEntry(region, provider);
+                Region regionEntry = MetadataStore.get().getRegionEntry(region, provider);
 
                 for (FunctionDeployment similarDeployment : similarDeployments) {
                     similar = true;
@@ -686,14 +673,14 @@ public class SimulationNode extends Node {
 
                 FunctionDeployment similarResult;
                 if (sameRegionAndMemory != null) {
-                    similarResult = MetadataStore.getDeploymentById(sameRegionAndMemory);
+                    similarResult = MetadataStore.get().getDeploymentById(sameRegionAndMemory);
                     result = extractRttAndCost(success, concurrencyOverhead, similarResult);
                 } else if (sameMemory != null) {
                     // always prefer the given entry if they have the same memory size
                     if (memory == entry.getMemorySize()) {
                         sameMemory = entry.getId();
                     }
-                    similarResult = MetadataStore.getDeploymentById(sameMemory);
+                    similarResult = MetadataStore.get().getDeploymentById(sameMemory);
                     SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
                     result = model.simulateRoundTripTime(success);
                 } else {
@@ -885,14 +872,16 @@ public class SimulationNode extends Node {
     private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> getSimulationResult(String resourceLink, String deploymentString)
             throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException,
             MissingComputationalWorkException, MissingSimulationParametersException {
-        FunctionDeployment fd = MetadataStore.getFunctionIdEntry(resourceLink);
+        FunctionDeployment fd = MetadataStore.get().getFunctionIdEntry(resourceLink);
 
         if (fd.getInvocations() == 0) {
-            logger.info("Refreshing database to check for an invocation for '" + resourceLink + "'. This could take a moment.");
-            ManualUpdate.main(null);
-            fd = MetadataStore.getFunctionIdEntry(resourceLink);
+            if (!MetadataStore.USE_JSON_METADATA) {
+                logger.info("Refreshing database to check for an invocation for '" + resourceLink + "'. This could take a moment.");
+                ManualUpdate.main(null);
+                fd = MetadataStore.get().getFunctionIdEntry(resourceLink);
+            }
             if (fd.getInvocations() == 0) {
-                FunctionImplementation fi = MetadataStore.getImplementationById(fd.getFunctionImplementationId());
+                FunctionImplementation fi = MetadataStore.get().getImplementationById(fd.getFunctionImplementationId());
                 if (fi.getComputationWork() == 0) {
                     throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet and " +
                             "no computation work is given for the function implementation. Either execute the function at least " +
@@ -931,7 +920,7 @@ public class SimulationNode extends Node {
         } else {
             String resourceLink = Utils.getResourceLink(properties, this);
             Provider provider = Utils.detectProvider(resourceLink);
-            at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.getProviderEntry(provider);
+            at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.get().getProviderEntry(provider);
             int maxConcurrency = providerEntry.getMaxConcurrency();
             if (loopCounter > maxConcurrency - 1 || (concurrencyLimit != -1 && loopCounter > concurrencyLimit - 1)) {
                 start = -1;
