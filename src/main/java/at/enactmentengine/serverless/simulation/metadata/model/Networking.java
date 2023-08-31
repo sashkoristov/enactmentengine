@@ -2,7 +2,7 @@ package at.enactmentengine.serverless.simulation.metadata.model;
 
 import java.io.Serializable;
 
-public class Networking implements Serializable {
+public class Networking implements Entity<Integer>, Serializable {
     @Column(name = "sourceRegionID", clazz = Integer.class)
     private Integer sourceRegionID;
 
@@ -45,5 +45,11 @@ public class Networking implements Serializable {
 
     public void setLatency(Double latency) {
         this.latency = latency;
+    }
+
+    @Override
+    public Integer getId() {
+        // not needed
+        return null;
     }
 }

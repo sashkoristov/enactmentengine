@@ -53,6 +53,7 @@ public class FunctionImplementation extends AdditionalServiceType {
     @Column(name = "invocations", clazz = int.class)
     private int invocations;
 
+    private Integer packageSize;
 
     @Override
     public Long getId() {
@@ -158,5 +159,13 @@ public class FunctionImplementation extends AdditionalServiceType {
 
     public void setFunctionTypeId(Long functionTypeId) {
         this.functionTypeId = functionTypeId;
+    }
+
+    public Integer getPackageSize() {
+        return packageSize;
+    }
+
+    public void setPackageSize(Integer packageSize) {
+        this.packageSize = packageSize;
     }
 }

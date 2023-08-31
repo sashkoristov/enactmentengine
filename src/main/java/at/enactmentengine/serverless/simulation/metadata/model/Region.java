@@ -1,7 +1,7 @@
 package at.enactmentengine.serverless.simulation.metadata.model;
 
 import at.enactmentengine.serverless.simulation.metadata.model.enums.ProviderConverter;
-import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 
@@ -28,7 +28,7 @@ public class Region implements Entity<Integer>, Serializable {
     private Double availability;
 
     @Column(name = "providerID", clazz = Long.class)
-    @JsonAlias({"providerID", "detailedProviderId"})
+    @JsonProperty("providerID")
     private Long providerID;
 
     @Column(name = "location", clazz = String.class)
@@ -54,6 +54,8 @@ public class Region implements Entity<Integer>, Serializable {
 
     @Column(name = "faasSystemOverheadms", clazz = Double.class)
     private Double faasSystemOverheadms;
+
+    private Double bandwidth;
 
     @Override
     public Integer getId() {
@@ -158,5 +160,13 @@ public class Region implements Entity<Integer>, Serializable {
 
     public void setFaasSystemOverheadms(Double faasSystemOverheadms) {
         this.faasSystemOverheadms = faasSystemOverheadms;
+    }
+
+    public Double getBandwidth() {
+        return bandwidth;
+    }
+
+    public void setBandwidth(Double bandwidth) {
+        this.bandwidth = bandwidth;
     }
 }

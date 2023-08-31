@@ -55,6 +55,14 @@ public class Provider implements Entity<Integer>, Serializable {
 
     private Integer cryptoOverheadms;
 
+    private Integer deploymentOverheadms;
+
+    private Integer roundTrips;
+
+    private Integer sessionOverheadms;
+
+    private Integer r;
+
     public Integer getCryptoOverheadms() {
         return cryptoOverheadms;
     }
@@ -165,5 +173,37 @@ public class Provider implements Entity<Integer>, Serializable {
 
     public void setFaasSystemOverheadms(Integer faasSystemOverheadms) {
         this.faasSystemOverheadms = faasSystemOverheadms;
+    }
+
+    public Integer getDeploymentOverheadms() {
+        return deploymentOverheadms;
+    }
+
+    public void setDeploymentOverheadms(Integer deploymentOverheadms) {
+        this.deploymentOverheadms = deploymentOverheadms;
+    }
+
+    public Integer getRoundTrips() {
+        return roundTrips;
+    }
+
+    public void setRoundTrips(Integer roundTrips) {
+        this.roundTrips = roundTrips;
+    }
+
+    public Integer getSessionOverheadms() {
+        return sessionOverheadms;
+    }
+
+    public void setSessionOverheadms(Integer sessionOverheadms) {
+        this.sessionOverheadms = sessionOverheadms;
+    }
+
+    public Integer getR() {
+        return r;
+    }
+
+    public void setR(Integer r) {
+        this.r = r;
     }
 }

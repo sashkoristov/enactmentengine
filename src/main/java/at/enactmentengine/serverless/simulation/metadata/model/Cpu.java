@@ -21,6 +21,7 @@ public class Cpu implements Entity<Integer>, Serializable {
     private Integer parallel;
 
     @Column(name = "MIPS", clazz = Double.class)
+    @JsonAlias({"mips", "MIPS"})
     private Double mips;
 
     @Column(name = "from_percentage", clazz = Integer.class)

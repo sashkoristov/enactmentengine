@@ -1,7 +1,6 @@
 package at.enactmentengine.serverless.simulation.metadata.database;
 
 import at.enactmentengine.serverless.simulation.metadata.DataProvider;
-import at.enactmentengine.serverless.simulation.metadata.cache.JsonProvider;
 import at.enactmentengine.serverless.simulation.metadata.exceptions.DatabaseException;
 import at.enactmentengine.serverless.simulation.metadata.model.*;
 import org.apache.commons.lang3.tuple.Pair;
@@ -178,7 +177,7 @@ public class DatabaseProvider implements DataProvider {
     @Override
     public Pair<Double, Double> getServiceParamsFromDB(Integer typeId, Integer serviceRegionId) {
         ServiceDeployment serviceDeployment = jdbiInstance.withHandle(handle ->
-                handle.createQuery("SELECT velocity, startup AS startup FROM serviceDeployment WHERE serviceID = ? AND regionID = ?")
+                handle.createQuery("SELECT * FROM serviceDeployment WHERE serviceID = ? AND regionID = ?")
                         .bind(0, typeId)
                         .bind(1, serviceRegionId)
                         .mapToBean(ServiceDeployment.class)
@@ -211,7 +210,7 @@ public class DatabaseProvider implements DataProvider {
                             .bind(1, serviceRegionId)
                             .mapToBean(Networking.class)
                             .findOne()
-                            .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from database for " + lambdaRegionId + "," + serviceRegionId))
+                            .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from database for " + serviceRegionId + "," + serviceRegionId))
             );
 
             return Triple.of(bandwidth, latency, networking.getLatency());

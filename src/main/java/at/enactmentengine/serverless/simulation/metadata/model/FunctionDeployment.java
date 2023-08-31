@@ -16,8 +16,8 @@ public class FunctionDeployment extends AdditionalServiceType {
     private Long id;
 
     @Column(name = "functionImplementation_id", clazz = Long.class)
-    @JsonAlias({"functionImplementationId", "functionImplementation_id"})
-    private Long functionImplementation_id;
+    @JsonAlias({"functionImplementation_id"})
+    private Long functionImplementationId;
 
     @Column(name = "regionID", clazz = Long.class)
     @JsonAlias({"regionId", "regionID"})
@@ -77,6 +77,16 @@ public class FunctionDeployment extends AdditionalServiceType {
     private String namespace;
 
     private String project;
+
+    private Double avgDeploymentTime;
+
+    private Double estDeploymentTime;
+
+    @JsonProperty("RTTModel")
+    private Double RTTModel;
+
+    @JsonProperty("ETModel")
+    private Double ETModel;
 
     public String getProject() {
         return project;
@@ -147,11 +157,11 @@ public class FunctionDeployment extends AdditionalServiceType {
     }
 
     public Long getFunctionImplementationId() {
-        return functionImplementation_id;
+        return functionImplementationId;
     }
 
     public void setFunctionImplementationId(Long functionImplementationId) {
-        this.functionImplementation_id = functionImplementationId;
+        this.functionImplementationId = functionImplementationId;
     }
 
     public Long getRegionId() {
@@ -280,5 +290,37 @@ public class FunctionDeployment extends AdditionalServiceType {
 
     public void setInvocations(int invocations) {
         this.invocations = invocations;
+    }
+
+    public Double getAvgDeploymentTime() {
+        return avgDeploymentTime;
+    }
+
+    public void setAvgDeploymentTime(Double avgDeploymentTime) {
+        this.avgDeploymentTime = avgDeploymentTime;
+    }
+
+    public Double getEstDeploymentTime() {
+        return estDeploymentTime;
+    }
+
+    public void setEstDeploymentTime(Double estDeploymentTime) {
+        this.estDeploymentTime = estDeploymentTime;
+    }
+
+    public Double getRTTModel() {
+        return RTTModel;
+    }
+
+    public void setRTTModel(Double RTTModel) {
+        this.RTTModel = RTTModel;
+    }
+
+    public Double getETModel() {
+        return ETModel;
+    }
+
+    public void setETModel(Double ETModel) {
+        this.ETModel = ETModel;
     }
 }

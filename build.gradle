@@ -42,7 +42,7 @@ description = "enactment-engine"
 
 mainClassName = 'at.enactmentengine.serverless.main.Service'
 
-sourceCompatibility = '8'
+sourceCompatibility = "11"
 
 repositories {
     mavenCentral()
@@ -131,3 +131,4 @@ task dockerupdate {
     tasks.findByName('updateDocker').mustRunAfter 'build'
 }
 
+targetCompatibility = JavaVersion.VERSION_11

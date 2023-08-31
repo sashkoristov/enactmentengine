@@ -2,7 +2,7 @@ package at.enactmentengine.serverless.simulation.metadata.model;
 
 import java.io.Serializable;
 
-public class DataTransfer  implements Entity<Integer>, Serializable {
+public class DataTransfer implements Entity<Integer>, Serializable {
     @IdColumn(name = "id", clazz = Integer.class)
     private Integer id;
 
