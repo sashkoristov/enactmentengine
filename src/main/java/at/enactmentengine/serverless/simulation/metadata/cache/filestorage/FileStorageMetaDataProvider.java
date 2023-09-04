@@ -48,7 +48,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.functionImplementationDao = new JsonFunctionImplementationDao(Path.of("metadata/functionimplementation.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading function implementations");
+                throw new IllegalStateException("an error occurred while loading function implementations");
             }
         }
         return this.functionImplementationDao;
@@ -59,7 +59,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.functionDeploymentDao = new JsonFunctionDeploymentDao(Path.of("metadata/functiondeployment.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading function deployments");
+                throw new IllegalStateException("an error occurred while loading function deployments");
             }
         }
         return this.functionDeploymentDao;
@@ -70,7 +70,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.providerDao = new JsonProviderDao(Path.of("metadata/provider.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading providers");
+                throw new IllegalStateException("an error occurred while loading providers");
             }
         }
         return this.providerDao;
@@ -81,7 +81,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.regionDao = new JsonRegionDao(Path.of("metadata/region.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading regions");
+                throw new IllegalStateException("an error occurred while loading regions");
             }
         }
         return this.regionDao;
@@ -92,7 +92,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.cpuDao = new JsonCpuDao(Path.of("metadata/cpu.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading cpus");
+                throw new IllegalStateException("an error occurred while loading cpus");
             }
         }
         return this.cpuDao;
@@ -103,7 +103,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.dataTransferDao = new JsonDataTransferDao(Path.of("metadata/datatransfer.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading datatransfers");
+                throw new IllegalStateException("an error occurred while loading datatransfers");
             }
         }
         return this.dataTransferDao;
@@ -114,7 +114,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.networkingDao = new JsonNetworkingDao(Path.of("metadata/networking.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading networking");
+                throw new IllegalStateException("an error occurred while loading networking");
             }
         }
         return this.networkingDao;
@@ -125,7 +125,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.serviceDao = new JsonServiceDao(Path.of("metadata/service.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading service");
+                throw new IllegalStateException("an error occurred while loading service");
             }
         }
         return this.serviceDao;
@@ -136,7 +136,7 @@ public class FileStorageMetaDataProvider implements AutoCloseable {
             try {
                 this.serviceDeploymentDao = new JsonServiceDeploymentDao(Path.of("metadata/servicedeployment.json"));
             } catch (final Exception e) {
-                throw new IllegalStateException("an error occured while loading networking");
+                throw new IllegalStateException("an error occurred while loading networking");
             }
         }
         return this.serviceDeploymentDao;

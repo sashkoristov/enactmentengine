@@ -30,7 +30,8 @@ public class DatabaseProvider implements DataProvider {
         try {
             databaseFile.load(Files.newInputStream(Paths.get(pathToProperties)));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseException("No " + pathToProperties + " file found! " +
+                    "Either setup this file or supply the metadata via JSON files in a 'metadata/' folder!");
         }
 
         final String host = databaseFile.getProperty("host");
@@ -40,7 +41,6 @@ public class DatabaseProvider implements DataProvider {
         final String database = databaseFile.getProperty("database");
         final String db_url = "jdbc:mariadb://" + host + ":" + port + "/" + database;
 
-        // Creating a Jdbi instance
         jdbiInstance = Jdbi.create(db_url, username, password);
     }
 
@@ -189,14 +189,7 @@ public class DatabaseProvider implements DataProvider {
 
     @Override
     public Triple<Double, Double, Double> getNetworkParamsFromDB(Integer lambdaRegionId, Integer serviceRegionId) {
-        Networking networking = jdbiInstance.withHandle(handle ->
-                handle.createQuery("SELECT * FROM networking WHERE sourceRegionID = ? AND destinationRegionID = ?")
-                        .bind(0, lambdaRegionId)
-                        .bind(1, serviceRegionId)
-                        .mapToBean(Networking.class)
-                        .findOne()
-                        .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from database for " + lambdaRegionId + "," + serviceRegionId))
-        );
+        Networking networking = findNetworkingByRegionIds(lambdaRegionId, serviceRegionId);
 
         double bandwidth = networking.getBandwidth() / 1000;
         double latency = networking.getLatency();
@@ -204,30 +197,28 @@ public class DatabaseProvider implements DataProvider {
         if (serviceRegionId.equals(lambdaRegionId)) {
             return Triple.of(bandwidth, latency, latency);
         } else {
-            networking = jdbiInstance.withHandle(handle ->
-                    handle.createQuery("SELECT * FROM networking WHERE sourceRegionID = ? AND destinationRegionID = ?")
-                            .bind(0, serviceRegionId)
-                            .bind(1, serviceRegionId)
-                            .mapToBean(Networking.class)
-                            .findOne()
-                            .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from database for " + serviceRegionId + "," + serviceRegionId))
-            );
+            networking = findNetworkingByRegionIds(serviceRegionId, serviceRegionId);
 
             return Triple.of(bandwidth, latency, networking.getLatency());
         }
     }
 
+    private Networking findNetworkingByRegionIds(Integer sourceId, Integer destinationId) {
+        return jdbiInstance.withHandle(handle ->
+                handle.createQuery("SELECT * FROM networking WHERE sourceRegionID = ? AND destinationRegionID = ?")
+                        .bind(0, sourceId)
+                        .bind(1, destinationId)
+                        .mapToBean(Networking.class)
+                        .findOne()
+                        .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from database for " +
+                                sourceId + "," + destinationId))
+        );
+    }
+
     @Override
     public Pair<Double, Double> getDataTransferParamsFromDB(String type, Integer lambdaRegionId, Integer serviceRegionId,
-                                                                   Integer originalLambdaRegionId, boolean useOriginalLambdaRegion) {
-        String dataTransferType;
-        if (type.equals("FILE_DL") || type.equals("DT_REMOVE")) {
-            dataTransferType = "download";
-        } else if (type.equals("FILE_UP") || type.equals("UT_REMOVE")) {
-            dataTransferType = "upload";
-        } else {
-            dataTransferType = null;
-        }
+                                                            Integer originalLambdaRegionId, boolean useOriginalLambdaRegion) {
+        String dataTransferType = determineDataTransferType(type);
 
         DataTransfer dataTransfer = jdbiInstance.withHandle(handle ->
                 handle.createQuery("SELECT * FROM data_transfer WHERE type = ? AND functionRegionID = ? AND storageRegionID = ?")
@@ -240,5 +231,15 @@ public class DatabaseProvider implements DataProvider {
         );
 
         return Pair.of(dataTransfer.getBandwidth(), dataTransfer.getLatency());
+    }
+
+    private String determineDataTransferType(String type) {
+        if (type.equals("FILE_DL") || type.equals("DT_REMOVE")) {
+            return "download";
+        } else if (type.equals("FILE_UP") || type.equals("UT_REMOVE")) {
+            return "upload";
+        } else {
+            return null;
+        }
     }
 }

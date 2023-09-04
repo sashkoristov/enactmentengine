@@ -160,10 +160,7 @@ public class JsonProvider implements DataProvider {
 
     @Override
     public Triple<Double, Double, Double> getNetworkParamsFromDB(Integer lambdaRegionId, Integer serviceRegionId) {
-        Networking networking = this.networkings.stream()
-                .filter(n -> n.getSourceRegionID().equals(lambdaRegionId) && n.getDestinationRegionID().equals(serviceRegionId))
-                .findFirst()
-                .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from JSON file for " + lambdaRegionId + "," + serviceRegionId));
+        Networking networking = findNetworkingByRegionIds(lambdaRegionId, serviceRegionId);
 
         double bandwidth = networking.getBandwidth() / 1000;
         double latency = networking.getLatency();
@@ -171,26 +168,26 @@ public class JsonProvider implements DataProvider {
         if (serviceRegionId.equals(lambdaRegionId)) {
             return Triple.of(bandwidth, latency, latency);
         } else {
-            networking = this.networkings.stream()
-                    .filter(n -> n.getSourceRegionID().equals(serviceRegionId) && n.getDestinationRegionID().equals(serviceRegionId))
-                    .findFirst()
-                    .orElseThrow(() -> new DatabaseException("Could not fetch network parameters from JSON file for " + serviceRegionId + "," + serviceRegionId));
+            networking = findNetworkingByRegionIds(serviceRegionId, serviceRegionId);
             return Triple.of(bandwidth, latency, networking.getLatency());
         }
     }
 
-    @Override
-    public Pair<Double, Double> getDataTransferParamsFromDB(String type, Integer lambdaRegionId, Integer serviceRegionId, Integer originalLambdaRegionId, boolean useOriginalLambdaRegion) {
-        String dataTransferType;
-        if (type.equals("FILE_DL") || type.equals("DT_REMOVE")) {
-            dataTransferType = "download";
-        } else if (type.equals("FILE_UP") || type.equals("UT_REMOVE")) {
-            dataTransferType = "upload";
-        } else {
-            dataTransferType = null;
-        }
+    private Networking findNetworkingByRegionIds(Integer sourceId, Integer destinationId) {
+        return this.networkings.stream()
+                .filter(n -> n.getSourceRegionID().equals(sourceId) && n.getDestinationRegionID().equals(destinationId))
+                .findFirst()
+                .orElseThrow(() -> new DatabaseException(
+                        "Could not fetch network parameters from JSON file for " + sourceId + "," + destinationId
+                ));
+    }
 
+    @Override
+    public Pair<Double, Double> getDataTransferParamsFromDB(String type, Integer lambdaRegionId, Integer serviceRegionId,
+                                                            Integer originalLambdaRegionId, boolean useOriginalLambdaRegion) {
+        String dataTransferType = determineDataTransferType(type);
         Integer functionRegionId = useOriginalLambdaRegion && originalLambdaRegionId != -1 ? originalLambdaRegionId : lambdaRegionId;
+
         DataTransfer dataTransfer = this.dataTransfers.stream()
                 .filter(d -> d.getType().equals(dataTransferType) && d.getFunctionRegionID().equals(functionRegionId) &&
                         d.getStorageRegionID().equals(serviceRegionId))
@@ -198,5 +195,15 @@ public class JsonProvider implements DataProvider {
                 .orElseThrow(() -> new DatabaseException("Could not fetch data transfer parameters from Json file."));
 
         return Pair.of(dataTransfer.getBandwidth(), dataTransfer.getLatency());
+    }
+
+    private String determineDataTransferType(String type) {
+        if (type.equals("FILE_DL") || type.equals("DT_REMOVE")) {
+            return "download";
+        } else if (type.equals("FILE_UP") || type.equals("UT_REMOVE")) {
+            return "upload";
+        } else {
+            return null;
+        }
     }
 }
