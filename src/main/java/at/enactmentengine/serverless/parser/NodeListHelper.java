@@ -1,12 +1,20 @@
 package at.enactmentengine.serverless.parser;
 
+import at.enactmentengine.serverless.exception.MissingResourceLinkException;
 import at.enactmentengine.serverless.nodes.*;
 import at.enactmentengine.serverless.object.ListPair;
+import at.enactmentengine.serverless.object.Utils;
 import at.uibk.dps.afcl.Function;
 import at.uibk.dps.afcl.functions.*;
 import at.uibk.dps.afcl.functions.objects.Case;
 import at.uibk.dps.afcl.functions.objects.Section;
+import at.uibk.dps.util.Provider;
 import org.apache.commons.lang3.NotImplementedException;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Helper class to create NodeLists out of function constructs
@@ -19,6 +27,11 @@ class NodeListHelper {
      * Flag used to determine whether to simulate or execute.
      */
     private final boolean simulate;
+
+    /**
+     * Flag used to determine if the AWS session overhead has already been applied.
+     */
+    private boolean usedAwsSessionOverhead;
 
     int executionId;
 
@@ -36,6 +49,7 @@ class NodeListHelper {
      */
     public NodeListHelper(boolean simulate) {
         this.simulate = simulate;
+        usedAwsSessionOverhead = false;
     }
 
 
@@ -49,8 +63,25 @@ class NodeListHelper {
     ListPair<Node, Node> toNodeList(Function function) {
         if (function instanceof AtomicFunction && simulate) {
             AtomicFunction tmp = (AtomicFunction) function;
+            boolean useSessionOverhead = false;
+
+            // check if it is the first occurrence of an AWS function, if it is, a session overhead has to be added
+            if (!usedAwsSessionOverhead) {
+                String resourceLink = null;
+                try {
+                    resourceLink = Utils.getResourceLink(tmp.getProperties(), null);
+                } catch (MissingResourceLinkException e) {
+                    throw new RuntimeException(e);
+                }
+                Provider provider = Utils.detectProvider(resourceLink);
+                if (provider == Provider.AWS) {
+                    usedAwsSessionOverhead = true;
+                    useSessionOverhead = true;
+                }
+            }
+
             SimulationNode simulationNode = new SimulationNode(tmp.getName(), tmp.getType(), tmp.getDeployment(),
-                    tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId);
+                    tmp.getProperties(), tmp.getConstraints(), tmp.getDataIns(), tmp.getDataOuts(), executionId, useSessionOverhead);
             return new ListPair<>(simulationNode, simulationNode);
         } else if (function instanceof AtomicFunction) {
             AtomicFunction tmp = (AtomicFunction) function;
@@ -60,7 +91,7 @@ class NodeListHelper {
         } else if (function instanceof IfThenElse) {
             return toNodeListIf((IfThenElse) function);
         } else if (function instanceof Parallel) {
-            return toNodeListParallel((Parallel) function);
+            return toNodeListParallel((Parallel) function, simulate);
         } else if (function instanceof ParallelFor) {
             return toNodeListParallelFor((ParallelFor) function, simulate);
         } else if (function instanceof Sequence) {
@@ -169,9 +200,13 @@ class NodeListHelper {
      *
      * @return NodeList
      */
-    private ListPair<Node, Node> toNodeListParallel(Parallel function) {
+    private ListPair<Node, Node> toNodeListParallel(Parallel function, boolean simulate) {
         ParallelStartNode start = new ParallelStartNode(function.getName(), "test", function.getDataIns());
         ParallelEndNode end = new ParallelEndNode(function.getName(), "test", function.getDataOuts());
+        boolean reuseSessionOverhead = !usedAwsSessionOverhead;
+        // map stores the section number and the iteration depth of where the first aws function occurs
+        Map<Integer, Integer> tmpMap = new HashMap<>();
+        List<ListPair<Node, Node>> pairList = new ArrayList<>();
 
         for (int i = 0; i < function.getParallelBody().size(); i++) {
             ListPair<Node, Node> currentListPair = toNodeListSection(function.getParallelBody().get(i));
@@ -179,9 +214,81 @@ class NodeListHelper {
             currentListPair.getStart().addParent(start);
             start.addChild(currentListPair.getStart());
             end.addParent(currentListPair.getEnd());
+
+            if (simulate && reuseSessionOverhead) {
+                usedAwsSessionOverhead = false;
+                tmpMap.put(i, findSessionOverheadIteration(currentListPair.getStart(), 0, true));
+                pairList.add(currentListPair);
+            }
+        }
+
+        if (!tmpMap.isEmpty() && tmpMap.values().stream().anyMatch(value -> value >= 0)) {
+            // find the iteration in which an AWS function is started first (= the iteration whose function will start first)
+            int minValue = Integer.MAX_VALUE;
+            for (Integer value : tmpMap.values()) {
+                if (value >= 0 && value < minValue) {
+                    minValue = value;
+                }
+            }
+            // reset the SO for all nodes that do not invoke an AWS function in the smallest iteration
+            for (Map.Entry<Integer, Integer> entry : tmpMap.entrySet()) {
+                if (entry.getValue() != minValue) {
+                    resetSessionOverheadIteration(pairList.get(entry.getKey()).getStart());
+                }
+            }
+
+            usedAwsSessionOverhead = true;
         }
 
         return new ListPair<>(start, end);
+    }
+
+    /**
+     * Recursively search through a node tree to find the node that has session overhead
+     *
+     * @param node            The node to start the search from
+     * @param iteration       The current iteration or depth level
+     * @param isFirstFunction If the node is the first function node in the tree
+     *
+     * @return The iteration where the node with session overhead was found, or -1 if not found
+     */
+    private int findSessionOverheadIteration(Node node, int iteration, boolean isFirstFunction) {
+        if (node instanceof SimulationNode && ((SimulationNode) node).hasSessionOverhead()) {
+            return iteration;
+        }
+
+        if (node instanceof SimulationNode) {
+            isFirstFunction = false;
+        }
+
+        for (Node child : node.getChildren()) {
+            int newIteration = iteration;
+            if (child instanceof SimulationNode && !isFirstFunction) {
+                newIteration += 1;
+            }
+            int foundIteration = findSessionOverheadIteration(child, newIteration, isFirstFunction);
+            if (foundIteration >= 0) {
+                return foundIteration;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Recursively resets the session overhead for the function in the node tree
+     *
+     * @param node The node to start from
+     */
+    private void resetSessionOverheadIteration(Node node) {
+        if (node instanceof SimulationNode && ((SimulationNode) node).hasSessionOverhead()) {
+            ((SimulationNode) node).setUseSessionOverhead(false);
+            return;
+        }
+
+        for (Node child : node.getChildren()) {
+            resetSessionOverheadIteration(child);
+        }
     }
 
     /**

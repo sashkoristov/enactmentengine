@@ -160,7 +160,7 @@ public class Provider implements Entity<Integer>, Serializable {
     }
 
     public Integer getConcurrencyOverheadMs() {
-        return concurrencyOverheadMs;
+        return concurrencyOverheadMs == null ? 0 : concurrencyOverheadMs;
     }
 
     public void setConcurrencyOverheadMs(Integer concurrencyOverheadMs) {

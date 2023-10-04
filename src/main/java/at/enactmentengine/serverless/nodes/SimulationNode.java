@@ -8,6 +8,7 @@ import at.enactmentengine.serverless.simulation.ServiceSimulationModel;
 import at.enactmentengine.serverless.simulation.SimulationModel;
 import at.enactmentengine.serverless.simulation.SimulationParameters;
 import at.enactmentengine.serverless.simulation.metadata.MetadataStore;
+import at.enactmentengine.serverless.simulation.metadata.exceptions.DatabaseException;
 import at.enactmentengine.serverless.simulation.metadata.model.FunctionDeployment;
 import at.enactmentengine.serverless.simulation.metadata.model.FunctionImplementation;
 import at.enactmentengine.serverless.simulation.metadata.model.Region;
@@ -101,19 +102,25 @@ public class SimulationNode extends Node {
     private String serviceOutput;
 
     /**
+     * Signals whether a session overhead should be added.
+     */
+    private boolean useSessionOverhead;
+
+    /**
      * Constructor for a simulation node.
      *
-     * @param name        of the base function.
-     * @param type        of the base function (fType).
-     * @param deployment  of the base function.
-     * @param properties  of the base function.
-     * @param constraints of the base function.
-     * @param input       to the base function.
-     * @param output      of the base function.
-     * @param executionId for the logging of the simulation.
+     * @param name               of the base function.
+     * @param type               of the base function (fType).
+     * @param deployment         of the base function.
+     * @param properties         of the base function.
+     * @param constraints        of the base function.
+     * @param input              to the base function.
+     * @param output             of the base function.
+     * @param executionId        for the logging of the simulation.
+     * @param useSessionOverhead if a session overhead should be added
      */
     public SimulationNode(String name, String type, String deployment, List<PropertyConstraint> properties, List<PropertyConstraint> constraints,
-                          List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
+                          List<DataIns> input, List<DataOutsAtomic> output, int executionId, boolean useSessionOverhead) {
         super(name, type);
         this.deployment = deployment;
         this.output = output;
@@ -125,6 +132,7 @@ public class SimulationNode extends Node {
             this.output = new ArrayList<>();
         }
         this.serviceStrings = ServiceSimulationModel.getUsedServices(this.properties);
+        this.useSessionOverhead = useSessionOverhead;
     }
 
     /**
@@ -308,6 +316,9 @@ public class SimulationNode extends Node {
             result = getSimulationResult(resourceLink, functionToSimulate.getDeployment());
             Event event = null;
             if (result.isSuccess()) {
+                if (useSessionOverhead) {
+                    result.setRTT(result.getRTT() + MetadataStore.get().getProviderEntry(Provider.AWS).getSessionOverheadms());
+                }
                 event = Event.FUNCTION_END;
                 logger.info("Simulating function {} took {}ms{}.", resourceLink, result.getRTT(), simInfo);
             } else {
@@ -874,6 +885,10 @@ public class SimulationNode extends Node {
             MissingComputationalWorkException, MissingSimulationParametersException {
         FunctionDeployment fd = MetadataStore.get().getFunctionIdEntry(resourceLink);
 
+        if (fd == null) {
+            throw new DatabaseException("No function deployment was found for resource link: " + resourceLink);
+        }
+
         if (fd.getInvocations() == 0) {
             if (!MetadataStore.USE_JSON_METADATA) {
                 logger.info("Refreshing database to check for an invocation for '" + resourceLink + "'. This could take a moment.");
@@ -952,5 +967,13 @@ public class SimulationNode extends Node {
 
     public synchronized void setAmountParallelFunctions(long amountParallelFunctions) {
         this.amountParallelFunctions = amountParallelFunctions;
+    }
+
+    public boolean hasSessionOverhead() {
+        return useSessionOverhead;
+    }
+
+    public void setUseSessionOverhead(boolean useSessionOverhead) {
+        this.useSessionOverhead = useSessionOverhead;
     }
 }

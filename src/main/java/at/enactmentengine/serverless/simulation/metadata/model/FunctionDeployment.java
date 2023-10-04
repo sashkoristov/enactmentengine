@@ -237,7 +237,7 @@ public class FunctionDeployment extends AdditionalServiceType {
     }
 
     public Double getAvgRuntime() {
-        return avgRuntime;
+        return avgRuntime == null ? 0 : avgRuntime;
     }
 
     public void setAvgRuntime(Double avgRuntime) {
