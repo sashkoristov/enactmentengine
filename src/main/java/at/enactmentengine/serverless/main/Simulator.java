@@ -1,6 +1,6 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.SimulationParameters;
 import at.enactmentengine.serverless.nodes.ExecutableWorkflow;
 import at.enactmentengine.serverless.parser.Language;
 import at.enactmentengine.serverless.parser.YAMLParser;
