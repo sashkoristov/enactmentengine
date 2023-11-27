@@ -10,7 +10,6 @@ import at.enactmentengine.serverless.simulation.metadata.model.Cpu;
 import at.enactmentengine.serverless.simulation.metadata.model.FunctionDeployment;
 import at.enactmentengine.serverless.simulation.metadata.model.FunctionImplementation;
 import at.enactmentengine.serverless.simulation.metadata.model.Region;
-import at.uibk.dps.databases.MariaDBAccess;
 import at.uibk.dps.util.Provider;
 
 import java.sql.SQLException;
@@ -297,11 +296,51 @@ public class SimulationModel {
         }
 
         executionTime = applyDistribution(executionTime, success);
-        double cost = MariaDBAccess.calculateCost(memorySize, executionTime, provider);
+        double cost = calculateCost(memorySize, executionTime, provider);
         SimulationParameters.workflowCost += cost;
         long rtt = addOverheads(executionTime);
 
         return new PairResult<>(rtt, cost);
+    }
+
+    /**
+     * Calculates the cost of execution.
+     *
+     * @param memorySize the memory size of the executed function
+     * @param runtime    the runtime of the executed function
+     * @param provider   the provider of the executed function
+     *
+     * @return the total cost of the executed function
+     */
+    private double calculateCost(int memorySize, double runtime, Provider provider) {
+        at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.get().getProviderEntry(provider);
+        double result = -1.0;
+
+        if (providerEntry != null) {
+            int roundTo = providerEntry.getUnitTimems();
+            runtime = (runtime + (double) roundTo - 1.0) / (double) roundTo * (double) roundTo;
+            result = providerEntry.getInvocationCost() + (double) memorySize / 1000.0 * (runtime / 1000.0) * providerEntry.getDurationGBpsCost();
+            if (provider == Provider.GOOGLE) {
+                short mhz;
+                if (memorySize < 256) {
+                    mhz = 200;
+                } else if (memorySize < 512) {
+                    mhz = 400;
+                } else if (memorySize < 1024) {
+                    mhz = 800;
+                } else if (memorySize < 2048) {
+                    mhz = 1400;
+                } else if (memorySize < 4096) {
+                    mhz = 2400;
+                } else {
+                    mhz = 4800;
+                }
+
+                result += (double) mhz / 1000.0 * (runtime / 1000.0) * providerEntry.getDurationGHzpsCost();
+            }
+        }
+
+        return result;
     }
 
 }
