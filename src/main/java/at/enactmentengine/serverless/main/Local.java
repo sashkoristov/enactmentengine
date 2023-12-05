@@ -1,6 +1,8 @@
 package at.enactmentengine.serverless.main;
 
-import at.enactmentengine.serverless.Simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.metadata.MetadataStore;
+import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.cronjob.ManualUpdate;
 import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.util.Type;
@@ -65,6 +67,16 @@ public class Local {
                 if (SimulationParameters.IGNORE_FT) {
                     length -= 1;
                 }
+
+                SimulationParameters.NO_DISTRIBUTION = parameterList.contains("--no-distribution");
+                if (SimulationParameters.NO_DISTRIBUTION) {
+                    length -= 1;
+                }
+
+                MetadataStore.FORCE_DATABASE_PROVIDER = parameterList.contains("--db");
+                if (MetadataStore.FORCE_DATABASE_PROVIDER) {
+                    length -= 1;
+                }
             }
             boolean export = parameterList.contains("--export");
             if (export) {
@@ -76,6 +88,11 @@ public class Local {
                 logger.info("Updating database. This could take a moment...");
                 ManualUpdate.main(null);
                 logger.info("Updating complete!");
+            }
+            boolean hideCredentials = parameterList.contains("--hide-credentials");
+            if (hideCredentials) {
+                LoggerUtil.HIDE_CREDENTIALS = true;
+                length -= 1;
             }
 
             String workflowContent = null;
@@ -103,7 +120,7 @@ public class Local {
                 MongoDBAccess.saveLogWorkflowStart(Type.EXEC, workflowContent, null, start);
                 result = executor.executeWorkflow(args[0], null, -1, start);
             } else {
-                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json] [--simulate] [--ignore-FT] [--update] [--export]");
+                logger.error("Usage: java -jar enactment-engine-all.jar path/to/workflow.yaml [path/to/input.json] [--simulate] [--ignore-FT] [--update] [--export] [--hide-credentials]");
             }
             if (!simulate) {
                 logger.info("Result: {}", result);

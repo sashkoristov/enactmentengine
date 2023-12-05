@@ -2,6 +2,8 @@ package at.enactmentengine.serverless.nodes;
 
 import at.enactmentengine.serverless.exception.MissingInputDataException;
 import at.enactmentengine.serverless.object.Utils;
+import at.enactmentengine.serverless.simulation.ServiceSimulationModel;
+import at.enactmentengine.serverless.utils.LoggerUtil;
 import at.uibk.dps.*;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
@@ -12,7 +14,6 @@ import at.uibk.dps.exception.LatestFinishingTimeException;
 import at.uibk.dps.exception.LatestStartingTimeException;
 import at.uibk.dps.exception.MaxRunningTimeException;
 import at.uibk.dps.function.Function;
-//import at.uibk.dps.socketutils.entity.Invocation;
 import at.uibk.dps.util.Event;
 import at.uibk.dps.util.Type;
 import com.google.gson.JsonObject;
@@ -23,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -271,7 +271,7 @@ public class FunctionNode extends Node {
             logger.info("Function took: " + RTT + " ms. Result: too large [" + System.currentTimeMillis()
                     + "ms], id=" + id + "");
         } else {
-            logger.info("Function took: " + RTT + " ms. Result: " + name + " : " + resultString + " ["
+            logger.info("Function took: " + RTT + " ms. Result: " + name + " : " + LoggerUtil.clearCredentials(resultString) + " ["
                     + System.currentTimeMillis() + "ms], id=" + id + "");
         }
     }
@@ -336,6 +336,8 @@ public class FunctionNode extends Node {
             pairResult = gateway.invokeFunction(resourceLink, functionInputs);
             long end = System.currentTimeMillis();
             resultString = pairResult.getResult();
+            long totalRttForServices = 0;
+
             /*
              * Read the actual function outputs by their key and store them in
              * functionOutputs
@@ -344,10 +346,22 @@ public class FunctionNode extends Node {
             Event event = null;
             if (success) {
                 event = Event.FUNCTION_END;
+
+                // simulate round trip time for used services to subtract below
+                List<String> usedServicesForFunction = ServiceSimulationModel.getUsedServices(properties);
+
+                if(!usedServicesForFunction.isEmpty() && deployment != null) {
+                    String lambdaRegion = SimulationNode.extractValuesFromDeployment(deployment).get(1);
+                    totalRttForServices = ServiceSimulationModel.calculateTotalRttForUsedServices(-1, lambdaRegion, usedServicesForFunction).getRTT();
+                }
             } else {
                 event = Event.FUNCTION_FAILED;
             }
-            MongoDBAccess.saveLog(event, resourceLink, deployment, name, type, resultString, pairResult.getRTT(), success, loopCounter, maxLoopCounter, start, Type.EXEC);
+
+            // remove the execution times of the services from the round trip time to be stored to the database
+            long logRtt = pairResult.getRTT() - totalRttForServices;
+
+            MongoDBAccess.saveLog(event, resourceLink, deployment, name, type, resultString, logRtt, success, loopCounter, maxLoopCounter, start, Type.EXEC);
         }
         return pairResult;
     }
@@ -362,7 +376,7 @@ public class FunctionNode extends Node {
         if (functionInputs.size() > 20) {
             logger.info("Input for function is large [{}ms], id={}", System.currentTimeMillis(), id);
         } else {
-            logger.info("Input for function " + name + " : " + functionInputs + " [" + System.currentTimeMillis()
+            logger.info("Input for function " + name + " : " + LoggerUtil.clearCredentials(functionInputs) + " [" + System.currentTimeMillis()
                     + "ms], id=" + id + "");
         }
     }

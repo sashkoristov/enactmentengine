@@ -1,4 +1,4 @@
-package at.enactmentengine.serverless.Simulation;
+package at.enactmentengine.serverless.simulation;
 
 import java.util.*;
 
@@ -10,6 +10,11 @@ public final class SimulationParameters {
      * Flag that determines whether all functions to simulate will be successful.
      */
     public static boolean IGNORE_FT;
+
+    /**
+     * Flag that determines whether no normal distribution should be applied for the RTT of functions.
+     */
+    public static boolean NO_DISTRIBUTION = false;
 
     /**
      * Variable that sums up the whole cost of the workflow.

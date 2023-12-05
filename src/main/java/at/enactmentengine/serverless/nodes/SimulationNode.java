@@ -1,16 +1,21 @@
 package at.enactmentengine.serverless.nodes;
 
-import at.enactmentengine.serverless.Simulation.SimulationModel;
-import at.enactmentengine.serverless.Simulation.SimulationParameters;
 import at.enactmentengine.serverless.exception.*;
 import at.enactmentengine.serverless.object.PairResult;
 import at.enactmentengine.serverless.object.QuadrupleResult;
 import at.enactmentengine.serverless.object.Utils;
+import at.enactmentengine.serverless.simulation.ServiceSimulationModel;
+import at.enactmentengine.serverless.simulation.SimulationModel;
+import at.enactmentengine.serverless.simulation.SimulationParameters;
+import at.enactmentengine.serverless.simulation.metadata.MetadataStore;
+import at.enactmentengine.serverless.simulation.metadata.exceptions.DatabaseException;
+import at.enactmentengine.serverless.simulation.metadata.model.FunctionDeployment;
+import at.enactmentengine.serverless.simulation.metadata.model.FunctionImplementation;
+import at.enactmentengine.serverless.simulation.metadata.model.Region;
 import at.uibk.dps.afcl.functions.objects.DataIns;
 import at.uibk.dps.afcl.functions.objects.DataOutsAtomic;
 import at.uibk.dps.afcl.functions.objects.PropertyConstraint;
 import at.uibk.dps.cronjob.ManualUpdate;
-import at.uibk.dps.databases.MariaDBAccess;
 import at.uibk.dps.databases.MongoDBAccess;
 import at.uibk.dps.exception.InvokationFailureException;
 import at.uibk.dps.exception.LatestFinishingTimeException;
@@ -24,7 +29,6 @@ import com.google.gson.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
@@ -90,20 +94,33 @@ public class SimulationNode extends Node {
      */
     private long amountParallelFunctions = -1;
 
+    private List<String> serviceStrings;
+
+    /**
+     * String containing the times of the simulated services.
+     */
+    private String serviceOutput;
+
+    /**
+     * Signals whether a session overhead should be added.
+     */
+    private boolean useSessionOverhead;
+
     /**
      * Constructor for a simulation node.
      *
-     * @param name        of the base function.
-     * @param type        of the base function (fType).
-     * @param deployment  of the base function.
-     * @param properties  of the base function.
-     * @param constraints of the base function.
-     * @param input       to the base function.
-     * @param output      of the base function.
-     * @param executionId for the logging of the simulation.
+     * @param name               of the base function.
+     * @param type               of the base function (fType).
+     * @param deployment         of the base function.
+     * @param properties         of the base function.
+     * @param constraints        of the base function.
+     * @param input              to the base function.
+     * @param output             of the base function.
+     * @param executionId        for the logging of the simulation.
+     * @param useSessionOverhead if a session overhead should be added
      */
     public SimulationNode(String name, String type, String deployment, List<PropertyConstraint> properties, List<PropertyConstraint> constraints,
-                          List<DataIns> input, List<DataOutsAtomic> output, int executionId) {
+                          List<DataIns> input, List<DataOutsAtomic> output, int executionId, boolean useSessionOverhead) {
         super(name, type);
         this.deployment = deployment;
         this.output = output;
@@ -114,6 +131,8 @@ public class SimulationNode extends Node {
         if (output == null) {
             this.output = new ArrayList<>();
         }
+        this.serviceStrings = ServiceSimulationModel.getUsedServices(this.properties);
+        this.useSessionOverhead = useSessionOverhead;
     }
 
     /**
@@ -124,7 +143,7 @@ public class SimulationNode extends Node {
      * @return a list containing 4 elements, the first is the memory size, the second the region, the third the provider
      * and the fourth the function name.
      */
-    private static List<String> extractValuesFromDeployment(String deployment) {
+    public static List<String> extractValuesFromDeployment(String deployment) {
         List<String> result = new ArrayList<>();
         String[] parts = deployment.split("_");
         result.add(parts[parts.length - 1]);
@@ -234,6 +253,14 @@ public class SimulationNode extends Node {
         // set the result of the simulation as the result of the SimulationNode
         result = simResult.getOutput();
 
+        if (this.input != null) {
+            for (DataIns in : this.input) {
+                if (in.getPassing() != null && in.getPassing()) {
+                    this.output.add(new DataOutsAtomic(in.getName(), in.getType()));
+                }
+            }
+        }
+
         /* Pass the output to the next node */
         for (Node node : children) {
             node.passResult(result);
@@ -289,13 +316,16 @@ public class SimulationNode extends Node {
             result = getSimulationResult(resourceLink, functionToSimulate.getDeployment());
             Event event = null;
             if (result.isSuccess()) {
+                if (useSessionOverhead) {
+                    result.setRTT(result.getRTT() + MetadataStore.get().getProviderEntry(Provider.AWS).getSessionOverheadms());
+                }
                 event = Event.FUNCTION_END;
                 logger.info("Simulating function {} took {}ms{}.", resourceLink, result.getRTT(), simInfo);
             } else {
                 event = Event.FUNCTION_FAILED;
                 logger.info("Simulating function {} failed{}.", resourceLink, simInfo);
             }
-            MongoDBAccess.saveLog(event, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), null,
+            MongoDBAccess.saveLog(event, resourceLink, functionToSimulate.getDeployment(), getName(), functionToSimulate.getType(), this.serviceOutput,
                     result.getRTT(), result.getCost(), result.isSuccess(), loopCounter, maxLoopCounter, startTime, Type.SIM);
         }
 
@@ -573,10 +603,10 @@ public class SimulationNode extends Node {
      * @throws SQLException             if an error occurs when reading fields from a database entry
      * @throws RegionDetectionException if detecting the region from the resource link fails
      */
-    private boolean deploymentsAreTheSame(ResultSet functionDeployment, int memorySize, Provider provider, String region)
+    private boolean deploymentsAreTheSame(FunctionDeployment functionDeployment, int memorySize, Provider provider, String region)
             throws SQLException, RegionDetectionException {
-        String functionId = functionDeployment.getString("KMS_Arn");
-        int fdMemorySize = functionDeployment.getInt("memorySize");
+        String functionId = functionDeployment.getKmsArn();
+        int fdMemorySize = functionDeployment.getMemorySize();
         Provider fdProvider = Utils.detectProvider(functionId);
         String fdRegion = Utils.detectRegion(functionId);
 
@@ -584,20 +614,6 @@ public class SimulationNode extends Node {
             return fdMemorySize == memorySize && fdProvider == provider && fdRegion.equals(region);
         }
         return false;
-    }
-
-    /**
-     * Checks if there are functionDeployments stored with the same functionImplementation as the given
-     * functionDeployment.
-     *
-     * @param functionDeployment to get the parameters
-     *
-     * @return entries with the same functionImplementationId
-     *
-     * @throws SQLException if an error occurs when reading fields from a database entry
-     */
-    private ResultSet sameImplementationStored(ResultSet functionDeployment) throws SQLException {
-        return MariaDBAccess.getDeploymentsWithImplementationId(functionDeployment.getInt("functionImplementation_id"));
     }
 
     /**
@@ -615,7 +631,7 @@ public class SimulationNode extends Node {
      *                                              filled
      * @throws MissingSimulationParametersException if not all required fields are filled in in the database
      */
-    private PairResult<Long, Double> calculateRoundTripTime(ResultSet entry, Boolean success, String deploymentString) throws SQLException,
+    private PairResult<Long, Double> calculateRoundTripTime(FunctionDeployment entry, Boolean success, String deploymentString) throws SQLException,
             RegionDetectionException, MissingComputationalWorkException, MissingSimulationParametersException {
         PairResult<Long, Double> result = null;
         List<String> elements;
@@ -623,19 +639,18 @@ public class SimulationNode extends Node {
         String region = null;
         Provider provider = null;
         int concurrencyOverhead;
-        ResultSet providerEntry;
+        at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry;
 
         if (deploymentString != null) {
             elements = extractValuesFromDeployment(deploymentString);
             memory = Integer.parseInt(elements.get(0));
             region = elements.get(1);
             provider = Provider.valueOf(elements.get(2));
-            providerEntry = MariaDBAccess.getProviderEntry(provider);
+            providerEntry = MetadataStore.get().getProviderEntry(provider);
         } else {
-            providerEntry = MariaDBAccess.getProviderEntry(Utils.detectProvider(entry.getString("KMS_Arn")));
+            providerEntry = MetadataStore.get().getProviderEntry(Utils.detectProvider(entry.getKmsArn()));
         }
-        providerEntry.next();
-        concurrencyOverhead = providerEntry.getInt("concurrencyOverheadms");
+        concurrencyOverhead = providerEntry.getConcurrencyOverheadMs();
 
         // if the deployment is null or deployment is already saved in the MD-DB,
         // simulate in the same region and with the same memory
@@ -643,42 +658,40 @@ public class SimulationNode extends Node {
             // simply read from the values from the DB without calculating them again
             result = extractRttAndCost(success, concurrencyOverhead, entry);
         } else {
-            ResultSet similarDeployment = sameImplementationStored(entry);
+            List<FunctionDeployment> similarDeployments = MetadataStore.get().getDeploymentsWithImplementationId(
+                    entry.getFunctionImplementationId());
             // indicates if a similar deployment was found
             boolean similar = false;
 
-            if (similarDeployment != null) {
-                Integer sameRegionAndMemory = null;
-                Integer sameMemory = null;
-                ResultSet regionEntry = MariaDBAccess.getRegionEntry(region, provider);
+            if (similarDeployments != null && !similarDeployments.isEmpty()) {
+                Long sameRegionAndMemory = null;
+                Long sameMemory = null;
+                Region regionEntry = MetadataStore.get().getRegionEntry(region, provider);
 
-                if (regionEntry.next()) {
-                    while (similarDeployment.next()) {
-                        similar = true;
+                for (FunctionDeployment similarDeployment : similarDeployments) {
+                    similar = true;
 
-                        int givenRegionID = regionEntry.getInt("id");
-                        int similarRegionID = similarDeployment.getInt("regionID");
-                        int similarMemorySize = similarDeployment.getInt("memorySize");
+                    int givenRegionID = regionEntry.getId();
+                    long similarRegionID = similarDeployment.getRegionId();
+                    int similarMemorySize = similarDeployment.getMemorySize();
 
-                        if (givenRegionID == similarRegionID && memory == similarMemorySize) {
-                            sameRegionAndMemory = similarDeployment.getInt("id");
-                        } else if (memory == similarMemorySize) {
-                            sameMemory = similarDeployment.getInt("id");
-                        }
+                    if (givenRegionID == similarRegionID && memory == similarMemorySize) {
+                        sameRegionAndMemory = similarDeployment.getId();
+                    } else if (memory == similarMemorySize) {
+                        sameMemory = similarDeployment.getId();
                     }
                 }
-                ResultSet similarResult;
+
+                FunctionDeployment similarResult;
                 if (sameRegionAndMemory != null) {
-                    similarResult = MariaDBAccess.getDeploymentById(sameRegionAndMemory);
-                    similarResult.next();
+                    similarResult = MetadataStore.get().getDeploymentById(sameRegionAndMemory);
                     result = extractRttAndCost(success, concurrencyOverhead, similarResult);
                 } else if (sameMemory != null) {
                     // always prefer the given entry if they have the same memory size
-                    if (memory == entry.getInt("memorySize")) {
-                        sameMemory = entry.getInt("id");
+                    if (memory == entry.getMemorySize()) {
+                        sameMemory = entry.getId();
                     }
-                    similarResult = MariaDBAccess.getDeploymentById(sameMemory);
-                    similarResult.next();
+                    similarResult = MetadataStore.get().getDeploymentById(sameMemory);
                     SimulationModel model = new SimulationModel(similarResult, provider, region, memory, loopCounter);
                     result = model.simulateRoundTripTime(success);
                 } else {
@@ -692,6 +705,21 @@ public class SimulationNode extends Node {
                 result = model.simulateRoundTripTime(success);
             }
         }
+
+        // simulate external services
+        if(!serviceStrings.isEmpty()) {
+            jFaaS.utils.PairResult<String, Long> simResult = null;
+
+            if (region == null) {
+                simResult = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getRegionId().intValue(), serviceStrings);
+            } else {
+                simResult = ServiceSimulationModel.calculateTotalRttForUsedServices(entry.getRegionId().intValue(), region, serviceStrings);
+            }
+
+            result.setRtt(result.getRtt() + simResult.getRTT());
+            this.serviceOutput = simResult.getResult();
+        }
+
         return result;
     }
 
@@ -706,10 +734,10 @@ public class SimulationNode extends Node {
      *
      * @throws SQLException if an error occurs when reading fields from a database entry
      */
-    private PairResult<Long, Double> extractRttAndCost(Boolean success, int concurrencyOverhead, ResultSet entry) throws SQLException {
-        long rtt = (long) entry.getDouble("avgRTT");
-        double cost = entry.getDouble("avgCost");
-        int averageLoopCounter = entry.getInt("avgLoopCounter");
+    private PairResult<Long, Double> extractRttAndCost(Boolean success, int concurrencyOverhead, FunctionDeployment entry) throws SQLException {
+        long rtt = entry.getAvgRTT().longValue();
+        double cost = entry.getAvgCost();
+        int averageLoopCounter = entry.getAvgLoopCounter();
 
         if (concurrencyOverhead != 0 && averageLoopCounter != 0) {
             rtt -= (long) concurrencyOverhead * averageLoopCounter;
@@ -731,7 +759,7 @@ public class SimulationNode extends Node {
      */
     private Map<String, Object> getFunctionOutput() {
         HashMap<String, Object> outputs = new HashMap<>();
-        for (DataOutsAtomic out : output) {
+        for (DataOutsAtomic out : new ArrayList<>(output)) {
             if (out.getProperties() != null && !out.getProperties().isEmpty()) {
                 for (PropertyConstraint constraint : out.getProperties()) {
                     if (constraint.getName().equals("simValue")) {
@@ -741,6 +769,14 @@ public class SimulationNode extends Node {
             } else {
                 // if no properties are set, fill with default values
                 parseOutputValues(out, null, outputs, true);
+            }
+        }
+
+        if (this.input != null) {
+            for (DataIns in : new ArrayList<>(this.input)) {
+                if (in.getPassing() != null && in.getPassing()) {
+                    parseOutputValues(new DataOutsAtomic(in.getName(), in.getType()), null, outputs, true);
+                }
             }
         }
 
@@ -806,8 +842,8 @@ public class SimulationNode extends Node {
     }
 
     /**
-     * Simulates whether the function returns as expected or yields an error. If the parameter IGNORE_FT in {@link
-     * SimulationParameters} is true, it always returns true.
+     * Simulates whether the function returns as expected or yields an error. If the parameter IGNORE_FT in
+     * {@link SimulationParameters} is true, it always returns true.
      *
      * @param entry the entry from the database
      *
@@ -815,11 +851,11 @@ public class SimulationNode extends Node {
      *
      * @throws SQLException if an error occurs when reading fields from a database entry
      */
-    private Boolean simulateOutcome(ResultSet entry) throws SQLException {
+    private Boolean simulateOutcome(FunctionDeployment entry) throws SQLException {
         if (SimulationParameters.IGNORE_FT) {
             return true;
         }
-        double successRate = entry.getDouble("successRate");
+        double successRate = entry.getSuccessRate();
         // get a random double between 0 and 1
         Random random = new Random();
         double randomValue = random.nextDouble();
@@ -847,22 +883,21 @@ public class SimulationNode extends Node {
     private QuadrupleResult<Long, Double, Map<String, Object>, Boolean> getSimulationResult(String resourceLink, String deploymentString)
             throws NoDatabaseEntryForIdException, NotYetInvokedException, SQLException, RegionDetectionException,
             MissingComputationalWorkException, MissingSimulationParametersException {
-        ResultSet entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
+        FunctionDeployment fd = MetadataStore.get().getFunctionIdEntry(resourceLink);
 
-        if (!entry.next()) {
-            throw new NoDatabaseEntryForIdException("No entry for '" + resourceLink + "' found. Make sure the resource link is correct and the "
-                    + "function has been added to the database.");
+        if (fd == null) {
+            throw new DatabaseException("No function deployment was found for resource link: " + resourceLink);
         }
 
-        if (entry.getInt("invocations") == 0) {
-            logger.info("Refreshing database to check for an invocation for '" + resourceLink + "'. This could take a moment.");
-            ManualUpdate.main(null);
-            entry = MariaDBAccess.getFunctionIdEntry(resourceLink);
-            entry.next();
-            if (entry.getInt("invocations") == 0) {
-                ResultSet implementation = MariaDBAccess.getImplementationById(entry.getInt("functionImplementation_id"));
-                implementation.next();
-                if (implementation.getDouble("computationWork") == 0) {
+        if (fd.getInvocations() == 0) {
+            if (!MetadataStore.USE_JSON_METADATA) {
+                logger.info("Refreshing database to check for an invocation for '" + resourceLink + "'. This could take a moment.");
+                ManualUpdate.main(null);
+                fd = MetadataStore.get().getFunctionIdEntry(resourceLink);
+            }
+            if (fd.getInvocations() == 0) {
+                FunctionImplementation fi = MetadataStore.get().getImplementationById(fd.getFunctionImplementationId());
+                if (fi.getComputationWork() == 0) {
                     throw new NotYetInvokedException("The function with id '" + resourceLink + "' has not been executed yet and " +
                             "no computation work is given for the function implementation. Either execute the function at least " +
                             "once or enter the computation work (in million instructions).");
@@ -870,8 +905,8 @@ public class SimulationNode extends Node {
             }
         }
 
-        Boolean success = simulateOutcome(entry);
-        PairResult<Long, Double> result = calculateRoundTripTime(entry, success, deploymentString);
+        Boolean success = simulateOutcome(fd);
+        PairResult<Long, Double> result = calculateRoundTripTime(fd, success, deploymentString);
         return new QuadrupleResult<>(result.getRtt(), result.getCost(), getFunctionOutput(), success);
     }
 
@@ -900,9 +935,8 @@ public class SimulationNode extends Node {
         } else {
             String resourceLink = Utils.getResourceLink(properties, this);
             Provider provider = Utils.detectProvider(resourceLink);
-            ResultSet providerEntry = MariaDBAccess.getProviderEntry(provider);
-            providerEntry.next();
-            int maxConcurrency = providerEntry.getInt("maxConcurrency");
+            at.enactmentengine.serverless.simulation.metadata.model.Provider providerEntry = MetadataStore.get().getProviderEntry(provider);
+            int maxConcurrency = providerEntry.getMaxConcurrency();
             if (loopCounter > maxConcurrency - 1 || (concurrencyLimit != -1 && loopCounter > concurrencyLimit - 1)) {
                 start = -1;
                 while (start == -1) {
@@ -933,5 +967,13 @@ public class SimulationNode extends Node {
 
     public synchronized void setAmountParallelFunctions(long amountParallelFunctions) {
         this.amountParallelFunctions = amountParallelFunctions;
+    }
+
+    public boolean hasSessionOverhead() {
+        return useSessionOverhead;
+    }
+
+    public void setUseSessionOverhead(boolean useSessionOverhead) {
+        this.useSessionOverhead = useSessionOverhead;
     }
 }
